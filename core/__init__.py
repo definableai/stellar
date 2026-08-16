@@ -1,4 +1,4 @@
-"""agentcore — minimal agent core. These imports are the public API."""
+"""core — minimal agent core. These imports are the public API."""
 
 from .agent import Agent
 from .events import StepEvent, StepKind, StepPhase

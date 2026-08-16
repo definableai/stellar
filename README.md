@@ -1,9 +1,9 @@
-# agentcore
+# core
 
 A minimal, hackable agent heart. Three layers, one event grammar, one handle. Zero dependencies (stdlib only), ~700 lines. Designed to be vendored as a git submodule into any project and adapted with full control — there is no framework underneath, only interfaces and a loop.
 
 ```
-agentcore/
+core/
 ├── types.py       Message, ToolCall, ToolResult, Usage — the generic vocabulary
 ├── events.py      StepEvent = kind × phase, the single event shape
 ├── llm.py         LLM protocol: "deltas, then exactly one reply"
@@ -66,7 +66,7 @@ Three phases (`step_start`, `step_delta`, `step_end` on the wire) × four kinds.
 ## Usage
 
 ```python
-from agentcore import Agent, Hooks, tool, ToolResult, JsonlTracer
+from core import Agent, Hooks, tool, ToolResult, JsonlTracer
 
 @tool(parameters={"type": "object",
                   "properties": {"city": {"type": "string"}},

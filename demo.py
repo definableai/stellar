@@ -7,7 +7,7 @@ graceful stop mid-stream, and late-subscriber replay.
 
 import asyncio
 
-from agentcore import (
+from core import (
     Agent, Hooks, LLMDelta, LLMReply, Message, ToolCall, ToolResult,
     Usage, sse, tool,
 )

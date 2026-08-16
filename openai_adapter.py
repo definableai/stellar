@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from typing import Any, AsyncIterator, Sequence
 
-from agentcore import LLMDelta, LLMReply, Message, ToolCall, ToolSpec, Usage
+from core import LLMDelta, LLMReply, Message, ToolCall, ToolSpec, Usage
 
 
 def _to_openai(messages: Sequence[Message]) -> list[dict[str, Any]]:
