@@ -11,9 +11,7 @@ contract. All provider-specific mess (partial tool-call JSON
 accumulation, event formats, retries, stop reasons) lives inside the
 adapter. The loop only ever sees generic ``Message``/``ToolCall`` data,
 which is what keeps the core hackable and provider-agnostic.
-
-Adapters may honor ``asyncio`` cancellation; the loop also stops
-consuming between chunks when a stop is requested.
+Adapters may honor cancellation; the loop stops consuming on stop.
 """
 
 from __future__ import annotations
@@ -25,11 +23,27 @@ from .tools import ToolSpec
 from .types import Message, Usage
 
 
+class LLMError(RuntimeError):
+    """What adapters raise on a failed provider call. Provider-agnostic:
+    handlers branch on status (retry 429/5xx, die on 401), never on vendor."""
+
+    def __init__(self, status: int, body: str):
+        self.status, self.body = status, body
+        super().__init__(f"LLM HTTP {status}: {body}")
+
+    @property
+    def retryable(self) -> bool:
+        return self.status in (408, 429) or self.status >= 500
+
+
 @dataclass
 class LLMDelta:
-    """An incremental chunk of assistant text."""
+    """An incremental chunk of assistant output. ``channel`` is "text" or
+    "reasoning"; reasoning never lands in the reply message (adapters
+    needing round-trip stash raw blocks in ``message.meta``)."""
 
     text: str = ""
+    channel: str = "text"
 
 
 @dataclass

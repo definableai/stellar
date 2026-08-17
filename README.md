@@ -1,6 +1,6 @@
 # core
 
-A minimal, hackable agent heart. Three layers, one event grammar, one handle. Zero dependencies (stdlib only), ~700 lines. Designed to be vendored as a git submodule into any project and adapted with full control — there is no framework underneath, only interfaces and a loop.
+A minimal, hackable agent heart. Three layers, one event grammar, one handle. Zero dependencies (stdlib only), ~1000 lines. Designed to be vendored as a git submodule into any project and adapted with full control — there is no framework underneath, only interfaces and a loop.
 
 ```
 core/
@@ -14,6 +14,33 @@ core/
 ├── transport.py   sse() and ws_frames() — pure serializers
 └── agent.py       the loop (~200 lines) — the whole heart
 ```
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[your code] -->|"run(input)"| A
+
+    subgraph CORE["core — stdlib only, provider-blind"]
+        A["agent.py<br/>the loop"]
+        A <--> HK["hooks.py<br/>before/after llm + tool"]
+        A <--> LP["llm.py<br/>LLM Protocol"]
+        A <--> TL["tools.py<br/>Tool + ctx"]
+        A -->|"emit StepEvents"| RH["run.py<br/>RunHandle"]
+        RH --> TR["tracer.py<br/>console / jsonl"]
+        RH --> TP["transport.py<br/>sse / ws frames"]
+    end
+
+    subgraph BUILTIN["builtin — replaceable, outside the line budget"]
+        OA["llm/openai.py<br/>chat + responses"] -.implements.-> LP
+        AN["llm/anthropic.py<br/>messages"] -.implements.-> LP
+        SC["tools/schema.py<br/>signature → JSON Schema"] -.builds specs for.-> TL
+    end
+
+    RH -->|"events / RunResult"| U
+```
+
+Everything crossing a boundary speaks the `types.py` vocabulary (`Message`, `ToolCall`, `ToolResult`, `Usage`, `ErrorInfo`) — the narrow waist. Adapters translate provider wire formats to it; the loop never sees provider data.
 
 ## The loop
 
@@ -57,7 +84,7 @@ Three phases (`step_start`, `step_delta`, `step_end` on the wire) × four kinds.
 
 ## The three extension seams
 
-**LLM adapter** — anything with `stream(messages, tools, **params)` yielding `LLMDelta*` then exactly one `LLMReply`. All provider mess (partial tool-call JSON accumulation, retries, stop-reason mapping) lives inside your adapter. See `examples/openai_adapter.py` for the shape; an Anthropic/LiteLLM/vLLM adapter is the same ~60 lines.
+**LLM adapter** — anything with `stream(messages, tools, **params)` yielding `LLMDelta*` then exactly one `LLMReply`. All provider mess (partial tool-call JSON accumulation, retries, stop-reason mapping) lives inside your adapter. See `builtin/llm/openai.py` for the shape (raw httpx + SSE, no SDK — `base_url` points it at any OpenAI-compatible server); an Anthropic adapter is the same ~100 lines.
 
 **Hooks** — mutate their context in place. `before_llm`/`after_llm` edit `messages`/`tools`/`reply` (context compaction, PII scrub, prompt injection defense). `before_tool` edits `call.arguments` or sets `ctx.result` to short-circuit — that one rule is your permission gate, HITL approval, cache hit, and dry-run mode. `after_tool` rewrites `ctx.result` (redaction, truncation, verification).
 
@@ -118,11 +145,11 @@ async def ws(websocket, run_id: str, cursor: int = -1):
 
 ## Deliberate non-features
 
-No provider clients, no retry policy, no memory, no MCP, no sub-agents, no persistence, no permission UI. Each of those is an adapter, a hook, a tracer, or a tool you write on top — the seams are there, the opinions are not. (Sub-agents, for instance: a tool whose handler calls `Agent.run_and_wait()` on another agent, forwarding its events through `ctx.emit_delta`.)
+No provider clients, no retry policy, no memory, no MCP, no sub-agents, no persistence, no permission UI. Each of those is an adapter, a hook, a tracer, or a tool you write on top — the seams are there, the opinions are not. (Sub-agents, for instance: a tool whose handler does `await other_agent.run(...)`, forwarding its events through `ctx.emit_delta`.)
 
 ## Notes
 
-- `Agent.run()` must be called inside a running asyncio event loop (it spawns a task). `run_and_wait()` is the awaitable convenience.
+- `Agent.run()` must be called inside a running asyncio event loop (it spawns a task). The handle is awaitable: `result = await agent.run(...)`; keep it un-awaited to stream events.
 - The in-memory event buffer is the replay source; the tracer is the durable record. Cap or offload the buffer if you run unbounded generations.
 - `hooks` also accepts a plain mapping: `Agent(llm, hooks={"before_tool": [gate]})`.
 - Parallel tool calls: `Agent(..., parallel_tools=True)` — events interleave, keyed by `call_id`; transcript order stays deterministic.

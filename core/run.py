@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Literal
 
 from .events import StepEvent, StepKind, StepPhase
-from .types import Message, Usage, new_id
+from .types import ErrorInfo, Message, Usage, new_id
 
 RunStatus = Literal["running", "completed", "stopped", "error"]
 
@@ -34,7 +34,7 @@ class RunResult:
     messages: list[Message]        # full transcript, including new turns
     output: str | None             # final assistant text (may be partial on stop)
     usage: Usage
-    error: str | None = None
+    error: ErrorInfo | None = None
     stop_reason: str | None = None  # e.g. "user", "max_steps"
 
 
@@ -152,6 +152,10 @@ class RunHandle:
 
     async def result(self) -> RunResult:
         return await asyncio.shield(self._result_fut)
+
+    def __await__(self):
+        """``await handle`` == ``await handle.result()``."""
+        return self.result().__await__()
 
     # ---- lifecycle (loop-internal) ------------------------------------
 

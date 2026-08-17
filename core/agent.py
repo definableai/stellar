@@ -31,7 +31,7 @@ from .llm import LLM, LLMDelta, LLMReply
 from .run import RunContext, RunHandle, RunResult
 from .tools import Tool, ToolCallContext, call_maybe_async
 from .tracer import Tracer
-from .types import Message, ToolResult, Usage, new_id
+from .types import ErrorInfo, Message, ToolResult, Usage, new_id
 
 START, DELTA, END = StepPhase.START, StepPhase.DELTA, StepPhase.END
 
@@ -70,6 +70,8 @@ class Agent:
     ) -> RunHandle:
         """Start a run. Returns immediately; events stream on the handle.
 
+        ``await agent.run(...)`` yields the RunResult; keep the handle
+        un-awaited to stream events instead.
         Must be called inside a running asyncio event loop.
         """
         messages = self._build_messages(input, history)
@@ -77,11 +79,6 @@ class Agent:
         ctx = RunContext(run_id=handle.run_id, handle=handle, state=state or {})
         handle._task = asyncio.create_task(self._run(handle, ctx, messages))
         return handle
-
-    async def run_and_wait(self, input, **kwargs) -> RunResult:
-        """Convenience: run to completion, ignore the stream."""
-        handle = self.run(input, **kwargs)
-        return await handle.result()
 
     # ---- internals -------------------------------------------------------
 
@@ -107,7 +104,7 @@ class Agent:
         output: str | None = None
         status: str = "completed"
         stop_reason: str | None = None
-        error: str | None = None
+        error: ErrorInfo | None = None
         steps = 0
 
         await h.emit(
@@ -136,7 +133,8 @@ class Agent:
                         if isinstance(item, LLMReply):
                             reply = item
                         elif isinstance(item, LLMDelta) and item.text:
-                            await h.emit(StepKind.TEXT, DELTA, {"text": item.text}, sid)
+                            await h.emit(StepKind.TEXT, DELTA,
+                                         {"text": item.text, "channel": item.channel}, sid)
                         if h.stop_requested:
                             partial = reply is None
                             break
@@ -147,9 +145,9 @@ class Agent:
 
                 if reply is None:  # stopped mid-stream: synthesize from deltas
                     text = "".join(
-                        e.payload["text"]
-                        for e in h._buffer
+                        e.payload["text"] for e in h._buffer
                         if e.step_id == sid and e.phase is DELTA
+                        and e.payload["channel"] == "text"
                     )
                     reply = LLMReply(
                         message=Message(role="assistant", content=text or None),
@@ -196,8 +194,9 @@ class Agent:
                     break
             else:
                 stop_reason = "max_steps"
-        except Exception:
-            status, error = "error", traceback.format_exc(limit=8)
+        except Exception as ex:
+            status = "error"
+            error = ErrorInfo.from_exc(ex, "run", traceback.format_exc(limit=8))
 
         await h.emit(
             StepKind.RUN,
@@ -207,7 +206,7 @@ class Agent:
                 "steps": steps,
                 "usage": usage.to_dict(),
                 "stop_reason": stop_reason,
-                "error": error,
+                "error": error.to_dict() if error else None,
             },
             run_step,
         )
@@ -240,11 +239,13 @@ class Agent:
         tctx = ToolHookContext(run=ctx, call=call)
         await self._fire(h, "before_tool", tctx)
 
+        err: ErrorInfo | None = None
         if tctx.result is None:  # not short-circuited by a hook
             tool = self.tools.get(call.name)
             if tool is None:
+                err = ErrorInfo("UnknownTool", f"Unknown tool: {call.name}", "tool")
                 tctx.result = ToolResult(
-                    call.id, call.name, f"Unknown tool: {call.name}", is_error=True
+                    call.id, call.name, err.message, is_error=True
                 )
             else:
                 cctx = ToolCallContext(
@@ -266,12 +267,14 @@ class Agent:
                     try:
                         tctx.result = ToolResult(call.id, call.name, exec_task.result())
                     except Exception as ex:
+                        err = ErrorInfo.from_exc(ex, "tool")
                         tctx.result = ToolResult(
                             call.id, call.name,
-                            f"{type(ex).__name__}: {ex}", is_error=True,
+                            f"{err.type}: {err.message}", is_error=True,
                         )
                 else:  # stop requested mid-execution
                     exec_task.cancel()
+                    err = ErrorInfo("Cancelled", "cancelled", "tool")
                     tctx.result = ToolResult(
                         call.id, call.name, "cancelled", is_error=True
                     )
@@ -286,6 +289,7 @@ class Agent:
                 "name": call.name,
                 "result": result.content,
                 "is_error": result.is_error,
+                **({"error": err.to_dict()} if err else {}),
             },
             sid,
         )
@@ -302,7 +306,8 @@ class Agent:
             except Exception as ex:
                 await h.emit(
                     StepKind.HOOK, END,
-                    {"point": point, "hook": name, "error": f"{type(ex).__name__}: {ex}"},
+                    {"point": point, "hook": name,
+                     "error": ErrorInfo.from_exc(ex, "hook").to_dict()},
                     sid,
                 )
                 raise  # fail closed: a broken guardrail aborts the run

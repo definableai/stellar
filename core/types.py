@@ -43,6 +43,25 @@ class ToolResult:
 
 
 @dataclass
+class ErrorInfo:
+    """The one error shape: any ``"error"`` key in an event payload or
+    RunResult holds this, serialized. Model-facing channels (ToolResult
+    content) stay plain strings — models read prose, consumers parse this."""
+
+    type: str                  # exception class or code: "UnknownTool", "Cancelled"
+    message: str
+    source: str                # "run" | "tool" | "hook"
+    detail: str | None = None  # traceback / response body; consumer-only
+
+    @classmethod
+    def from_exc(cls, ex: BaseException, source: str, detail: str | None = None) -> "ErrorInfo":
+        return cls(type(ex).__name__, str(ex), source, detail)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class Message:
     """One turn in the conversation. Generic across all providers.
 
@@ -71,12 +90,14 @@ class Message:
 class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
+    reasoning_tokens: int = 0  # subset of output_tokens on reasoning models
 
     def __add__(self, other: "Usage") -> "Usage":
         return Usage(
             self.input_tokens + other.input_tokens,
             self.output_tokens + other.output_tokens,
+            self.reasoning_tokens + other.reasoning_tokens,
         )
 
     def to_dict(self) -> dict[str, int]:
-        return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens}
+        return asdict(self)

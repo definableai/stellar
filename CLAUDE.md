@@ -27,7 +27,7 @@ But this mini core must stay powerfull, can handle complex tasks if implemented 
 - Mark deliberate corner-cuts with their ceiling (global lock, O(n²) scan, naive heuristic).
 
 ## After writing code(Verification)
-- Always use a subagent with `claude-opus-4.8` model to do the smoke testing.
+- Always use a subagent with `claude-opus-4.6` model to do the smoke testing.
 
 ## Git
 - Good commit messages. simple, clear, concise.
