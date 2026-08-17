@@ -67,7 +67,7 @@ Three phases (`step_start`, `step_delta`, `step_end` on the wire) × four kinds.
 | kind | start payload | delta payload | end payload |
 |---|---|---|---|
 | `run` | `messages`, `run_id` | — | `status`, `steps`, `usage`, `stop_reason`, `error` |
-| `text` | `index` | `text` | `text`, `tool_calls[]`, `stop_reason`, `partial`, `usage` |
+| `text` | `step` | `text`, `channel` (`text`\|`reasoning`\|`tool_args`), `index` (tool-call #) | `text`, `tool_calls[]`, `stop_reason`, `partial`, `usage` |
 | `tool` | `call_id`, `name`, `arguments` | `call_id` + whatever the tool emits | `call_id`, `name`, `result`, `is_error` |
 | `hook` | `point`, `hook` | — | `point`, `hook`, `error?` |
 

@@ -85,6 +85,14 @@ class Message:
             d["meta"] = self.meta
         return d
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "Message":
+        return cls(role=d["role"], content=d.get("content"),
+                   tool_calls=[ToolCall(**c) for c in d.get("tool_calls") or []],
+                   tool_result=ToolResult(**d["tool_result"])
+                   if d.get("tool_result") else None,
+                   meta=d.get("meta") or {})
+
 
 @dataclass
 class Usage:

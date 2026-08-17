@@ -6,10 +6,9 @@
       ``seq``, so any number of consumers can attach at any time and
       ``events(after_seq=n)`` replays the past then follows live
       (your durable stream / reconnect story);
-    * owns cancellation — ``stop()`` is graceful: the loop finishes
-      the current chunk, records text/end (partial), tool/end
-      (cancelled) and run/end (status="stopped"); every event is still
-      delivered to tracers and subscribers;
+    * owns cancellation — ``stop()`` is graceful: current chunk finishes,
+      text/end (partial), tool/end (cancelled), run/end (status="stopped")
+      still reach every tracer and subscriber;
     * owns completion — ``await handle.result()`` yields the RunResult.
 """
 
@@ -68,6 +67,7 @@ class RunHandle:
             asyncio.get_running_loop().create_future()
         )
         self._finished = False
+        self._inbox: list[Message] = []         # mid-run steering queue
         self._task: asyncio.Task | None = None  # set by Agent.run()
 
     # ---- stream side -------------------------------------------------
@@ -135,6 +135,13 @@ class RunHandle:
         if not self._finished and not self._stop.is_set():
             self._stop_reason = reason
             self._stop.set()
+
+    def send(self, input: "str | Message") -> None:
+        """Queue a user message mid-run; the loop picks it up before its
+        next LLM step. Ignored after the run finishes."""
+        if not self._finished:
+            self._inbox.append(Message(role="user", content=input)
+                               if isinstance(input, str) else input)
 
     @property
     def stop_requested(self) -> bool:

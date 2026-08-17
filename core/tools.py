@@ -52,12 +52,14 @@ class ToolCallContext:
 class Tool:
     spec: ToolSpec
     handler: Callable[..., Any]  # (ctx: ToolCallContext, **arguments) -> Any
+    parallel_safe: bool = True   # False (writes/side effects) forces the batch sequential
 
 
 def tool(
     name: str | None = None,
     description: str | None = None,
     parameters: dict[str, Any] | None = None,
+    parallel_safe: bool = True,
 ) -> Callable[[Callable[..., Any]], Tool]:
     """Decorator: turn a function into a Tool.
 
@@ -76,7 +78,7 @@ def tool(
             parameters=parameters
             or {"type": "object", "properties": {}},
         )
-        return Tool(spec=spec, handler=fn)
+        return Tool(spec=spec, handler=fn, parallel_safe=parallel_safe)
 
     return wrap
 

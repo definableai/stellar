@@ -142,8 +142,10 @@ class AnthropicLLM:
                         yield LLMDelta(text=d["thinking"], channel="reasoning")
                     elif d.get("type") == "signature_delta":
                         slot["sig"] += d.get("signature", "")
-                    elif d.get("type") == "input_json_delta":
-                        slot["json"] += d.get("partial_json", "")
+                    elif d.get("type") == "input_json_delta" and d.get("partial_json"):
+                        slot["json"] += d["partial_json"]
+                        yield LLMDelta(text=d["partial_json"], channel="tool_args",
+                                       index=ev["index"])
                 elif t == "message_delta":
                     finish = (ev.get("delta") or {}).get("stop_reason") or finish
                     u = ev.get("usage") or {}
@@ -225,8 +227,9 @@ if __name__ == "__main__":
         got = [x async for x in llm.stream([Message(role="user", content="hi")],
                                            [ToolSpec(name="add")])]
         *deltas, reply = got
-        assert [(d.text, d.channel) for d in deltas] == [
-            ("hmm", "reasoning"), ("Hi", "text")], deltas
+        assert [(d.text, d.channel, d.index) for d in deltas] == [
+            ("hmm", "reasoning", 0), ("Hi", "text", 0),
+            ('{"a": ', "tool_args", 2), ("5}", "tool_args", 2)], deltas
         assert reply.message.content == "Hi"          # reasoning stays out
         assert reply.message.tool_calls == [ToolCall(id="t9", name="add",
                                                      arguments={"a": 5})]

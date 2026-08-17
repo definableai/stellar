@@ -94,6 +94,7 @@ def tool(
     name: str | None = None,
     description: str | None = None,
     parameters: dict[str, Any] | None = None,
+    parallel_safe: bool = True,
 ):
     """Like ``core.tool`` but infers what you don't pass."""
 
@@ -103,6 +104,7 @@ def tool(
             name=name or fn.__name__,
             description=description or inferred_desc,
             parameters=parameters or inferred_schema,
+            parallel_safe=parallel_safe,
         )(fn)
 
     return wrap

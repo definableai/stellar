@@ -38,12 +38,14 @@ class LLMError(RuntimeError):
 
 @dataclass
 class LLMDelta:
-    """An incremental chunk of assistant output. ``channel`` is "text" or
-    "reasoning"; reasoning never lands in the reply message (adapters
-    needing round-trip stash raw blocks in ``message.meta``)."""
+    """An incremental chunk of assistant output. ``channel`` is "text",
+    "reasoning", or "tool_args" (raw partial JSON of tool call #``index`` —
+    display only; the loop executes from the assembled LLMReply). Reasoning
+    never lands in the reply (adapters stash raw blocks in ``message.meta``)."""
 
     text: str = ""
     channel: str = "text"
+    index: int = 0
 
 
 @dataclass

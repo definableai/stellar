@@ -107,12 +107,15 @@ class Agent:
         error: ErrorInfo | None = None
         steps = 0
 
-        await h.emit(
-            StepKind.RUN, START, {"messages": len(messages), "run_id": h.run_id}, run_step
-        )
+        await h.emit(StepKind.RUN, START,
+                     {"messages": len(messages), "run_id": h.run_id}, run_step)
         try:
             for step_index in range(self.max_steps):
                 steps = step_index + 1
+
+                if h._inbox:                    # mid-run steering (handle.send)
+                    messages.extend(h._inbox)
+                    h._inbox.clear()
 
                 # -- before_llm hooks (may mutate messages/tools) ----------
                 hctx = LLMHookContext(
@@ -124,7 +127,7 @@ class Agent:
 
                 # -- LLM step ----------------------------------------------
                 sid = new_id("text")
-                await h.emit(StepKind.TEXT, START, {"index": step_index}, sid)
+                await h.emit(StepKind.TEXT, START, {"step": step_index}, sid)
                 reply: LLMReply | None = None
                 partial = False
                 stream = self.llm.stream(list(messages), hctx.tools, **self.params)
@@ -134,7 +137,8 @@ class Agent:
                             reply = item
                         elif isinstance(item, LLMDelta) and item.text:
                             await h.emit(StepKind.TEXT, DELTA,
-                                         {"text": item.text, "channel": item.channel}, sid)
+                                         {"text": item.text, "channel": item.channel,
+                                          "index": item.index}, sid)
                         if h.stop_requested:
                             partial = reply is None
                             break
@@ -154,18 +158,12 @@ class Agent:
                         stop_reason="stopped",
                     )
                 usage = usage + reply.usage
-                await h.emit(
-                    StepKind.TEXT,
-                    END,
-                    {
-                        "text": reply.message.content,
-                        "tool_calls": [c.to_dict() for c in reply.message.tool_calls],
-                        "stop_reason": reply.stop_reason,
-                        "partial": partial,
-                        "usage": reply.usage.to_dict(),
-                    },
-                    sid,
-                )
+                await h.emit(StepKind.TEXT, END, {
+                    "text": reply.message.content,
+                    "tool_calls": [c.to_dict() for c in reply.message.tool_calls],
+                    "stop_reason": reply.stop_reason, "partial": partial,
+                    "usage": reply.usage.to_dict(),
+                }, sid)
 
                 # -- after_llm hooks (may mutate reply) ---------------------
                 hctx.reply = reply.message
@@ -181,7 +179,10 @@ class Agent:
 
                 # -- tool steps ---------------------------------------------
                 calls = reply.message.tool_calls
-                if self.parallel_tools and len(calls) > 1:
+                # ponytail: one unsafe tool serializes the whole batch
+                if (self.parallel_tools and len(calls) > 1
+                        and all(t is None or t.parallel_safe
+                                for t in (self.tools.get(c.name) for c in calls))):
                     tool_msgs = await asyncio.gather(
                         *(self._exec_tool(h, ctx, c) for c in calls)
                     )
@@ -198,29 +199,19 @@ class Agent:
             status = "error"
             error = ErrorInfo.from_exc(ex, "run", traceback.format_exc(limit=8))
 
-        await h.emit(
-            StepKind.RUN,
-            END,
-            {
-                "status": status,
-                "steps": steps,
-                "usage": usage.to_dict(),
-                "stop_reason": stop_reason,
-                "error": error.to_dict() if error else None,
-            },
-            run_step,
-        )
-        h._finish(
-            RunResult(
-                run_id=h.run_id,
-                status=status,  # type: ignore[arg-type]
-                messages=messages,
-                output=output,
-                usage=usage,
-                error=error,
-                stop_reason=stop_reason,
-            )
-        )
+        if h._inbox:            # late sends still land in the transcript
+            messages.extend(h._inbox)
+            h._inbox.clear()
+        await h.emit(StepKind.RUN, END, {
+            "status": status, "steps": steps, "usage": usage.to_dict(),
+            "stop_reason": stop_reason,
+            "error": error.to_dict() if error else None,
+        }, run_step)
+        h._finish(RunResult(
+            run_id=h.run_id, status=status,  # type: ignore[arg-type]
+            messages=messages, output=output, usage=usage,
+            error=error, stop_reason=stop_reason,
+        ))
 
     async def _exec_tool(self, h: RunHandle, ctx: RunContext, call) -> Message:
         """One tool call: start -> before hooks -> exec -> after hooks -> end.
@@ -230,12 +221,9 @@ class Agent:
         the run (fail closed) — they propagate out of _fire.
         """
         sid = new_id("tool")
-        await h.emit(
-            StepKind.TOOL,
-            START,
-            {"call_id": call.id, "name": call.name, "arguments": call.arguments},
-            sid,
-        )
+        await h.emit(StepKind.TOOL, START, {
+            "call_id": call.id, "name": call.name, "arguments": call.arguments,
+        }, sid)
         tctx = ToolHookContext(run=ctx, call=call)
         await self._fire(h, "before_tool", tctx)
 
@@ -281,18 +269,11 @@ class Agent:
 
         await self._fire(h, "after_tool", tctx)
         result = tctx.result
-        await h.emit(
-            StepKind.TOOL,
-            END,
-            {
-                "call_id": call.id,
-                "name": call.name,
-                "result": result.content,
-                "is_error": result.is_error,
-                **({"error": err.to_dict()} if err else {}),
-            },
-            sid,
-        )
+        await h.emit(StepKind.TOOL, END, {
+            "call_id": call.id, "name": call.name,
+            "result": result.content, "is_error": result.is_error,
+            **({"error": err.to_dict()} if err else {}),
+        }, sid)
         return Message(role="tool", tool_result=result)
 
     async def _fire(self, h: RunHandle, point: HookPoint, hctx: Any) -> None:

@@ -131,7 +131,10 @@ class OpenAILLM:
                     fn = tc.get("function") or {}
                     slot["id"] = tc.get("id") or slot["id"]
                     slot["name"] += fn.get("name") or ""
-                    slot["args"] += fn.get("arguments") or ""
+                    if fn.get("arguments"):
+                        slot["args"] += fn["arguments"]
+                        yield LLMDelta(text=fn["arguments"], channel="tool_args",
+                                       index=tc.get("index", 0))
 
         tool_calls = []
         for _, s in sorted(calls.items()):
@@ -206,6 +209,9 @@ class OpenAIResponsesLLM(OpenAILLM):
                     yield LLMDelta(text=ev["delta"])
                 elif t == "response.reasoning_summary_text.delta":
                     yield LLMDelta(text=ev["delta"], channel="reasoning")
+                elif t == "response.function_call_arguments.delta" and ev.get("delta"):
+                    yield LLMDelta(text=ev["delta"], channel="tool_args",
+                                   index=ev.get("output_index", 0))
                 elif (t == "response.output_item.done"
                       and ev["item"].get("type") == "function_call"):
                     it = ev["item"]   # args arrive finalized here — no accumulation
@@ -265,7 +271,8 @@ if __name__ == "__main__":
 
         *deltas, reply = got
         assert [(d.text, d.channel) for d in deltas] == [
-            ("hmm", "reasoning"), ("Hel", "text"), ("lo", "text")], deltas
+            ("hmm", "reasoning"), ("Hel", "text"), ("lo", "text"),
+            ('{"a": ', "tool_args"), ("2}", "tool_args")], deltas
         assert isinstance(reply, LLMReply)
         assert reply.message.content == "Hello"       # reasoning stays out
         assert reply.message.tool_calls == [
@@ -288,6 +295,8 @@ if __name__ == "__main__":
         resp_body = b"".join([
             b'data: {"type":"response.reasoning_summary_text.delta","delta":"think"}\n\n',
             b'data: {"type":"response.output_text.delta","delta":"Hi"}\n\n',
+            b'data: {"type":"response.function_call_arguments.delta",'
+            b'"delta":"{\\"a\\": 1}","output_index":1}\n\n',
             b'data: {"type":"response.output_item.done","item":{"type":"function_call",'
             b'"call_id":"c9","name":"add","arguments":"{\\"a\\": 1}"}}\n\n',
             b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,'
@@ -300,8 +309,9 @@ if __name__ == "__main__":
             transport=rt, base_url="http://fake"))
         got2 = [x async for x in rllm.stream([Message(role="user", content="hi")], [])]
         *d2, rep2 = got2
-        assert [(d.text, d.channel) for d in d2] == [
-            ("think", "reasoning"), ("Hi", "text")], d2
+        assert [(d.text, d.channel, d.index) for d in d2] == [
+            ("think", "reasoning", 0), ("Hi", "text", 0),
+            ('{"a": 1}', "tool_args", 1)], d2
         assert rep2.message.content == "Hi"
         assert rep2.message.tool_calls == [ToolCall(id="c9", name="add",
                                                     arguments={"a": 1})]
