@@ -21,7 +21,7 @@ from typing import Any, AsyncIterator, Literal
 from .events import StepEvent, StepKind, StepPhase
 from .types import ErrorInfo, Message, Usage, new_id
 
-RunStatus = Literal["running", "completed", "stopped", "error"]
+RunStatus = Literal["running", "completed", "truncated", "stopped", "error"]
 
 _DONE = object()  # stream sentinel
 
@@ -30,7 +30,9 @@ _DONE = object()  # stream sentinel
 class RunResult:
     run_id: str
     status: RunStatus
-    messages: list[Message]        # full transcript, including new turns
+    messages: list[Message]        # the run's final request view + new turns
+                                   # (compaction hooks may have pruned it;
+                                   # the session log keeps the full record)
     output: str | None             # final assistant text (may be partial on stop)
     usage: Usage
     error: ErrorInfo | None = None
@@ -39,11 +41,13 @@ class RunResult:
 
 @dataclass
 class RunContext:
-    """Passed to hooks and tools. ``state`` is user scratch space."""
+    """Passed to hooks and tools. ``state`` is user scratch space;
+    ``usage`` is the run's cumulative total (updated after each LLM step)."""
 
     run_id: str
     handle: "RunHandle"
     state: dict[str, Any] = field(default_factory=dict)
+    usage: Usage = field(default_factory=Usage)
 
     @property
     def stop_requested(self) -> bool:
@@ -101,10 +105,7 @@ class RunHandle:
 
     async def events(self, after_seq: int = -1) -> AsyncIterator[StepEvent]:
         """Replay buffered events past ``after_seq``, then follow live.
-
-        Safe to call multiple times, from multiple consumers, and after
-        the run has finished (pure replay).
-        """
+        Safe for many consumers, any time, incl. after finish (pure replay)."""
         q: asyncio.Queue = asyncio.Queue()
         self._subs.append(q)
         try:
@@ -146,6 +147,10 @@ class RunHandle:
     @property
     def stop_requested(self) -> bool:
         return self._stop.is_set()
+
+    async def wait_stop(self) -> None:
+        """Await until a stop is requested (hooks race this vs. user input)."""
+        await self._stop.wait()
 
     @property
     def stop_reason(self) -> str | None:

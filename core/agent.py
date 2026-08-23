@@ -22,13 +22,15 @@ Everything else in the package exists to serve these ~200 lines.
 from __future__ import annotations
 
 import asyncio
+import json
 import traceback
-from typing import Any, AsyncIterator, Iterable, Mapping
+from typing import Any, Iterable, Mapping
 
 from .events import StepKind, StepPhase
 from .hooks import HookFn, HookPoint, Hooks, LLMHookContext, ToolHookContext
 from .llm import LLM, LLMDelta, LLMReply
 from .run import RunContext, RunHandle, RunResult
+from .session import Session
 from .tools import Tool, ToolCallContext, call_maybe_async
 from .tracer import Tracer
 from .types import ErrorInfo, Message, ToolResult, Usage, new_id
@@ -64,23 +66,49 @@ class Agent:
         self,
         input: str | Message | Iterable[Message],
         *,
+        session: Session | None = None,
         history: Iterable[Message] | None = None,
         state: dict[str, Any] | None = None,
         run_id: str | None = None,
+        params: dict[str, Any] | None = None,   # per-run LLM param overrides
     ) -> RunHandle:
         """Start a run. Returns immediately; events stream on the handle.
 
         ``await agent.run(...)`` yields the RunResult; keep the handle
         un-awaited to stream events instead.
         Must be called inside a running asyncio event loop.
+
+        With ``session=``, the request derives from the session log and
+        every new message is appended through it (durable transcript).
         """
-        messages = self._build_messages(input, history)
+        if session is not None:
+            if history is not None:
+                raise ValueError("pass session or history, not both")
+            new = self._input_messages(input)
+            for m in new:            # validate the whole batch before any
+                json.dumps(m.to_dict())  # append lands (atomic input)
+            for m in new:
+                session.append(m)
+            messages = self._build_messages(session.messages(), None)
+        else:
+            messages = self._build_messages(input, history)
         handle = RunHandle(run_id, self.tracers)
         ctx = RunContext(run_id=handle.run_id, handle=handle, state=state or {})
-        handle._task = asyncio.create_task(self._run(handle, ctx, messages))
+        merged = {**self.params, **(params or {}),   # dicts deep-merge one level
+                  **{k: {**self.params[k], **v} for k, v in (params or {}).items()
+                     if isinstance(v, dict) and isinstance(self.params.get(k), dict)}}
+        handle._task = asyncio.create_task(
+            self._run(handle, ctx, messages, merged, session))
         return handle
 
     # ---- internals -------------------------------------------------------
+
+    def _input_messages(self, input) -> list[Message]:
+        if isinstance(input, str):
+            return [Message(role="user", content=input)]
+        if isinstance(input, Message):
+            return [input]
+        return list(input)
 
     def _build_messages(self, input, history) -> list[Message]:
         messages: list[Message] = []
@@ -88,16 +116,12 @@ class Agent:
             messages.append(Message(role="system", content=self.system))
         if history:
             messages.extend(history)
-        if isinstance(input, str):
-            messages.append(Message(role="user", content=input))
-        elif isinstance(input, Message):
-            messages.append(input)
-        else:
-            messages.extend(input)
+        messages.extend(self._input_messages(input))
         return messages
 
     async def _run(
-        self, h: RunHandle, ctx: RunContext, messages: list[Message]
+        self, h: RunHandle, ctx: RunContext, messages: list[Message],
+        params: dict[str, Any], session: Session | None,
     ) -> None:
         run_step = new_id("run")
         usage = Usage()
@@ -107,6 +131,12 @@ class Agent:
         error: ErrorInfo | None = None
         steps = 0
 
+        def record(msg: Message) -> None:
+            """Every new message lands in the transcript and the session log."""
+            messages.append(msg)
+            if session is not None:
+                session.append(msg)
+
         await h.emit(StepKind.RUN, START,
                      {"messages": len(messages), "run_id": h.run_id}, run_step)
         try:
@@ -114,7 +144,8 @@ class Agent:
                 steps = step_index + 1
 
                 if h._inbox:                    # mid-run steering (handle.send)
-                    messages.extend(h._inbox)
+                    for m in h._inbox:
+                        record(m)
                     h._inbox.clear()
 
                 # -- before_llm hooks (may mutate messages/tools) ----------
@@ -124,13 +155,14 @@ class Agent:
                     tools=[t.spec for t in self.tools.values()],
                 )
                 await self._fire(h, "before_llm", hctx)
+                messages = hctx.messages   # hooks may rebind, not just mutate
 
                 # -- LLM step ----------------------------------------------
                 sid = new_id("text")
                 await h.emit(StepKind.TEXT, START, {"step": step_index}, sid)
                 reply: LLMReply | None = None
                 partial = False
-                stream = self.llm.stream(list(messages), hctx.tools, **self.params)
+                stream = self.llm.stream(list(messages), hctx.tools, **params)
                 try:
                     async for item in stream:
                         if isinstance(item, LLMReply):
@@ -154,10 +186,11 @@ class Agent:
                         and e.payload["channel"] == "text"
                     )
                     reply = LLMReply(
-                        message=Message(role="assistant", content=text or None),
+                        message=Message(role="assistant", content=text or None,
+                                        meta={"interrupted": True}),
                         stop_reason="stopped",
                     )
-                usage = usage + reply.usage
+                usage = ctx.usage = usage + reply.usage
                 await h.emit(StepKind.TEXT, END, {
                     "text": reply.message.content,
                     "tool_calls": [c.to_dict() for c in reply.message.tool_calls],
@@ -168,7 +201,7 @@ class Agent:
                 # -- after_llm hooks (may mutate reply) ---------------------
                 hctx.reply = reply.message
                 await self._fire(h, "after_llm", hctx)
-                messages.append(reply.message)
+                record(reply.message)
                 output = reply.message.content
 
                 if h.stop_requested:
@@ -183,25 +216,40 @@ class Agent:
                 if (self.parallel_tools and len(calls) > 1
                         and all(t is None or t.parallel_safe
                                 for t in (self.tools.get(c.name) for c in calls))):
-                    tool_msgs = await asyncio.gather(
-                        *(self._exec_tool(h, ctx, c) for c in calls)
+                    settled = await asyncio.gather(
+                        *(self._exec_tool(h, ctx, c) for c in calls),
+                        return_exceptions=True,
                     )
+                    # hook failure: fail closed, but only after siblings
+                    # settle — and their real results stay in the transcript
+                    exc = next((m for m in settled if isinstance(m, BaseException)),
+                               None)
+                    tool_msgs = [m for m in settled if isinstance(m, Message)]
                 else:
+                    exc = None
                     tool_msgs = [await self._exec_tool(h, ctx, c) for c in calls]
-                messages.extend(tool_msgs)
+                for m in tool_msgs:
+                    record(m)
+                if exc is not None:
+                    raise exc
 
                 if h.stop_requested:
                     status, stop_reason = "stopped", h.stop_reason
                     break
             else:
-                stop_reason = "max_steps"
+                status, stop_reason = "truncated", "max_steps"
         except Exception as ex:
             status = "error"
             error = ErrorInfo.from_exc(ex, "run", traceback.format_exc(limit=8))
 
-        if h._inbox:            # late sends still land in the transcript
-            messages.extend(h._inbox)
-            h._inbox.clear()
+        try:
+            if h._inbox:        # late sends still land in the transcript
+                for m in h._inbox:
+                    record(m)
+                h._inbox.clear()
+        except Exception as ex:  # a failing append must never hang the handle
+            status = "error"
+            error = error or ErrorInfo.from_exc(ex, "run", traceback.format_exc(limit=8))
         await h.emit(StepKind.RUN, END, {
             "status": status, "steps": steps, "usage": usage.to_dict(),
             "stop_reason": stop_reason,
@@ -224,7 +272,11 @@ class Agent:
         await h.emit(StepKind.TOOL, START, {
             "call_id": call.id, "name": call.name, "arguments": call.arguments,
         }, sid)
-        tctx = ToolHookContext(run=ctx, call=call)
+        async def emit_delta(payload: dict[str, Any]) -> Any:
+            return await h.emit(StepKind.TOOL, DELTA,
+                                {"call_id": call.id, **payload}, sid)
+
+        tctx = ToolHookContext(run=ctx, call=call, emit_delta=emit_delta)
         await self._fire(h, "before_tool", tctx)
 
         err: ErrorInfo | None = None
@@ -236,19 +288,14 @@ class Agent:
                     call.id, call.name, err.message, is_error=True
                 )
             else:
-                cctx = ToolCallContext(
-                    run=ctx,
-                    call=call,
-                    emit_delta=lambda payload: h.emit(
-                        StepKind.TOOL, DELTA, {"call_id": call.id, **payload}, sid
-                    ),
-                )
+                cctx = ToolCallContext(run=ctx, call=call, emit_delta=emit_delta)
                 exec_task = asyncio.ensure_future(
                     call_maybe_async(tool.handler, cctx, **call.arguments)
                 )
                 stop_task = asyncio.ensure_future(h._stop.wait())
                 done, _ = await asyncio.wait(
-                    {exec_task, stop_task}, return_when=asyncio.FIRST_COMPLETED
+                    {exec_task, stop_task}, timeout=tool.timeout,
+                    return_when=asyncio.FIRST_COMPLETED
                 )
                 if exec_task in done:
                     stop_task.cancel()
@@ -260,12 +307,13 @@ class Agent:
                             call.id, call.name,
                             f"{err.type}: {err.message}", is_error=True,
                         )
-                else:  # stop requested mid-execution
+                else:  # stop requested mid-execution, or tool.timeout hit
                     exec_task.cancel()
-                    err = ErrorInfo("Cancelled", "cancelled", "tool")
-                    tctx.result = ToolResult(
-                        call.id, call.name, "cancelled", is_error=True
-                    )
+                    stop_task.cancel()
+                    stopped = stop_task in done
+                    why = "cancelled" if stopped else f"timeout after {tool.timeout}s"
+                    err = ErrorInfo("Cancelled" if stopped else "Timeout", why, "tool")
+                    tctx.result = ToolResult(call.id, call.name, why, is_error=True)
 
         await self._fire(h, "after_tool", tctx)
         result = tctx.result

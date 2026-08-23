@@ -1,5 +1,5 @@
 ## Abou this packages
-This is a minified agent core and its task its to provide agent infra, and idea is to keep this core hackable and under 1000 lines of code. Simple code, just abstractions, and internal functionality. 
+This is a minified agent core and its task its to provide agent infra, and idea is to keep this core hackable and under 2000 lines of code. Simple code, just abstractions, and internal functionality. 
 But this mini core must stay powerfull, can handle complex tasks if implemented properly
 - Layers : LLM, TOOL, HOOK
 - Transport : SSE, WS
