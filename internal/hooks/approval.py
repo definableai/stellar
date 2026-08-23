@@ -136,16 +136,20 @@ def approval_gate(rules: Iterable[Rule], asker: Asker, timeout: float = 120.0):
         else:
             ask.cancel()
             stop.cancel()
+            # let the asker's cleanup finish (a console asker tears down
+            # its stdin reader in a finally) before the next gate installs
+            # its own — otherwise one timeout kills every later prompt
+            await asyncio.gather(ask, stop, return_exceptions=True)
             decision, reason = "deny", ("run stopped" if stop in done else "timeout")
 
-        if decision == "always":
+        if ctx.emit_delta:   # audit the REAL answer — "always" has policy
+            await ctx.emit_delta({"approval": decision,   # consequence and
+                                  **({"reason": reason} if reason else {})})
+        if decision == "always":                          # must be visible
             # learns this exact call only — different arguments re-ask
             rules.append(Rule("allow", ctx.call.name,
                               exact=dict(ctx.call.arguments)))
             decision = "allow"
-        if ctx.emit_delta:
-            await ctx.emit_delta({"approval": decision,
-                                  **({"reason": reason} if reason else {})})
         if decision != "allow":
             _deny(ctx, reason or "rejected by user")
 

@@ -305,7 +305,11 @@ for line in sys.stdin:
 
         # --- stdio, against a real subprocess -------------------------
         server = StdioMCP(sys.executable, "-c", _FAKE_SERVER, timeout=10)
-        await server.start()
+        try:
+            await server.start()
+        except BaseException:      # a server that dies/hangs during the
+            await server.close()   # handshake must not leave an orphan
+            raise
         tools = await mcp_tools(server)
         assert [t.spec.name for t in tools] == ["echo", "boom"]  # paginated
         assert tools[0].spec.parameters["required"] == ["text"]

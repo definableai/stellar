@@ -27,7 +27,8 @@ internal/             replaceable patterns built ON the core (not in the budget)
 └── mcp.py            MCP client (stdio + streamable HTTP) → core Tools
 
 tests/                fake-LLM suites + hypothesis property tests, no pytest
-examples/cc/          Claude Code rebuilt on this core — durable, resumable
+examples/             8 offline-runnable examples (see examples/README.md)
+examples/cc/          the flagship: Claude Code rebuilt on this core
 ```
 
 ## Architecture
