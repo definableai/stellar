@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Literal
 
@@ -48,6 +49,9 @@ class RunContext:
     handle: "RunHandle"
     state: dict[str, Any] = field(default_factory=dict)
     usage: Usage = field(default_factory=Usage)
+    last_usage: Usage = field(default_factory=Usage)  # most recent LLM step
+    # (last_usage.input_tokens == the context size the provider just saw —
+    # what token-based compaction keys on)
 
     @property
     def stop_requested(self) -> bool:
@@ -59,10 +63,19 @@ class RunContext:
 
 
 class RunHandle:
+    # ponytail: fixed caps as class attrs — override on the class or a
+    # subclass. Hours-long runs must not grow memory without bound:
+    # events(after_seq=n) replays only what's still in the ring (gaps are
+    # visible via seq), and a slow subscriber loses its OLDEST queued
+    # events first — run/end and the done sentinel always arrive
+    # (needs max_queue >= 2: at 1 the sentinel evicts run/end).
+    max_buffer = 10_000     # replay ring (events)
+    max_queue = 1_000       # per-subscriber queue (events)
+
     def __init__(self, run_id: str | None, tracers: list[Any]) -> None:
         self.run_id = run_id or new_id("run")
         self._tracers = tracers
-        self._buffer: list[StepEvent] = []
+        self._buffer: deque[StepEvent] = deque(maxlen=self.max_buffer)
         self._subs: list[asyncio.Queue] = []
         self._seq = 0
         self._stop = asyncio.Event()
@@ -95,7 +108,7 @@ class RunHandle:
         )
         self._buffer.append(event)
         for q in list(self._subs):
-            q.put_nowait(event)
+            self._offer(q, event)
         for tracer in self._tracers:
             try:
                 await tracer.on_event(event)
@@ -106,7 +119,7 @@ class RunHandle:
     async def events(self, after_seq: int = -1) -> AsyncIterator[StepEvent]:
         """Replay buffered events past ``after_seq``, then follow live.
         Safe for many consumers, any time, incl. after finish (pure replay)."""
-        q: asyncio.Queue = asyncio.Queue()
+        q: asyncio.Queue = asyncio.Queue(maxsize=self.max_queue)
         self._subs.append(q)
         try:
             last = after_seq
@@ -114,9 +127,11 @@ class RunHandle:
                 if event.seq > last:
                     yield event
                     last = event.seq
-            if self._finished:
-                return
             while True:
+                # the run may have finished while we replayed the snapshot:
+                # drain the queued live tail (incl. run/end) before leaving
+                if self._finished and q.empty():
+                    return
                 item = await q.get()
                 if item is _DONE:
                     return
@@ -176,4 +191,15 @@ class RunHandle:
         if not self._result_fut.done():
             self._result_fut.set_result(result)
         for q in list(self._subs):
-            q.put_nowait(_DONE)
+            self._offer(q, _DONE)
+
+    @staticmethod
+    def _offer(q: asyncio.Queue, item: Any) -> None:
+        try:
+            q.put_nowait(item)
+        except asyncio.QueueFull:      # slow consumer: shed its oldest event
+            try:
+                q.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            q.put_nowait(item)         # space just freed; single-threaded

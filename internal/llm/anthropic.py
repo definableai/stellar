@@ -9,7 +9,7 @@ summary text (current models default to omitted/empty thinking text).
 
 Self-check (no network, fake transport):
 
-    uv run python -m builtin.llm.anthropic
+    uv run python -m internal.llm.anthropic
 """
 
 from __future__ import annotations
@@ -23,6 +23,23 @@ import httpx
 from core import LLMDelta, LLMError, LLMReply, Message, ToolCall, ToolSpec, Usage
 
 
+def _a_blocks(content: Any) -> Any:
+    """Core content blocks -> anthropic content blocks."""
+    if not isinstance(content, list):
+        return content or ""
+    out = []
+    for b in content:
+        if b.get("type") == "image":
+            src = ({"type": "url", "url": b["url"]} if b.get("url") else
+                   {"type": "base64",
+                    "media_type": b.get("media_type", "image/png"),
+                    "data": b.get("data", "")})
+            out.append({"type": "image", "source": src})
+        else:
+            out.append({"type": "text", "text": b.get("text", "")})
+    return out
+
+
 def _to_anthropic(messages: Sequence[Message]) -> tuple[str | None, list[dict[str, Any]]]:
     """-> (system, messages). Tool results coalesce into one user message —
     Anthropic requires all parallel tool_result blocks in a single turn."""
@@ -30,7 +47,10 @@ def _to_anthropic(messages: Sequence[Message]) -> tuple[str | None, list[dict[st
     out: list[dict[str, Any]] = []
     for m in messages:
         if m.role == "system":
-            if m.content:
+            if isinstance(m.content, list):    # blocks: keep the text parts
+                system_parts += [b.get("text", "") for b in m.content
+                                 if b.get("type") != "image"]
+            elif m.content:
                 system_parts.append(m.content)
         elif m.role == "tool" and m.tool_result:
             block = {
@@ -56,7 +76,7 @@ def _to_anthropic(messages: Sequence[Message]) -> tuple[str | None, list[dict[st
                 out.append({"role": "assistant", "content": blocks})
             # else: empty assistant turn (stop before any text) — API rejects ""
         else:
-            out.append({"role": m.role, "content": m.content or ""})
+            out.append({"role": m.role, "content": _a_blocks(m.content)})
     return "\n\n".join(system_parts) or None, out
 
 
@@ -69,8 +89,11 @@ class AnthropicLLM:
         client: httpx.AsyncClient | None = None,
         timeout: float = 600.0,           # thinking turns can run minutes
         max_tokens: int = 64000,
-        **defaults: Any,
-    ):
+        cache: bool = True,               # prompt caching: breakpoints on
+        **defaults: Any,                  # system + last message (~90% input
+    ):                                    # cost cut on long agent runs)
+        # client= is the test seam: when passed, it wins wholesale —
+        # api_key/base_url/timeout are ignored and the key guard is skipped.
         key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         if client is None and not key:
             raise ValueError("no API key: pass api_key= or set ANTHROPIC_API_KEY")
@@ -82,6 +105,7 @@ class AnthropicLLM:
         )
         self.model = model
         self.max_tokens = max_tokens
+        self.cache = cache
         self.defaults = defaults
 
     async def stream(
@@ -100,6 +124,22 @@ class AnthropicLLM:
         if tools:
             payload["tools"] = [{"name": s.name, "description": s.description,
                                  "input_schema": s.parameters} for s in tools]
+        if self.cache:
+            # two ephemeral breakpoints: system (covers tools+system prefix)
+            # and the last message (covers the whole conversation prefix, so
+            # each turn only pays for what's new since the previous one)
+            if system:
+                payload["system"] = [{"type": "text", "text": system,
+                                      "cache_control": {"type": "ephemeral"}}]
+            if msgs:
+                content = msgs[-1]["content"]
+                if isinstance(content, str) and content:
+                    msgs[-1]["content"] = [{"type": "text", "text": content,
+                                            "cache_control": {"type": "ephemeral"}}]
+                elif isinstance(content, list) and content \
+                        and content[-1].get("type") != "thinking":
+                    content[-1] = {**content[-1],
+                                   "cache_control": {"type": "ephemeral"}}
 
         text_parts: list[str] = []
         blocks: dict[int, dict[str, Any]] = {}    # index -> {type, id, name, json}
@@ -242,6 +282,32 @@ if __name__ == "__main__":
         _, dropped = _to_anthropic([Message(role="user", content="x"),
                                     Message(role="assistant")])
         assert len(dropped) == 1                             # empty assistant dropped
+
+        captured: dict[str, Any] = {}
+
+        def capture(req: httpx.Request) -> httpx.Response:
+            captured["body"] = json.loads(req.content)
+            return httpx.Response(200, content=sse,
+                                  headers={"content-type": "text/event-stream"})
+
+        cllm = AnthropicLLM(api_key="t", client=httpx.AsyncClient(
+            transport=httpx.MockTransport(capture), base_url="http://fake"))
+        async for _ in cllm.stream([Message(role="system", content="sys"),
+                                    Message(role="user", content="hi")], []):
+            pass
+        body = captured["body"]
+        assert body["system"] == [{"type": "text", "text": "sys",
+                                   "cache_control": {"type": "ephemeral"}}]
+        assert body["messages"][-1]["content"][-1]["cache_control"] == \
+            {"type": "ephemeral"}
+
+        nllm = AnthropicLLM(api_key="t", cache=False, client=httpx.AsyncClient(
+            transport=httpx.MockTransport(capture), base_url="http://fake"))
+        async for _ in nllm.stream([Message(role="system", content="sys"),
+                                    Message(role="user", content="hi")], []):
+            pass
+        assert captured["body"]["system"] == "sys"                # untouched
+        assert captured["body"]["messages"][-1]["content"] == "hi"
 
         err_t = httpx.MockTransport(lambda req: httpx.Response(
             401, content=b'{"error":{"type":"authentication_error"}}'))

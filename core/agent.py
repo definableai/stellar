@@ -162,12 +162,15 @@ class Agent:
                 await h.emit(StepKind.TEXT, START, {"step": step_index}, sid)
                 reply: LLMReply | None = None
                 partial = False
+                parts: list[str] = []   # for stop-mid-stream synthesis
                 stream = self.llm.stream(list(messages), hctx.tools, **params)
                 try:
                     async for item in stream:
                         if isinstance(item, LLMReply):
                             reply = item
                         elif isinstance(item, LLMDelta) and item.text:
+                            if item.channel == "text":
+                                parts.append(item.text)
                             await h.emit(StepKind.TEXT, DELTA,
                                          {"text": item.text, "channel": item.channel,
                                           "index": item.index}, sid)
@@ -179,18 +182,15 @@ class Agent:
                     if aclose:
                         await aclose()
 
-                if reply is None:  # stopped mid-stream: synthesize from deltas
-                    text = "".join(
-                        e.payload["text"] for e in h._buffer
-                        if e.step_id == sid and e.phase is DELTA
-                        and e.payload["channel"] == "text"
-                    )
+                if reply is None:  # stopped mid-stream: synthesize the partial
                     reply = LLMReply(
-                        message=Message(role="assistant", content=text or None,
+                        message=Message(role="assistant",
+                                        content="".join(parts) or None,
                                         meta={"interrupted": True}),
                         stop_reason="stopped",
                     )
                 usage = ctx.usage = usage + reply.usage
+                ctx.last_usage = reply.usage
                 await h.emit(StepKind.TEXT, END, {
                     "text": reply.message.content,
                     "tool_calls": [c.to_dict() for c in reply.message.tool_calls],

@@ -14,8 +14,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    Agent, LLMDelta, LLMReply, Message, Session, StepKind, StepPhase,
-    ToolCall, tool,
+    Agent, LLMDelta, LLMReply, Message, RunHandle, Session, StepKind,
+    StepPhase, ToolCall, tool,
 )
 
 
@@ -203,6 +203,66 @@ async def test_before_llm_rebind_honored() -> None:
     assert ("user", "[summary]") in seen
 
 
+async def test_partial_survives_tiny_buffer() -> None:
+    old = RunHandle.max_buffer
+    RunHandle.max_buffer = 8   # ring far smaller than the streamed deltas
+    try:
+        agent = Agent(NeverEndingLLM())
+        handle = agent.run("go")
+        n = 0
+        async for e in handle.events():
+            if e.kind is StepKind.TEXT and e.phase is StepPhase.DELTA:
+                n += 1
+                if n >= 20:
+                    handle.stop("test")
+                    break
+        result = await handle
+    finally:
+        RunHandle.max_buffer = old
+    assert result.status == "stopped"
+    # synthesis no longer reads the (capped) buffer: full partial text kept
+    assert result.output.startswith("chunk0 ")
+    assert "chunk19 " in result.output
+
+
+async def test_slow_subscriber_sheds_old_keeps_end() -> None:
+    old = RunHandle.max_queue
+    RunHandle.max_queue = 4
+    try:
+        agent = Agent(NeverEndingLLM())
+        handle = agent.run("go")
+        gen = handle.events()
+        events = [await anext(gen)]     # attach, then stall while it floods
+        for _ in range(200):
+            await asyncio.sleep(0)
+        handle.stop("test")
+        await handle
+        async for e in gen:             # drain what survived
+            events.append(e)
+    finally:
+        RunHandle.max_queue = old
+    seqs = [e.seq for e in events]
+    assert seqs != list(range(seqs[0], seqs[-1] + 1))   # old events shed
+    assert any(e.kind is StepKind.RUN and e.phase is StepPhase.END
+               for e in events)                          # run/end survived
+
+
+async def test_reconnect_drains_tail() -> None:
+    agent = Agent(ScriptedLLM([text_reply("hello world")]))
+    handle = agent.run("go")
+    while handle._seq < 3:          # let events accumulate in the ring
+        await asyncio.sleep(0)
+    gen = handle.events()           # attach mid-run: non-empty snapshot
+    events = [await anext(gen)]     # start replaying...
+    await handle                    # ...run finishes while we're paused
+    async for e in gen:             # must drain the live tail, not drop it
+        events.append(e)
+    assert any(e.kind is StepKind.RUN and e.phase is StepPhase.END
+               for e in events)
+    seqs = [e.seq for e in events]
+    assert seqs == sorted(set(seqs))
+
+
 async def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
@@ -214,6 +274,9 @@ async def main() -> None:
         await test_failing_late_append_never_hangs(d)
         await test_input_batch_atomic()
         await test_before_llm_rebind_honored()
+        await test_partial_survives_tiny_buffer()
+        await test_slow_subscriber_sheds_old_keeps_end()
+        await test_reconnect_drains_tail()
     print("test_agent: all ok")
 
 
