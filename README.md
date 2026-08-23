@@ -20,7 +20,7 @@ internal/             replaceable patterns built ON the core (not in the budget)
 │                     moonshot, retry wrapper, structured extraction
 ├── hooks/            approval (HITL permission gate), compaction (token-aware)
 ├── tools/schema.py   signature + docstring → JSON Schema
-├── subagent.py       as_tool(agent) — agents as tools, events forwarded
+├── subagent.py       subagent() — spawn a child derived from the parent
 ├── worker.py         the long-lived agent: queue → turns → one durable session
 └── mcp.py            MCP client (stdio + streamable HTTP) → core Tools
 
@@ -48,7 +48,7 @@ flowchart LR
     subgraph INTERNAL["internal — patterns, all replaceable"]
         OA["llm adapters"] -.implement.-> LP
         AP["approval / compaction"] -.hook into.-> HK
-        SB["subagent.as_tool"] -.is a.-> TL
+        SB["subagent()"] -.is a.-> TL
         WK["worker.Worker"] -.drives.-> A
         MC["mcp client"] -.produces.-> TL
     end
@@ -169,12 +169,14 @@ await worker.close()             # drains unrun inputs into the log, unanswered
 
 ```python
 lead = Agent(llm, tools=[
-    as_tool(researcher, name="researcher", description="Delegate research"),
+    read, bash,
+    subagent(name="researcher", description="Delegate a research task",
+             system="Research deeply; report findings only."),
     *await mcp_tools(server),     # any MCP server's tools, validated like local ones
-])
+], hooks=[approval_gate(rules, asker)])
 ```
 
-A subagent is just a tool — the child's entire event stream forwards through the parent handle (`tool/delta` events, nesting for grandchildren), stop propagates down, depth is guarded. `mcp.py` speaks stdio and streamable HTTP, survives 1MB tool results, dead servers fail loudly.
+A subagent is just a tool that spawns a child **derived from the running parent**: same LLM (override with `llm=` for a cheaper child), same tools minus itself (`tools=` to narrow or re-enable recursion), and — critically — the same hooks, so the parent's permission gate guards the child's `bash` too. The child's entire event stream forwards through the parent handle (`tool/delta` events, nesting for grandchildren), stop propagates down, depth is guarded. `mcp.py` speaks stdio and streamable HTTP, survives 1MB tool results, dead servers fail loudly.
 
 ## Serving
 

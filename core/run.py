@@ -32,8 +32,7 @@ class RunResult:
     run_id: str
     status: RunStatus
     messages: list[Message]        # the run's final request view + new turns
-                                   # (compaction hooks may have pruned it;
-                                   # the session log keeps the full record)
+                                   # (compacted view; the session log has all)
     output: str | None             # final assistant text (may be partial on stop)
     usage: Usage
     error: ErrorInfo | None = None
@@ -47,6 +46,7 @@ class RunContext:
 
     run_id: str
     handle: "RunHandle"
+    agent: Any = None   # the running Agent — subagents derive from it
     state: dict[str, Any] = field(default_factory=dict)
     usage: Usage = field(default_factory=Usage)
     last_usage: Usage = field(default_factory=Usage)  # most recent LLM step

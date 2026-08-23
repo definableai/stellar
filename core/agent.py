@@ -94,9 +94,9 @@ class Agent:
         else:
             messages = self._build_messages(input, history)
         handle = RunHandle(run_id, self.tracers)
-        # `is not None`, not truthiness: a caller-held dict (even empty) is
-        # shared identity across runs — how workers carry state between turns
-        ctx = RunContext(run_id=handle.run_id, handle=handle,
+        # state: `is not None`, not truthiness — a caller-held dict (even
+        # empty) is shared identity across runs (worker turn scratch)
+        ctx = RunContext(run_id=handle.run_id, handle=handle, agent=self,
                          state=state if state is not None else {})
         merged = {**self.params, **(params or {}),   # dicts deep-merge one level
                   **{k: {**self.params[k], **v} for k, v in (params or {}).items()

@@ -18,7 +18,8 @@ from core import (  # noqa: E402
     StepKind, StepPhase, ToolCall, file_block, hook, image_block, text_block,
     tool, validate_args,
 )
-from internal.subagent import as_tool  # noqa: E402
+from core import ToolResult  # noqa: E402
+from internal.subagent import subagent  # noqa: E402
 
 
 @tool(parameters={"type": "object", "properties": {"x": {"type": "string"}}})
@@ -256,15 +257,23 @@ def sub_call(call_id: str, name: str, prompt: str) -> LLMReply:
         stop_reason="tool_use")
 
 
-async def test_subagent_forwarding() -> None:
-    child = Agent(ScriptedLLM([text_reply("leaf answer")]))
-    parent = Agent(
-        ScriptedLLM([sub_call("c1", "helper", "dig"), text_reply("synth")]),
-        tools=[as_tool(child, name="helper", description="delegate")])
+def _nested_tool_ends(events: list) -> list[dict]:
+    return [e.payload["child"] for e in events
+            if e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
+            and e.payload.get("child", {}).get("kind") == "tool"
+            and e.payload["child"]["phase"] == "end"]
+
+
+async def test_subagent_forwarding_and_llm_inheritance() -> None:
+    llm = ScriptedLLM([sub_call("c1", "helper", "dig"),
+                       text_reply("leaf answer"),   # child's step: same llm
+                       text_reply("synth")])
+    parent = Agent(llm, tools=[subagent(name="helper", description="delegate")])
     handle = parent.run("go")
     events = [e async for e in handle.events()]
     result = await handle
     assert result.status == "completed" and result.output == "synth"
+    assert llm.replies == []           # child consumed the inherited LLM
     # child's stream is visible through the parent handle
     child_kinds = [e.payload["child"]["kind"] for e in events
                    if e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
@@ -277,30 +286,81 @@ async def test_subagent_forwarding() -> None:
 
 
 async def test_subagent_depth_limit() -> None:
-    grand = Agent(ScriptedLLM([text_reply("leaf")]))
-    mid = Agent(
-        ScriptedLLM([sub_call("m1", "sub2", "deeper"), text_reply("mid done")]),
-        tools=[as_tool(grand, name="sub2", description="d", max_depth=1)])
-    parent = Agent(
-        ScriptedLLM([sub_call("p1", "sub1", "deep"), text_reply("parent done")]),
-        tools=[as_tool(mid, name="sub1", description="d", max_depth=1)])
-    handle = parent.run("go")
+    recursive: list = []               # closure: the tool sees itself
+    sub = subagent(name="sub", description="d", tools=recursive, max_depth=1)
+    recursive.append(sub)
+    llm = ScriptedLLM([
+        sub_call("p1", "sub", "deep"),      # parent, depth 0: spawns
+        sub_call("m1", "sub", "deeper"),    # child, depth 1: blocked
+        text_reply("child done"),
+        text_reply("parent done")])
+    handle = Agent(llm, tools=[sub]).run("go")
     events = [e async for e in handle.events()]
     result = await handle
     assert result.status == "completed" and result.output == "parent done"
-    # mid's attempt to go deeper failed as a readable tool error
-    nested_ends = [e.payload["child"] for e in events
-                   if e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
-                   and e.payload.get("child", {}).get("kind") == "tool"
-                   and e.payload["child"]["phase"] == "end"]
-    assert any(c["payload"]["is_error"] and "depth limit" in str(c["payload"]["result"])
-               for c in nested_ends)
+    assert any(c["payload"]["is_error"]
+               and "depth limit" in str(c["payload"]["result"])
+               for c in _nested_tool_ends(events))
+
+
+async def test_subagent_inherits_hooks() -> None:
+    @hook("before_tool")
+    def gate(ctx) -> None:
+        if ctx.call.name == "secret":
+            ctx.result = ToolResult(ctx.call.id, ctx.call.name,
+                                    "denied", is_error=True)
+
+    @tool(parameters={"type": "object", "properties": {}})
+    def secret(ctx) -> str:
+        """Must never run under the gate."""
+        raise AssertionError("gate must deny before execution")
+
+    llm = ScriptedLLM([
+        sub_call("c1", "worker", "try it"),
+        LLMReply(message=Message(role="assistant", tool_calls=[
+            ToolCall("s1", "secret", {})]), stop_reason="tool_use"),
+        text_reply("child gave up"),
+        text_reply("parent done")])
+    parent = Agent(llm, tools=[secret, subagent(name="worker", description="d")],
+                   hooks=[gate])
+    handle = parent.run("go")
+    events = [e async for e in handle.events()]
+    result = await handle
+    assert result.output == "parent done"
+    # the parent's permission gate followed the delegation into the child
+    assert any(c["payload"]["is_error"] and c["payload"]["result"] == "denied"
+               for c in _nested_tool_ends(events))
+
+
+async def test_subagent_system_override() -> None:
+    llm = ScriptedLLM([sub_call("c1", "child", "task"),
+                       text_reply("kid"), text_reply("done")])
+    parent = Agent(llm, system="PARENT SYS",
+                   tools=[subagent(name="child", description="d",
+                                   system="CHILD SYS")])
+    result = await parent.run("go")
+    assert result.output == "done"
+    assert llm.seen[0][0].content == "PARENT SYS"
+    assert llm.seen[1][0].role == "system"
+    assert llm.seen[1][0].content == "CHILD SYS"     # override, not inherit
+
+
+async def test_subagent_max_steps_zero_honored() -> None:
+    llm = ScriptedLLM([sub_call("c1", "kid", "go"), text_reply("parent done")])
+    parent = Agent(llm, tools=[subagent(name="kid", description="d",
+                                        max_steps=0)])
+    result = await parent.run("go")
+    assert result.output == "parent done"
+    # child truncated immediately: zero is a value, not "unset"
+    assert len(llm.seen) == 2          # parent's two steps, no child step
+    tr = next(m.tool_result for m in result.messages if m.role == "tool")
+    assert tr.content.startswith("[truncated]")
 
 
 async def test_subagent_stop_propagates() -> None:
-    child = Agent(NeverEndingLLM())
     parent = Agent(ScriptedLLM([sub_call("c1", "sub", "spin")]),
-                   tools=[as_tool(child, name="sub", description="d")])
+                   tools=[subagent(name="sub", description="d",
+                                   llm=NeverEndingLLM())])
     handle = parent.run("go")
     async for e in handle.events():
         if (e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
@@ -457,8 +517,11 @@ async def main() -> None:
         await test_partial_survives_tiny_buffer()
         await test_slow_subscriber_sheds_old_keeps_end()
         await test_reconnect_drains_tail()
-        await test_subagent_forwarding()
+        await test_subagent_forwarding_and_llm_inheritance()
         await test_subagent_depth_limit()
+        await test_subagent_inherits_hooks()
+        await test_subagent_system_override()
+        await test_subagent_max_steps_zero_honored()
         await test_subagent_stop_propagates()
         await test_send_after_finish_rejected()
         await test_state_shared_by_identity()
