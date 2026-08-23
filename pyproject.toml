@@ -8,5 +8,8 @@ dependencies = [
     "httpx>=0.27",
 ]
 
+[project.optional-dependencies]
+litellm = ["litellm>=1.60"]
+
 [dependency-groups]
 dev = ["hypothesis>=6"]
