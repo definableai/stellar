@@ -128,6 +128,21 @@ def test_append_is_atomic(dir: Path) -> None:
     assert [m.content for m in Session.load(path2).messages()] == ["hi", "ok"]
 
 
+def test_single_writer_lock(dir: Path) -> None:
+    path = dir / "lock.jsonl"
+    s = Session(path)
+    s.append(Message(role="user", content="hi"))
+    try:
+        Session.load(path)
+        raise AssertionError("second writer must be refused")
+    except SessionError:
+        pass
+    s.close()
+    s2 = Session.load(path)    # lock released with close()
+    assert len(s2) == 1
+    s2.close()
+
+
 def test_corruption_is_loud(dir: Path) -> None:
     # corrupt middle line
     path = dir / "d.jsonl"
@@ -178,5 +193,6 @@ if __name__ == "__main__":
         test_unicode_line_separators(d)
         test_torn_mid_codepoint(d)
         test_append_is_atomic(d)
+        test_single_writer_lock(d)
         test_corruption_is_loud(d)
     print("test_session: all ok")

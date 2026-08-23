@@ -85,6 +85,7 @@ class RunHandle:
         )
         self._finished = False
         self._inbox: list[Message] = []         # mid-run steering queue
+        self._inbox_closed = False              # set past the final drain
         self._task: asyncio.Task | None = None  # set by Agent.run()
 
     # ---- stream side -------------------------------------------------
@@ -152,12 +153,16 @@ class RunHandle:
             self._stop_reason = reason
             self._stop.set()
 
-    def send(self, input: "str | Message") -> None:
+    def send(self, input: "str | Message") -> bool:
         """Queue a user message mid-run; the loop picks it up before its
-        next LLM step. Ignored after the run finishes."""
-        if not self._finished:
-            self._inbox.append(Message(role="user", content=input)
-                               if isinstance(input, str) else input)
+        next LLM step (or its final drain). Returns False — input NOT
+        accepted — once the run is finished or past that drain; callers
+        that must never lose input requeue it elsewhere on False."""
+        if self._finished or self._inbox_closed:
+            return False
+        self._inbox.append(Message(role="user", content=input)
+                           if isinstance(input, str) else input)
+        return True
 
     @property
     def stop_requested(self) -> bool:

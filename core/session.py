@@ -23,9 +23,11 @@ Rules:
     * Message content must be JSON-serializable; ``append`` is
       all-or-nothing, so a bad payload fails loudly instead of letting
       memory and disk diverge.
-    * Single writer per file — and one run at a time: two concurrent
-      runs on one session interleave into a provider-invalid transcript.
-      ponytail: no lock, no run guard; Worker (phase 3) serializes runs.
+    * Single writer per file, enforced by an advisory flock on the
+      append handle — a second open (other process or this one) raises.
+      One run at a time within that writer: two concurrent runs on one
+      session interleave into a provider-invalid transcript. ponytail:
+      no run guard; Worker serializes runs.
 """
 
 from __future__ import annotations
@@ -40,7 +42,24 @@ FORMAT_VERSION = 0
 
 
 class SessionError(ValueError):
-    """Corrupt or incompatible session file."""
+    """Corrupt, incompatible, or already-claimed session file."""
+
+
+def _open_locked(p: Path) -> IO[str]:
+    """Append handle holding an exclusive advisory lock: a second writer
+    (any process, or a second load in this one) fails loudly instead of
+    interleaving records. Released by close(). ponytail: no-op where
+    fcntl is missing (Windows)."""
+    f = p.open("a", encoding="utf-8")
+    try:
+        import fcntl
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except ImportError:
+        pass
+    except OSError:
+        f.close()
+        raise SessionError(f"session file locked by another writer: {p}") from None
+    return f
 
 
 class Session:
@@ -55,7 +74,7 @@ class Session:
             if self.path.exists() and self.path.stat().st_size:
                 raise SessionError(f"session file exists, use Session.load(): {self.path}")
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self._file = self.path.open("a", encoding="utf-8")
+            self._file = _open_locked(self.path)
             self._write({"v": FORMAT_VERSION, "id": self.id})
 
     @classmethod
@@ -84,7 +103,7 @@ class Session:
         if torn is not None:  # truncate, or the next append corrupts this line
             with p.open("r+b") as f:
                 f.truncate(len(raw) - len(torn))
-        s._file = p.open("a", encoding="utf-8")
+        s._file = _open_locked(p)
         s._repair()
         return s
 

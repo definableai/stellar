@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
     Agent, LLMDelta, LLMReply, Message, RunHandle, Session, StepKind,
-    StepPhase, ToolCall, tool,
+    StepPhase, ToolCall, as_tool, tool,
 )
 
 
@@ -247,6 +247,94 @@ async def test_slow_subscriber_sheds_old_keeps_end() -> None:
                for e in events)                          # run/end survived
 
 
+def sub_call(call_id: str, name: str, prompt: str) -> LLMReply:
+    return LLMReply(
+        message=Message(role="assistant",
+                        tool_calls=[ToolCall(call_id, name, {"prompt": prompt})]),
+        stop_reason="tool_use")
+
+
+async def test_subagent_forwarding() -> None:
+    child = Agent(ScriptedLLM([text_reply("leaf answer")]))
+    parent = Agent(
+        ScriptedLLM([sub_call("c1", "helper", "dig"), text_reply("synth")]),
+        tools=[as_tool(child, name="helper", description="delegate")])
+    handle = parent.run("go")
+    events = [e async for e in handle.events()]
+    result = await handle
+    assert result.status == "completed" and result.output == "synth"
+    # child's stream is visible through the parent handle
+    child_kinds = [e.payload["child"]["kind"] for e in events
+                   if e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
+                   and "child" in e.payload]
+    assert "text" in child_kinds and "run" in child_kinds
+    # the child's final text became the tool result
+    tool_end = next(e for e in events
+                    if e.kind is StepKind.TOOL and e.phase is StepPhase.END)
+    assert tool_end.payload["result"] == "leaf answer"
+
+
+async def test_subagent_depth_limit() -> None:
+    grand = Agent(ScriptedLLM([text_reply("leaf")]))
+    mid = Agent(
+        ScriptedLLM([sub_call("m1", "sub2", "deeper"), text_reply("mid done")]),
+        tools=[as_tool(grand, name="sub2", description="d", max_depth=1)])
+    parent = Agent(
+        ScriptedLLM([sub_call("p1", "sub1", "deep"), text_reply("parent done")]),
+        tools=[as_tool(mid, name="sub1", description="d", max_depth=1)])
+    handle = parent.run("go")
+    events = [e async for e in handle.events()]
+    result = await handle
+    assert result.status == "completed" and result.output == "parent done"
+    # mid's attempt to go deeper failed as a readable tool error
+    nested_ends = [e.payload["child"] for e in events
+                   if e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
+                   and e.payload.get("child", {}).get("kind") == "tool"
+                   and e.payload["child"]["phase"] == "end"]
+    assert any(c["payload"]["is_error"] and "depth limit" in str(c["payload"]["result"])
+               for c in nested_ends)
+
+
+async def test_subagent_stop_propagates() -> None:
+    child = Agent(NeverEndingLLM())
+    parent = Agent(ScriptedLLM([sub_call("c1", "sub", "spin")]),
+                   tools=[as_tool(child, name="sub", description="d")])
+    handle = parent.run("go")
+    async for e in handle.events():
+        if (e.kind is StepKind.TOOL and e.phase is StepPhase.DELTA
+                and e.payload.get("child", {}).get("kind") == "text"
+                and e.payload["child"]["phase"] == "delta"):
+            handle.stop("user")   # parent stop mid-child-stream
+            break
+    result = await asyncio.wait_for(handle.result(), timeout=2)  # no hang
+    assert result.status == "stopped"
+
+
+async def test_send_after_finish_rejected() -> None:
+    agent = Agent(ScriptedLLM([text_reply("x")]))
+    handle = agent.run("go")
+    await handle
+    assert handle.send("late") is False   # caller knows to requeue
+
+
+async def test_state_shared_by_identity() -> None:
+    @tool(parameters={"type": "object", "properties": {}})
+    def bump(ctx) -> int:
+        """Count runs via shared state."""
+        ctx.run.state["n"] = ctx.run.state.get("n", 0) + 1
+        return ctx.run.state["n"]
+
+    shared: dict = {}                      # empty dict must still be shared
+    for _ in range(2):
+        agent = Agent(ScriptedLLM([
+            LLMReply(message=Message(role="assistant",
+                                     tool_calls=[ToolCall("c", "bump", {})]),
+                     stop_reason="tool_use"),
+            text_reply("done")]), tools=[bump])
+        await agent.run("go", state=shared)
+    assert shared["n"] == 2
+
+
 async def test_reconnect_drains_tail() -> None:
     agent = Agent(ScriptedLLM([text_reply("hello world")]))
     handle = agent.run("go")
@@ -277,6 +365,11 @@ async def main() -> None:
         await test_partial_survives_tiny_buffer()
         await test_slow_subscriber_sheds_old_keeps_end()
         await test_reconnect_drains_tail()
+        await test_subagent_forwarding()
+        await test_subagent_depth_limit()
+        await test_subagent_stop_propagates()
+        await test_send_after_finish_rejected()
+        await test_state_shared_by_identity()
     print("test_agent: all ok")
 
 

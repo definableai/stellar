@@ -93,7 +93,10 @@ class Agent:
         else:
             messages = self._build_messages(input, history)
         handle = RunHandle(run_id, self.tracers)
-        ctx = RunContext(run_id=handle.run_id, handle=handle, state=state or {})
+        # `is not None`, not truthiness: a caller-held dict (even empty) is
+        # shared identity across runs — how workers carry state between turns
+        ctx = RunContext(run_id=handle.run_id, handle=handle,
+                         state=state if state is not None else {})
         merged = {**self.params, **(params or {}),   # dicts deep-merge one level
                   **{k: {**self.params[k], **v} for k, v in (params or {}).items()
                      if isinstance(v, dict) and isinstance(self.params.get(k), dict)}}
@@ -250,6 +253,7 @@ class Agent:
         except Exception as ex:  # a failing append must never hang the handle
             status = "error"
             error = error or ErrorInfo.from_exc(ex, "run", traceback.format_exc(limit=8))
+        h._inbox_closed = True   # sends past this point report unaccepted
         await h.emit(StepKind.RUN, END, {
             "status": status, "steps": steps, "usage": usage.to_dict(),
             "stop_reason": stop_reason,
