@@ -27,13 +27,13 @@ import traceback
 from typing import Any, Iterable, Mapping
 
 from .events import StepKind, StepPhase
-from .hooks import HookFn, HookPoint, Hooks, LLMHookContext, ToolHookContext
+from .hooks import Hook, HookFn, HookPoint, Hooks, LLMHookContext, ToolHookContext
 from .llm import LLM, LLMDelta, LLMReply
-from .run import RunContext, RunHandle, RunResult
+from .run import RunContext, RunHandle, RunResult, RunStatus
 from .session import Session
-from .tools import Tool, ToolCallContext, call_maybe_async
+from .tools import Tool, ToolCallContext, call_maybe_async, validate_args
 from .tracer import Tracer
-from .types import ErrorInfo, Message, ToolResult, Usage, new_id
+from .types import ErrorInfo, Message, ToolCall, ToolResult, Usage, new_id
 
 START, DELTA, END = StepPhase.START, StepPhase.DELTA, StepPhase.END
 
@@ -44,7 +44,8 @@ class Agent:
         llm: LLM,
         *,
         tools: Iterable[Tool] = (),
-        hooks: Hooks | Mapping[HookPoint, Iterable[HookFn]] | None = None,
+        hooks: Hooks | Iterable[Hook]
+        | Mapping[HookPoint, Iterable[HookFn]] | None = None,
         tracers: Iterable[Tracer] = (),
         system: str | None = None,
         max_steps: int = 8,
@@ -106,14 +107,17 @@ class Agent:
 
     # ---- internals -------------------------------------------------------
 
-    def _input_messages(self, input) -> list[Message]:
+    def _input_messages(
+        self, input: str | Message | Iterable[Message]) -> list[Message]:
         if isinstance(input, str):
             return [Message(role="user", content=input)]
         if isinstance(input, Message):
             return [input]
         return list(input)
 
-    def _build_messages(self, input, history) -> list[Message]:
+    def _build_messages(
+        self, input: str | Message | Iterable[Message],
+        history: Iterable[Message] | None) -> list[Message]:
         messages: list[Message] = []
         if self.system:
             messages.append(Message(role="system", content=self.system))
@@ -129,7 +133,7 @@ class Agent:
         run_step = new_id("run")
         usage = Usage()
         output: str | None = None
-        status: str = "completed"
+        status: RunStatus = "completed"
         stop_reason: str | None = None
         error: ErrorInfo | None = None
         steps = 0
@@ -205,7 +209,8 @@ class Agent:
                 hctx.reply = reply.message
                 await self._fire(h, "after_llm", hctx)
                 record(reply.message)
-                output = reply.message.content
+                output = (reply.message.content
+                          if isinstance(reply.message.content, str) else None)
 
                 if h.stop_requested:
                     status, stop_reason = "stopped", h.stop_reason
@@ -215,12 +220,15 @@ class Agent:
 
                 # -- tool steps ---------------------------------------------
                 calls = reply.message.tool_calls
+                bad_args: dict[str, str] = (
+                    reply.message.meta.get("invalid_tool_args") or {})
                 # ponytail: one unsafe tool serializes the whole batch
                 if (self.parallel_tools and len(calls) > 1
                         and all(t is None or t.parallel_safe
                                 for t in (self.tools.get(c.name) for c in calls))):
                     settled = await asyncio.gather(
-                        *(self._exec_tool(h, ctx, c) for c in calls),
+                        *(self._exec_tool(h, ctx, c, malformed=c.id in bad_args)
+                          for c in calls),
                         return_exceptions=True,
                     )
                     # hook failure: fail closed, but only after siblings
@@ -230,7 +238,8 @@ class Agent:
                     tool_msgs = [m for m in settled if isinstance(m, Message)]
                 else:
                     exc = None
-                    tool_msgs = [await self._exec_tool(h, ctx, c) for c in calls]
+                    tool_msgs = [await self._exec_tool(
+                        h, ctx, c, malformed=c.id in bad_args) for c in calls]
                 for m in tool_msgs:
                     record(m)
                 if exc is not None:
@@ -260,12 +269,13 @@ class Agent:
             "error": error.to_dict() if error else None,
         }, run_step)
         h._finish(RunResult(
-            run_id=h.run_id, status=status,  # type: ignore[arg-type]
+            run_id=h.run_id, status=status,
             messages=messages, output=output, usage=usage,
             error=error, stop_reason=stop_reason,
         ))
 
-    async def _exec_tool(self, h: RunHandle, ctx: RunContext, call) -> Message:
+    async def _exec_tool(self, h: RunHandle, ctx: RunContext, call: ToolCall,
+                         *, malformed: bool = False) -> Message:
         """One tool call: start -> before hooks -> exec -> after hooks -> end.
 
         Never raises: failures become ToolResult(is_error=True) so the
@@ -286,11 +296,25 @@ class Agent:
         err: ErrorInfo | None = None
         if tctx.result is None:  # not short-circuited by a hook
             tool = self.tools.get(call.name)
-            if tool is None:
+            problems = ([] if tool is None or malformed or not tool.validate
+                        else validate_args(tool.spec.parameters, call.arguments))
+            if malformed:        # adapter flagged unparseable argument JSON
+                err = ErrorInfo("MalformedArguments",
+                                "invalid or truncated tool-call JSON", "tool")
+                tctx.result = ToolResult(
+                    call.id, call.name,
+                    "Malformed tool arguments (invalid or truncated JSON). "
+                    "Re-issue the call.", is_error=True)
+            elif tool is None:
                 err = ErrorInfo("UnknownTool", f"Unknown tool: {call.name}", "tool")
                 tctx.result = ToolResult(
                     call.id, call.name, err.message, is_error=True
                 )
+            elif problems:       # schema guardrail: readable, model-facing
+                err = ErrorInfo("InvalidArguments", "; ".join(problems), "tool")
+                tctx.result = ToolResult(
+                    call.id, call.name,
+                    f"Invalid arguments: {'; '.join(problems)}", is_error=True)
             else:
                 cctx = ToolCallContext(run=ctx, call=call, emit_delta=emit_delta)
                 exec_task = asyncio.ensure_future(
@@ -328,7 +352,8 @@ class Agent:
         }, sid)
         return Message(role="tool", tool_result=result)
 
-    async def _fire(self, h: RunHandle, point: HookPoint, hctx: Any) -> None:
+    async def _fire(self, h: RunHandle, point: HookPoint,
+                    hctx: LLMHookContext | ToolHookContext) -> None:
         """Fire all hooks at a point; each is its own hook step."""
         for fn in self.hooks.get(point):
             sid = new_id("hook")

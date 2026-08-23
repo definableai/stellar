@@ -4,12 +4,8 @@ Every observable thing the agent does is a *step*. Every step emits
 ``start`` and ``end`` exactly once, and zero or more ``delta`` events
 in between. That is the entire grammar.
 
-kinds:
-    run   the whole run (the "initial step"): one start, one end
-    text  one LLM generation
-    tool  one tool execution
-    hook  one hook invocation
-
+kinds: run (the whole run) / text (one LLM generation) /
+tool (one execution) / hook (one invocation).
 Payload contracts by (kind, phase) — see README for the full table.
 ``seq`` is a per-run monotonic counter: it is the total order of the
 run and the resume cursor for reconnecting consumers.
@@ -53,15 +49,9 @@ class StepEvent:
         return f"step_{self.phase.value}"
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "run_id": self.run_id,
-            "step_id": self.step_id,
-            "kind": self.kind.value,
-            "phase": self.phase.value,
-            "seq": self.seq,
-            "ts": self.ts,
-            "payload": self.payload,
-        }
+        return {"run_id": self.run_id, "step_id": self.step_id,
+                "kind": self.kind.value, "phase": self.phase.value,
+                "seq": self.seq, "ts": self.ts, "payload": self.payload}
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), default=str, ensure_ascii=False)

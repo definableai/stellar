@@ -20,7 +20,8 @@ from typing import Any, AsyncIterator, Sequence
 
 import httpx
 
-from core import LLMDelta, LLMError, LLMReply, Message, ToolCall, ToolSpec, Usage
+from core import (LLMDelta, LLMError, LLMReply, Message, ReplyBuilder,
+                  ToolCall, ToolSpec)
 
 
 def _a_blocks(content: Any) -> Any:
@@ -35,6 +36,12 @@ def _a_blocks(content: Any) -> Any:
                     "media_type": b.get("media_type", "image/png"),
                     "data": b.get("data", "")})
             out.append({"type": "image", "source": src})
+        elif b.get("type") == "file":                  # PDFs and documents
+            src = ({"type": "url", "url": b["url"]} if b.get("url") else
+                   {"type": "base64",
+                    "media_type": b.get("media_type", "application/pdf"),
+                    "data": b.get("data", "")})
+            out.append({"type": "document", "source": src})
         else:
             out.append({"type": "text", "text": b.get("text", "")})
     return out
@@ -141,10 +148,8 @@ class AnthropicLLM:
                     content[-1] = {**content[-1],
                                    "cache_control": {"type": "ephemeral"}}
 
-        text_parts: list[str] = []
-        blocks: dict[int, dict[str, Any]] = {}    # index -> {type, id, name, json}
-        finish: str | None = None
-        usage = Usage()
+        b = ReplyBuilder()
+        thinking: dict[int, dict[str, str]] = {}  # index -> {thinking, sig}
 
         async with self.client.stream("POST", "/messages", json=payload) as r:
             if r.status_code >= 400:
@@ -161,60 +166,41 @@ class AnthropicLLM:
                     raise LLMError(status, json.dumps(err))
                 elif t == "message_start":
                     u = (ev.get("message") or {}).get("usage") or {}
-                    usage.input_tokens = (u.get("input_tokens", 0)
-                                          + u.get("cache_creation_input_tokens", 0)
-                                          + u.get("cache_read_input_tokens", 0))
+                    b.usage(input_tokens=(u.get("input_tokens", 0)
+                            + u.get("cache_creation_input_tokens", 0)
+                            + u.get("cache_read_input_tokens", 0)))
                 elif t == "content_block_start":
                     cb = ev.get("content_block") or {}
-                    blocks[ev["index"]] = {"type": cb.get("type"),
-                                           "id": cb.get("id"), "name": cb.get("name"),
-                                           "json": "", "thinking": "", "sig": ""}
+                    if cb.get("type") == "tool_use":
+                        b.tool_call(ev["index"], id=cb.get("id") or "",
+                                    name=cb.get("name") or "")
                 elif t == "content_block_delta":
                     d = ev.get("delta") or {}
-                    slot = blocks.setdefault(ev["index"], {   # tolerate orphan delta
-                        "type": None, "id": None, "name": None,
-                        "json": "", "thinking": "", "sig": ""})
+                    slot = thinking.setdefault(ev["index"],
+                                               {"thinking": "", "sig": ""})
                     if d.get("type") == "text_delta" and d.get("text"):
-                        text_parts.append(d["text"])
-                        yield LLMDelta(text=d["text"])
+                        yield b.text(d["text"])
                     elif d.get("type") == "thinking_delta" and d.get("thinking"):
                         slot["thinking"] += d["thinking"]
-                        yield LLMDelta(text=d["thinking"], channel="reasoning")
+                        yield b.reasoning(d["thinking"])
                     elif d.get("type") == "signature_delta":
                         slot["sig"] += d.get("signature", "")
                     elif d.get("type") == "input_json_delta" and d.get("partial_json"):
-                        slot["json"] += d["partial_json"]
-                        yield LLMDelta(text=d["partial_json"], channel="tool_args",
-                                       index=ev["index"])
+                        yield b.tool_args(ev["index"], d["partial_json"])
                 elif t == "message_delta":
-                    finish = (ev.get("delta") or {}).get("stop_reason") or finish
+                    b.finish((ev.get("delta") or {}).get("stop_reason"))
                     u = ev.get("usage") or {}
-                    usage.output_tokens = u.get("output_tokens", usage.output_tokens)
+                    if u.get("output_tokens") is not None:
+                        b.usage(output_tokens=u["output_tokens"])
 
-        tool_calls = []
-        for _, b in sorted(blocks.items()):
-            if b["type"] != "tool_use":
-                continue
-            try:
-                args = json.loads(b["json"] or "{}")
-            except json.JSONDecodeError:
-                continue    # truncated by max_tokens — drop the incomplete call
-            tool_calls.append(ToolCall(id=b["id"], name=b["name"], arguments=args))
         # ponytail: redacted_thinking blocks not round-tripped; add if hit
         thinking_blocks = [
-            {"type": "thinking", "thinking": b["thinking"], "signature": b["sig"]}
-            for _, b in sorted(blocks.items())
-            if b["type"] == "thinking" and b["thinking"]
+            {"type": "thinking", "thinking": s["thinking"], "signature": s["sig"]}
+            for _, s in sorted(thinking.items()) if s["thinking"]
         ]
-        yield LLMReply(
-            message=Message(role="assistant",
-                            content="".join(text_parts) or None,
-                            tool_calls=tool_calls,
-                            meta={"anthropic_thinking": thinking_blocks}
-                            if thinking_blocks else {}),
-            usage=usage,
-            stop_reason=finish or "end",
-        )
+        if thinking_blocks:
+            b.meta["anthropic_thinking"] = thinking_blocks
+        yield b.reply()
 
 
 if __name__ == "__main__":

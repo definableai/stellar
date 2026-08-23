@@ -1,7 +1,7 @@
 """Context compaction — a before_llm hook that keeps the transcript small.
 
-    hooks.add("before_llm", compaction(max_chars=400_000, keep_last=8,
-                                       summarizer=OpenAILLM(model="gpt-4o-mini")))
+    agent = Agent(llm, hooks=[compaction(max_tokens=100_000, keep_last=8,
+                                         summarizer=OpenAILLM(model="gpt-4o-mini"))])
 
 When the serialized transcript exceeds ``max_chars`` (chars ~ 4x tokens —
 deliberately tokenizer-free), everything between the leading system
@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from core import LLMReply, Message, Usage
+from core import Hook, LLMReply, Message, Usage
 
 
 def _size(messages: list[Message]) -> int:
@@ -83,7 +83,7 @@ def compaction(max_chars: int = 400_000, keep_last: int = 8,
                                   content=f"[Conversation so far]\n{summary}",
                                   meta={"compacted": len(middle)})]
 
-    return hook
+    return Hook("before_llm", hook)
 
 
 if __name__ == "__main__":
@@ -116,12 +116,12 @@ if __name__ == "__main__":
         # under threshold: untouched
         msgs = transcript(2)
         before = list(msgs)
-        await compaction(max_chars=1_000_000)(Ctx(msgs))
+        await compaction(max_chars=1_000_000).fn(Ctx(msgs))
         assert msgs == before
 
         # over threshold, no summarizer: dropped with marker
         msgs = transcript(20)
-        await compaction(max_chars=5_000, keep_last=6)(Ctx(msgs))
+        await compaction(max_chars=5_000, keep_last=6).fn(Ctx(msgs))
         assert msgs[0].role == "system"
         assert "[Conversation so far]" in msgs[1].content
         assert msgs[1].meta["compacted"] > 0
@@ -143,19 +143,19 @@ if __name__ == "__main__":
 
         msgs = transcript(20)
         await compaction(max_chars=5_000, keep_last=4,
-                         summarizer=Summarizer())(Ctx(msgs))
+                         summarizer=Summarizer()).fn(Ctx(msgs))
         assert "user asked 0..n; answered" in msgs[1].content
 
         # token threshold: measured usage decides, char size ignored
         msgs = transcript(20)
-        await compaction(max_tokens=1_000, keep_last=4)(Ctx(msgs, Run(50_000)))
+        await compaction(max_tokens=1_000, keep_last=4).fn(Ctx(msgs, Run(50_000)))
         assert msgs[1].meta.get("compacted")
         msgs = transcript(20)
-        await compaction(max_tokens=10**9, keep_last=4)(Ctx(msgs, Run(500)))
+        await compaction(max_tokens=10**9, keep_last=4).fn(Ctx(msgs, Run(500)))
         assert not any(m.meta.get("compacted") for m in msgs)
         # unmeasured (first step): falls back to chars/4 estimate
         msgs = transcript(20)
-        await compaction(max_tokens=1_000, keep_last=4)(Ctx(msgs, Run(0)))
+        await compaction(max_tokens=1_000, keep_last=4).fn(Ctx(msgs, Run(0)))
         assert msgs[1].meta.get("compacted")
 
         # end to end: hook wired into a real Agent run

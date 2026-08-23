@@ -29,7 +29,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from .tools import Tool, ToolCallContext, ToolSpec
+from core import Tool, ToolCallContext, ToolSpec
 
 _PROMPT_SCHEMA = {
     "type": "object",

@@ -31,11 +31,8 @@ class ConsoleTracer:
     async def on_event(self, event: StepEvent) -> None:
         p = event.payload
         brief = {k: p[k] for k in ("name", "point", "hook", "status", "text") if k in p}
-        print(
-            f"[{event.seq:>3}] {event.kind.value}/{event.phase.value:<5} "
-            f"{event.step_id} {brief}",
-            file=self.stream,
-        )
+        print(f"[{event.seq:>3}] {event.kind.value}/{event.phase.value:<5} "
+              f"{event.step_id} {brief}", file=self.stream)
 
 
 class JsonlTracer:

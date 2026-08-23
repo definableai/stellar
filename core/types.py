@@ -8,13 +8,65 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import asdict, dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, NotRequired, TypedDict
 
 Role = Literal["system", "user", "assistant", "tool"]
 
 
 def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+# ---- content blocks ---------------------------------------------------
+# The input vocabulary: what a Message.content list may hold. Plain dicts
+# on the wire (serializable, hackable); TypedDicts + constructors give
+# adapter authors and tool writers the full picture.
+
+class TextBlock(TypedDict):
+    type: Literal["text"]
+    text: str
+
+
+class ImageBlock(TypedDict):
+    type: Literal["image"]
+    url: NotRequired[str]          # either a URL...
+    media_type: NotRequired[str]   # ...or base64 data + its media type
+    data: NotRequired[str]
+
+
+class FileBlock(TypedDict):
+    type: Literal["file"]          # PDFs, docs — provider willing
+    media_type: str
+    url: NotRequired[str]
+    data: NotRequired[str]         # base64
+    name: NotRequired[str]
+
+
+Block = TextBlock | ImageBlock | FileBlock
+
+
+def text_block(text: str) -> TextBlock:
+    return {"type": "text", "text": text}
+
+
+def image_block(*, url: str | None = None, data: str | None = None,
+                media_type: str = "image/png") -> ImageBlock:
+    if url:
+        return {"type": "image", "url": url}
+    return {"type": "image", "media_type": media_type, "data": data or ""}
+
+
+def file_block(*, url: str | None = None, data: str | None = None,
+               media_type: str = "application/pdf",
+               name: str | None = None) -> FileBlock:
+    b: FileBlock = {"type": "file", "media_type": media_type}
+    if url:
+        b["url"] = url
+    else:
+        b["data"] = data or ""
+    if name:
+        b["name"] = name
+    return b
 
 
 @dataclass
@@ -67,10 +119,12 @@ class Message:
 
     - assistant messages may carry ``tool_calls``
     - tool messages carry exactly one ``tool_result``
+    - ``content`` is a string, or a list of Blocks for multimodal input —
+      build them with ``text_block`` / ``image_block`` / ``file_block``
     """
 
     role: Role
-    content: str | None = None
+    content: str | list[Block] | list[dict[str, Any]] | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     tool_result: ToolResult | None = None
     meta: dict[str, Any] = field(default_factory=dict)

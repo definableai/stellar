@@ -14,9 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    Agent, LLMDelta, LLMReply, Message, RunHandle, Session, StepKind,
-    StepPhase, ToolCall, as_tool, tool,
+    Agent, LLMDelta, LLMReply, Message, ReplyBuilder, RunHandle, Session,
+    StepKind, StepPhase, ToolCall, file_block, hook, image_block, text_block,
+    tool, validate_args,
 )
+from internal.subagent import as_tool  # noqa: E402
 
 
 @tool(parameters={"type": "object", "properties": {"x": {"type": "string"}}})
@@ -351,6 +353,96 @@ async def test_reconnect_drains_tail() -> None:
     assert seqs == sorted(set(seqs))
 
 
+def test_replybuilder() -> None:
+    b = ReplyBuilder()
+    assert b.text("Hel").text == "Hel"
+    b.text("lo")
+    b.tool_call(0, id="c1", name="ad")
+    b.tool_call(0, name="d")                  # name fragments concatenate
+    b.tool_args(0, '{"a": ')
+    b.tool_args(0, "2}")
+    b.tool_call(1, name="bad")
+    b.tool_args(1, '{"x": tru')               # truncated JSON
+    b.usage(input_tokens=7, output_tokens=3)
+    b.finish("tool_use")
+    r = b.reply()
+    assert r.message.content == "Hello"
+    assert r.message.tool_calls[0] == ToolCall("c1", "add", {"a": 2})
+    bad = r.message.tool_calls[1]
+    assert bad.arguments == {} and bad.name == "bad"
+    assert r.message.meta["invalid_tool_args"] == {bad.id: '{"x": tru'}
+    assert (r.usage.input_tokens, r.usage.output_tokens) == (7, 3)
+    assert r.stop_reason == "tool_use"
+
+
+def test_validate_args() -> None:
+    schema = {"type": "object",
+              "properties": {"path": {"type": "string"},
+                             "limit": {"type": "integer"},
+                             "mode": {"enum": ["r", "w"]},
+                             "tags": {"type": "array",
+                                      "items": {"type": "string"}}},
+              "required": ["path"]}
+    assert validate_args(schema, {"path": "/x", "limit": 3, "mode": "r",
+                                  "tags": ["a"]}) == []
+    problems = validate_args(schema, {"limit": True, "mode": "x",
+                                      "tags": ["a", 1], "junk": 0})
+    text = "; ".join(problems)
+    assert "missing required argument: 'path'" in text
+    assert "limit: expected integer, got bool" in text
+    assert "mode: expected one of" in text
+    assert "tags: [1]: expected string" in text
+    assert "unknown argument: 'junk'" in text
+
+
+def test_blocks() -> None:
+    assert text_block("hi") == {"type": "text", "text": "hi"}
+    assert image_block(url="http://x/i.png") == {"type": "image",
+                                                 "url": "http://x/i.png"}
+    assert image_block(data="QUJD")["data"] == "QUJD"
+    f = file_block(data="QUJD", name="doc.pdf")
+    assert f["type"] == "file" and f["media_type"] == "application/pdf"
+    assert f["name"] == "doc.pdf"
+
+
+async def test_invalid_args_reach_model_readably() -> None:
+    @tool(parameters={"type": "object",
+                      "properties": {"path": {"type": "string"}},
+                      "required": ["path"]})
+    def read(ctx, path: str = "") -> str:
+        """Read."""
+        raise AssertionError("handler must not run on invalid args")
+
+    # bad-typed args from the model
+    r1 = await Agent(ScriptedLLM([
+        LLMReply(message=Message(role="assistant", tool_calls=[
+            ToolCall("c1", "read", {"path": 7})]), stop_reason="tool_use"),
+        text_reply("done")]), tools=[read]).run("go")
+    tr = next(m.tool_result for m in r1.messages if m.role == "tool")
+    assert tr.is_error and "expected string" in tr.content
+
+    # adapter-flagged malformed JSON (ReplyBuilder policy)
+    r2 = await Agent(ScriptedLLM([
+        LLMReply(message=Message(role="assistant", tool_calls=[
+            ToolCall("c2", "read", {})],
+            meta={"invalid_tool_args": {"c2": '{"path": "/tm'}}),
+            stop_reason="tool_use"),
+        text_reply("done")]), tools=[read]).run("go")
+    tr2 = next(m.tool_result for m in r2.messages if m.role == "tool")
+    assert tr2.is_error and "Malformed" in tr2.content
+
+
+async def test_hook_decorator_dx() -> None:
+    @hook("before_llm")
+    def inject(ctx) -> None:
+        ctx.messages.append(Message(role="user", content="[injected]"))
+
+    llm = ScriptedLLM([text_reply("ok")])
+    result = await Agent(llm, hooks=[inject]).run("go")
+    assert result.status == "completed"
+    assert llm.seen[0][-1].content == "[injected]"
+
+
 async def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
@@ -370,6 +462,11 @@ async def main() -> None:
         await test_subagent_stop_propagates()
         await test_send_after_finish_rejected()
         await test_state_shared_by_identity()
+        test_replybuilder()
+        test_validate_args()
+        test_blocks()
+        await test_invalid_args_reach_model_readably()
+        await test_hook_decorator_dx()
     print("test_agent: all ok")
 
 

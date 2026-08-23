@@ -31,11 +31,8 @@ from .events import StepEvent
 async def sse(events: AsyncIterator[StepEvent]) -> AsyncIterator[str]:
     """Serialize events as Server-Sent Events frames."""
     async for event in events:
-        yield (
-            f"id: {event.seq}\n"
-            f"event: {event.name}\n"
-            f"data: {event.to_json()}\n\n"
-        )
+        yield (f"id: {event.seq}\nevent: {event.name}\n"
+               f"data: {event.to_json()}\n\n")
     yield "event: done\ndata: {}\n\n"
 
 

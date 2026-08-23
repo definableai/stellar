@@ -2,12 +2,13 @@
 
 from .agent import Agent
 from .events import StepEvent, StepKind, StepPhase
-from .hooks import HookPoint, Hooks, LLMHookContext, ToolHookContext
-from .llm import LLM, LLMDelta, LLMError, LLMReply
+from .hooks import Hook, HookPoint, Hooks, LLMHookContext, ToolHookContext, hook
+from .llm import LLM, Channel, LLMDelta, LLMError, LLMReply, ReplyBuilder
 from .run import RunContext, RunHandle, RunResult, RunStatus
 from .session import Session, SessionError
-from .subagent import as_tool
-from .tools import Tool, ToolCallContext, ToolSpec, tool
+from .tools import Tool, ToolCallContext, ToolSpec, tool, validate_args
 from .tracer import ConsoleTracer, JsonlTracer, Tracer
 from .transport import sse, ws_frames
-from .types import ErrorInfo, Message, ToolCall, ToolResult, Usage, new_id
+from .types import (Block, ErrorInfo, FileBlock, ImageBlock, Message,
+                    TextBlock, ToolCall, ToolResult, Usage, file_block,
+                    image_block, new_id, text_block)
