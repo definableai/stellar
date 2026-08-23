@@ -98,9 +98,9 @@ with Session("task.jsonl") as s:          # or Session.load() to continue
 Try it on the Claude Code replica:
 
 ```
-uv run python -m examples.cc.cc --session cc.jsonl "refactor the parser"
+uv run python -m examples.cc.cc --session 7b2f "refactor the parser"
 ^C  (or kill -9 it)
-uv run python -m examples.cc.cc --session cc.jsonl "continue"   # picks up where it died
+uv run python -m examples.cc.cc --session 7b2f "continue"   # picks up where it died
 ```
 
 ## The extension seams

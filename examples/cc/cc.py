@@ -22,9 +22,12 @@ text-only, so ``pages`` is ignored and binary files error out.
 
     export OPENAI_API_KEY=...
     uv run python -m examples.cc.cc "add a healthcheck route to app.py"
-    uv run python -m examples.cc.cc --session cc.jsonl "big refactor task"
-    uv run python -m examples.cc.cc --session cc.jsonl      # REPL (Worker)
+    uv run python -m examples.cc.cc --session 7b2f "big refactor task"
+    uv run python -m examples.cc.cc --session 7b2f          # REPL (Worker)
     uv run python -m examples.cc.cc selfcheck               # no network
+
+``--session`` takes a plain id (any slug you like); the log lives at
+``.cc-sessions/<id>.jsonl`` under the cwd.
 
 With ``--session`` the whole conversation is durable: Ctrl-C stops the
 run gracefully (partial reply persisted), kill -9 loses at most the
@@ -236,12 +239,16 @@ def build(model: str = "gpt-5.6-sol", tracers: Any = (), **params: Any) -> Agent
     )
 
 
-def _open_session(path: str | None) -> Session:
-    if path is None:
+SESSIONS_DIR = Path(".cc-sessions")             # <cwd>/.cc-sessions/<id>.jsonl
+
+
+def _open_session(sid: str | None) -> Session:
+    if sid is None:
         return Session()                        # in-memory: no resume
-    if Path(path).exists():
+    path = SESSIONS_DIR / f"{sid}.jsonl"
+    if path.exists():
         return Session.load(path)               # repair + continue
-    return Session(path)
+    return Session(path, id=sid)
 
 
 async def main(prompt: str, session_path: str | None = None) -> None:
@@ -405,6 +412,19 @@ async def _selfcheck() -> None:
             "user", "assistant", "tool", "user", "assistant"]
         assert "\ta = 9" in logged[2].tool_result.content   # history intact
 
+        # --session takes an id, not a path
+        global SESSIONS_DIR
+        old_dir, SESSIONS_DIR = SESSIONS_DIR, Path(d) / "sessions"
+        try:
+            with _open_session("task-1") as s:
+                s.append(Message(role="user", content="hi"))
+            assert (Path(d) / "sessions" / "task-1.jsonl").exists()
+            with _open_session("task-1") as s3:      # same id resumes
+                assert len(s3) == 1 and s3.id == "task-1"
+            assert len(_open_session(None)) == 0     # in-memory
+        finally:
+            SESSIONS_DIR = old_dir
+
     print("cc replica self-check ok")
 
 
@@ -414,7 +434,7 @@ if __name__ == "__main__":
     if "--session" in args:
         i = args.index("--session")
         if i + 1 >= len(args):
-            sys.exit("usage: --session <path.jsonl> [prompt]")
+            sys.exit("usage: --session <id> [prompt]")
         session = args[i + 1]
         del args[i:i + 2]
     prompt = " ".join(args)
