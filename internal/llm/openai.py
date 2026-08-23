@@ -46,52 +46,60 @@ from typing import Any, AsyncIterator, Sequence
 import httpx
 
 from core import (LLMDelta, LLMError, LLMReply, Message, ReplyBuilder,
-                  ToolCall, ToolSpec)
+                  ToolCall, ToolResult, ToolSpec)
+from internal.llm.common import data_url, dump_result, map_blocks
+
+# ---- request: core -> wire (chat completions) -------------------------
+
+
+def _file_part(b: dict[str, Any]) -> dict[str, Any]:
+    """chat completions takes file bytes (data URL) or a file_id — it
+    cannot fetch URLs; failing loud beats sending an empty payload."""
+    if b.get("url"):
+        raise ValueError("chat completions cannot fetch file URLs — pass "
+                         "base64 data, or upload and use a file_id")
+    return {"type": "file", "file": {"filename": b.get("name", "file"),
+                                     "file_data": data_url(b, "application/pdf")}}
 
 
 def _blocks(content: Any) -> Any:
-    """Core content blocks -> chat-completions content parts."""
-    if not isinstance(content, list):
-        return content or ""
-    out = []
-    for b in content:
-        if b.get("type") == "image":
-            url = b.get("url") or (f"data:{b.get('media_type', 'image/png')};"
-                                   f"base64,{b.get('data', '')}")
-            out.append({"type": "image_url", "image_url": {"url": url}})
-        elif b.get("type") == "file":
-            out.append({"type": "file", "file": {
-                "filename": b.get("name", "file"),
-                "file_data": f"data:{b.get('media_type', 'application/pdf')};"
-                             f"base64,{b.get('data', '')}"}})
-        else:
-            out.append({"type": "text", "text": b.get("text", "")})
-    return out
+    return map_blocks(
+        content,
+        text=lambda b: {"type": "text", "text": b.get("text", "")},
+        image=lambda b: {"type": "image_url",
+                         "image_url": {"url": data_url(b, "image/png")}},
+        file=_file_part,
+    )
+
+
+def _result_msg(tr: ToolResult) -> dict[str, Any]:
+    """Tool results are their own role="tool" messages, keyed by call id."""
+    return {"role": "tool", "tool_call_id": tr.call_id,
+            "content": dump_result(tr.content)}
+
+
+def _assistant_msg(m: Message) -> dict[str, Any]:
+    """Tool calls ride ON the assistant message, arguments as JSON text."""
+    return {"role": "assistant", "content": m.content,
+            "tool_calls": [{"id": c.id, "type": "function",
+                            "function": {"name": c.name,
+                                         "arguments": json.dumps(c.arguments)}}
+                           for c in m.tool_calls]}
 
 
 def _to_openai(messages: Sequence[Message]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for m in messages:
         if m.role == "tool" and m.tool_result:
-            out.append({
-                "role": "tool",
-                "tool_call_id": m.tool_result.call_id,
-                "content": json.dumps(m.tool_result.content, default=str),
-            })
+            out.append(_result_msg(m.tool_result))
         elif m.role == "assistant" and m.tool_calls:
-            out.append({
-                "role": "assistant",
-                "content": m.content,
-                "tool_calls": [{
-                    "id": c.id,
-                    "type": "function",
-                    "function": {"name": c.name,
-                                 "arguments": json.dumps(c.arguments)},
-                } for c in m.tool_calls],
-            })
+            out.append(_assistant_msg(m))
         else:
             out.append({"role": m.role, "content": _blocks(m.content)})
     return out
+
+
+# ---- adapter: chat completions ----------------------------------------
 
 
 class OpenAILLM:
@@ -161,9 +169,10 @@ class OpenAILLM:
                     yield b.reasoning(delta["reasoning_content"])
                 if delta.get("content"):
                     yield b.text(delta["content"])
-                for tc in delta.get("tool_calls") or []:
-                    # some OpenAI-compatible proxies omit "index" (single call)
-                    idx = tc.get("index", 0)
+                for i, tc in enumerate(delta.get("tool_calls") or []):
+                    # some proxies omit "index" — fall back to position in
+                    # the delta so parallel calls don't merge into one slot
+                    idx = tc.get("index", i)
                     fn = tc.get("function") or {}
                     b.tool_call(idx, id=tc.get("id") or "",
                                 name=fn.get("name") or "")
@@ -172,42 +181,43 @@ class OpenAILLM:
         yield b.reply()
 
 
+# ---- request: core -> wire (responses) --------------------------------
+
+
 def _r_blocks(content: Any) -> Any:
-    """Core content blocks -> responses-API input parts."""
-    if not isinstance(content, list):
-        return content or ""
-    out = []
-    for b in content:
-        if b.get("type") == "image":
-            url = b.get("url") or (f"data:{b.get('media_type', 'image/png')};"
-                                   f"base64,{b.get('data', '')}")
-            out.append({"type": "input_image", "image_url": url})
-        elif b.get("type") == "file":
-            out.append({"type": "input_file",
-                        "filename": b.get("name", "file"),
-                        "file_data": f"data:{b.get('media_type', 'application/pdf')};"
-                                     f"base64,{b.get('data', '')}"})
-        else:
-            out.append({"type": "input_text", "text": b.get("text", "")})
-    return out
+    return map_blocks(
+        content,
+        text=lambda b: {"type": "input_text", "text": b.get("text", "")},
+        image=lambda b: {"type": "input_image",
+                         "image_url": data_url(b, "image/png")},
+        file=lambda b: ({"type": "input_file", "file_url": b["url"]}
+                        if b.get("url") else
+                        {"type": "input_file", "filename": b.get("name", "file"),
+                         "file_data": data_url(b, "application/pdf")}),
+    )
 
 
 def _to_responses(messages: Sequence[Message]) -> list[dict[str, Any]]:
+    """Responses flattens: tool calls and results are TOP-LEVEL typed
+    items, not fields on messages."""
     items: list[dict[str, Any]] = []
     for m in messages:
         if m.role == "tool" and m.tool_result:
             items.append({"type": "function_call_output",
                           "call_id": m.tool_result.call_id,
-                          "output": json.dumps(m.tool_result.content, default=str)})
+                          "output": dump_result(m.tool_result.content)})
         elif m.role == "assistant" and m.tool_calls:
             if m.content:
                 items.append({"role": "assistant", "content": m.content})
-            for c in m.tool_calls:
-                items.append({"type": "function_call", "call_id": c.id,
-                              "name": c.name, "arguments": json.dumps(c.arguments)})
+            items += [{"type": "function_call", "call_id": c.id, "name": c.name,
+                       "arguments": json.dumps(c.arguments)}
+                      for c in m.tool_calls]
         else:
             items.append({"role": m.role, "content": _r_blocks(m.content)})
     return items
+
+
+# ---- adapter: responses -----------------------------------------------
 
 
 class OpenAIResponsesLLM(OpenAILLM):
@@ -281,6 +291,18 @@ if __name__ == "__main__":
     import asyncio
 
     async def _selfcheck() -> None:
+        from core import file_block
+
+        try:
+            _blocks([file_block(url="http://x/d.pdf")])
+            raise AssertionError("chat file URL must raise")
+        except ValueError:
+            pass
+        assert _blocks([file_block(data="QUJD")])[0]["file"][
+            "file_data"].startswith("data:application/pdf")
+        assert _r_blocks([file_block(url="http://x/d.pdf")]) == [
+            {"type": "input_file", "file_url": "http://x/d.pdf"}]
+
         sse_body = b"".join([
             b'data: {"choices":[{"delta":{"reasoning_content":"hmm"},"finish_reason":null}]}\n\n',
             b'data: {"choices":[{"delta":{"content":"Hel"},"finish_reason":null}]}\n\n',

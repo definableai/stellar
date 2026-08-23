@@ -17,7 +17,9 @@ core/                 the heart — 1500 lines exactly, stdlib only, py.typed
 
 internal/             replaceable patterns built ON the core (not in the budget)
 ├── llm/              openai (chat + responses), anthropic (+ prompt caching),
-│                     moonshot, retry wrapper, structured extraction
+│                     litellm (100+ providers, optional dep), moonshot,
+│                     retry wrapper, structured extraction; common.py holds
+│                     the 3-transformation adapter recipe
 ├── hooks/            approval (HITL permission gate), compaction (token-aware)
 ├── tools/schema.py   signature + docstring → JSON Schema
 ├── subagent.py       subagent() — spawn a child derived from the parent

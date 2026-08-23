@@ -21,70 +21,85 @@ from typing import Any, AsyncIterator, Sequence
 import httpx
 
 from core import (LLMDelta, LLMError, LLMReply, Message, ReplyBuilder,
-                  ToolCall, ToolSpec)
+                  ToolCall, ToolResult, ToolSpec)
+from internal.llm.common import dump_result, map_blocks
+
+# ---- request: core -> wire --------------------------------------------
 
 
-def _a_blocks(content: Any) -> Any:
-    """Core content blocks -> anthropic content blocks."""
-    if not isinstance(content, list):
-        return content or ""
-    out = []
-    for b in content:
-        if b.get("type") == "image":
-            src = ({"type": "url", "url": b["url"]} if b.get("url") else
-                   {"type": "base64",
-                    "media_type": b.get("media_type", "image/png"),
-                    "data": b.get("data", "")})
-            out.append({"type": "image", "source": src})
-        elif b.get("type") == "file":                  # PDFs and documents
-            src = ({"type": "url", "url": b["url"]} if b.get("url") else
-                   {"type": "base64",
-                    "media_type": b.get("media_type", "application/pdf"),
-                    "data": b.get("data", "")})
-            out.append({"type": "document", "source": src})
-        else:
-            out.append({"type": "text", "text": b.get("text", "")})
-    return out
+def _source(b: dict[str, Any], default_media: str) -> dict[str, Any]:
+    """url or base64 source — images and documents share the shape."""
+    if b.get("url"):
+        return {"type": "url", "url": b["url"]}
+    return {"type": "base64", "media_type": b.get("media_type", default_media),
+            "data": b.get("data", "")}
+
+
+def _blocks(content: Any) -> Any:
+    return map_blocks(
+        content,
+        text=lambda b: {"type": "text", "text": b.get("text", "")},
+        image=lambda b: {"type": "image", "source": _source(b, "image/png")},
+        file=lambda b: {"type": "document",          # PDFs and documents
+                        "source": _source(b, "application/pdf")},
+    )
+
+
+def _take_system(m: Message, parts: list[str]) -> None:
+    """System is a top-level request field, not a message; block content
+    keeps its text parts only."""
+    if isinstance(m.content, list):
+        parts += [b.get("text", "") for b in m.content
+                  if b.get("type") != "image"]
+    elif m.content:
+        parts.append(m.content)
+
+
+def _add_result(out: list[dict[str, Any]], tr: ToolResult) -> None:
+    """Anthropic requires ALL parallel tool_result blocks coalesced into
+    ONE user turn — consecutive results append to the same message."""
+    block = {"type": "tool_result", "tool_use_id": tr.call_id,
+             "content": dump_result(tr.content),
+             **({"is_error": True} if tr.is_error else {})}
+    last = out[-1] if out else None
+    if (last and last["role"] == "user" and isinstance(last["content"], list)
+            and last["content"]
+            and last["content"][-1].get("type") == "tool_result"):
+        last["content"].append(block)
+    else:
+        out.append({"role": "user", "content": [block]})
+
+
+def _add_assistant(out: list[dict[str, Any]], m: Message) -> None:
+    """Thinking blocks echo back unchanged and FIRST (required when
+    thinking + tool use continue on the same model); an empty assistant
+    turn is dropped — the API rejects ""."""
+    blocks: list[dict[str, Any]] = list(m.meta.get("anthropic_thinking", []))
+    if m.content:
+        blocks.append({"type": "text", "text": m.content})
+    blocks += [{"type": "tool_use", "id": c.id, "name": c.name,
+                "input": c.arguments} for c in m.tool_calls]
+    if blocks:
+        out.append({"role": "assistant", "content": blocks})
 
 
 def _to_anthropic(messages: Sequence[Message]) -> tuple[str | None, list[dict[str, Any]]]:
-    """-> (system, messages). Tool results coalesce into one user message —
-    Anthropic requires all parallel tool_result blocks in a single turn."""
-    system_parts: list[str] = []
+    """-> (system, messages)."""
+    system: list[str] = []
     out: list[dict[str, Any]] = []
     for m in messages:
         if m.role == "system":
-            if isinstance(m.content, list):    # blocks: keep the text parts
-                system_parts += [b.get("text", "") for b in m.content
-                                 if b.get("type") != "image"]
-            elif m.content:
-                system_parts.append(m.content)
+            _take_system(m, system)
         elif m.role == "tool" and m.tool_result:
-            block = {
-                "type": "tool_result",
-                "tool_use_id": m.tool_result.call_id,
-                "content": json.dumps(m.tool_result.content, default=str),
-                **({"is_error": True} if m.tool_result.is_error else {}),
-            }
-            if out and out[-1]["role"] == "user" and isinstance(out[-1]["content"], list) \
-                    and out[-1]["content"] and out[-1]["content"][-1].get("type") == "tool_result":
-                out[-1]["content"].append(block)      # coalesce consecutive results
-            else:
-                out.append({"role": "user", "content": [block]})
+            _add_result(out, m.tool_result)
         elif m.role == "assistant":
-            # thinking blocks must be echoed back unchanged (required when
-            # thinking + tool use continue on the same model)
-            blocks: list[dict[str, Any]] = list(m.meta.get("anthropic_thinking", []))
-            if m.content:
-                blocks.append({"type": "text", "text": m.content})
-            blocks += [{"type": "tool_use", "id": c.id, "name": c.name,
-                        "input": c.arguments} for c in m.tool_calls]
-            if blocks:
-                out.append({"role": "assistant", "content": blocks})
-            # else: empty assistant turn (stop before any text) — API rejects ""
+            _add_assistant(out, m)
         else:
-            out.append({"role": m.role, "content": _a_blocks(m.content)})
-    return "\n\n".join(system_parts) or None, out
+            out.append({"role": m.role, "content": _blocks(m.content)})
+    return "\n\n".join(system) or None, out
+
+
+# ---- adapter ----------------------------------------------------------
 
 
 class AnthropicLLM:
