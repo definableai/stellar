@@ -1,10 +1,19 @@
-## Abou this packages
-This is a minified agent core and its task its to provide agent infra, and idea is to keep this core hackable and under 2000 lines of code. Simple code, just abstractions, and internal functionality. 
-But this mini core must stay powerfull, can handle complex tasks if implemented properly
-- Layers : LLM, TOOL, HOOK
-- Transport : SSE, WS
-- Events : step_start, step_delta, step_end
-- Tracing : Jsonl, Console
+## About this package
+A minified agent core: the infrastructure to run an agent, kept hackable and
+under 2000 lines (`wc -l core/*.py`). Simple code — abstractions and the
+internals that serve them, nothing else. Small, but strong enough for hard
+tasks when it is used well.
+
+- Runtime: `agent` (the loop) + `llm`, `tools`, `hooks`, `session`, `run`,
+  `worker`, `tracer`, `transport` — plus `types` and `events`, the shared
+  vocabulary every seam speaks.
+- Seams: LLM, TOOL, HOOK. Three kinds of adapter, one per seam.
+- Adapters: one file, one plain factory. Call it, pass the result to
+  `Agent(...)`. Ours live in `internal/`, yours in `external/`.
+- Composition is fixed at construction. No runtime mounting, no runtime
+  self-modification: an agent runs with what it was built with.
+- Transport: SSE, WS. Events: step_start, step_delta, step_end.
+  Tracing: Jsonl, Console.
 
 ## Agents
 
