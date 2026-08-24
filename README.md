@@ -31,6 +31,7 @@ internal/             replaceable adapters built ON the core (not in the budget)
 external/             the agent's workspace — the adapters it writes for itself
 tests/                fake-LLM suites + hypothesis property tests, no pytest
 examples/cc/          the flagship: Claude Code rebuilt on this core
+examples/web/         the bare agent in a browser: SSE steps, sessions, live mounts
 ```
 
 ## Architecture
