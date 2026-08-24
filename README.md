@@ -1,36 +1,35 @@
 # stellar core
 
-A complete agent harness heart in **1,500 lines you can read in an afternoon**. Durable sessions, long-lived agents, subagents, MCP, prompt caching, streaming, human-in-the-loop — the capabilities of a 15,000-line platform, at a tenth of the code, with every line yours to change. The core is stdlib-only; there is no framework underneath, only typed interfaces and a loop.
+A complete agent harness heart in **1,800 lines you can read in an afternoon**. Durable sessions, long-lived agents, subagents, MCP, prompt caching, streaming, human-in-the-loop — the capabilities of a 15,000-line platform, at a tenth of the code, with every line yours to change. The core is stdlib-only; there is no framework underneath, only typed interfaces and a loop.
 
 ```
-core/                 the heart — 1500 lines exactly, stdlib only, py.typed
+core/                 the heart — under 1800 lines, stdlib only, py.typed
 ├── types.py          Message, ToolCall, ToolResult, Usage, content Blocks
 ├── events.py         StepEvent = kind × phase, the single event shape
 ├── llm.py            LLM protocol + ReplyBuilder (the adapter skeleton)
 ├── tools.py          Tool, @tool, ToolCallContext, validate_args guardrail
 ├── hooks.py          @hook decorator — before/after llm + tool
 ├── adapter.py        Ctx + Scope — agent.use()/drop(), reversible composition
+├── kernel.py         the agent's hands on itself: adapter_list/load/unload/reload
 ├── session.py        durable append-only JSONL log, crash repair, resume
 ├── run.py            RunHandle: stream, replay, stop, steer; bounded buffers
-├── tracer.py         Tracer protocol (the sinks live in internal/)
-└── agent.py          the loop (~390 lines) — everything else serves it
-
-internal/             replaceable patterns built ON the core (not in the budget)
-├── llm/              openai (chat + responses), anthropic (+ prompt caching),
-│                     litellm (100+ providers, optional dep), deepseek, moonshot,
-│                     retry wrapper, structured extraction; common.py holds
-│                     the 3-transformation adapter recipe
-├── hooks/            approval (HITL permission gate), compaction (token-aware)
-├── tools/schema.py   signature + docstring → JSON Schema
-├── kernel.py         the agent's hands on itself: adapter_list/load/unload/reload
-├── subagent.py       subagent() — spawn a child derived from the parent
-├── worker.py         the long-lived agent: queue → turns → one durable session
-├── tracers.py        Console/Jsonl tracer sinks
+├── tracer.py         Tracer protocol + Console/Jsonl sinks
 ├── transport.py      sse() / ws_frames() — pure serializers
-└── mcp.py            MCP client (stdio + streamable HTTP) → core Tools
+└── agent.py          the loop (~400 lines) — everything else serves it
 
+internal/             replaceable adapters built ON the core (not in the budget)
+├── llm_openai.py     chat + responses;  llm_anthropic.py — + prompt caching
+├── llm_litellm.py    100+ providers through one optional dep
+├── llm_deepseek.py   OpenAI-compatible reuse of llm_openai;  llm_moonshot.py too
+├── llm_retry.py      backoff wrapper;  llm_structured.py — extract() to a schema
+├── llm_common.py     the 3-transformation adapter recipe, shared block helpers
+├── hook_approval.py  HITL permission gate;  hook_compaction.py — token-aware
+├── tool_schema.py    signature + docstring → JSON Schema
+├── tool_subagent.py  subagent() — spawn a child derived from the parent
+└── tool_mcp.py       MCP client (stdio + streamable HTTP) → core Tools
+
+external/             the agent's workspace — the adapters it writes for itself
 tests/                fake-LLM suites + hypothesis property tests, no pytest
-examples/             11 offline-runnable examples (see examples/README.md)
 examples/cc/          the flagship: Claude Code rebuilt on this core
 ```
 
@@ -39,26 +38,26 @@ examples/cc/          the flagship: Claude Code rebuilt on this core
 ```mermaid
 flowchart LR
     U[your code] -->|"run(input, session=s)"| A
+    WK["worker.Worker<br/>examples/cc"] -.drives.-> A
 
-    subgraph CORE["core — stdlib only, provider-blind, 1500 lines"]
+    subgraph CORE["core — stdlib only, provider-blind, under 1800 lines"]
         A["agent.py<br/>the loop"]
         A <--> HK["hooks.py<br/>@hook points"]
         A <--> LP["llm.py<br/>LLM Protocol + ReplyBuilder"]
         A <--> TL["tools.py<br/>Tool + validate_args"]
         A <--> AD["adapter.py<br/>use / drop"]
         A <--> SS["session.py<br/>durable log"]
+        KN["kernel.py<br/>adapter_* tools"] -.self-compose via.-> AD
         A -->|StepEvents| RH["run.py<br/>RunHandle"]
-        RH --> TR["tracer.py<br/>protocol"]
+        RH --> TR["tracer.py<br/>protocol + sinks"]
+        RH --> TP["transport.py<br/>sse / ws_frames"]
     end
 
-    subgraph INTERNAL["internal — patterns, all replaceable"]
+    subgraph INTERNAL["internal — adapters, all replaceable"]
         OA["llm adapters"] -.implement.-> LP
         AP["approval / compaction"] -.hook into.-> HK
         SB["subagent()"] -.is a.-> TL
-        KN["kernel adapter_* tools"] -.self-compose via.-> AD
-        WK["worker.Worker"] -.drives.-> A
         MC["mcp client"] -.produces.-> TL
-        TP["transport sse/ws"] -.serialize.-> RH
     end
 
     RH -->|"events / RunResult"| U
@@ -127,7 +126,7 @@ class MyLLM:
         yield b.reply()
 ```
 
-The builder owns assembly: text joins in order, tool-call fragments accumulate per index, truncated argument JSON becomes a flagged call that the loop turns into a readable "re-issue the call" error for the model — never a silent drop, never a handler crash. See `internal/llm/anthropic.py` (~320 lines including its self-check, with prompt caching).
+The builder owns assembly: text joins in order, tool-call fragments accumulate per index, truncated argument JSON becomes a flagged call that the loop turns into a readable "re-issue the call" error for the model — never a silent drop, never a handler crash. See `internal/llm_anthropic.py` (~220 lines, with prompt caching).
 
 **Tools** — a JSON Schema and a function; the context streams progress and reaches the run:
 
@@ -141,7 +140,7 @@ async def weather(ctx, city: str):
     return {"city": city, "temp_c": 31}
 ```
 
-Arguments are validated against the schema before dispatch (`Tool.validate`, on by default) — whatever the model or adapter produces, your handler only ever sees kwargs that fit its signature. Prefer inferred schemas? `internal/tools/schema.py` builds them from the signature + docstring.
+Arguments are validated against the schema before dispatch (`Tool.validate`, on by default) — whatever the model or adapter produces, your handler only ever sees kwargs that fit its signature. Prefer inferred schemas? `internal/tool_schema.py` builds them from the signature + docstring.
 
 **Hooks** — a decorated function taking its context; attach as a flat list:
 
@@ -153,14 +152,14 @@ def gate(ctx):
 
 agent = Agent(llm, tools=[...], hooks=[
     gate,
-    compaction(max_tokens=100_000),        # internal/hooks — token-aware, exact
+    compaction(max_tokens=100_000),        # hook_compaction — token-aware, exact
     approval_gate(rules, asker=my_asker),  # HITL permission gate, full audit trail
 ])
 ```
 
 `before_tool` setting `ctx.result` short-circuits execution — that one rule is your permission gate, HITL approval, cache hit, and dry-run mode. Hook failures abort the run (fail closed); tracer failures are swallowed (fail open); tool failures become error results the model can read (fail forward).
 
-**Tracer** — `async on_event(event)`, every event in order. `JsonlTracer` (internal/tracers.py) is a replayable run record; point OTel, your DB, or a TUI at the same seam.
+**Tracer** — `async on_event(event)`, every event in order. `JsonlTracer` (core/tracer.py) is a replayable run record; point OTel, your DB, or a TUI at the same seam.
 
 ## Self-composition — adapters
 
@@ -179,9 +178,9 @@ agent.drop("observability")              # unwinds newest-first (LIFO)
 
 A raising `setup` unwinds its partial work and mounts nothing. Nested swaps restore correctly: mount B's LLM over A's, drop B, A's is back. Out-of-order drops stay exact too — dropping A first unwinds B, drops A, and re-runs B's setup on the new base (position is dependency; setups are idempotent composition).
 
-**The kernel** (`internal/kernel.py`) hands the same lever to the model: four tools — `adapter_list / adapter_load / adapter_unload / adapter_reload` — over a path-jailed workspace directory of adapter files. `boot(agent, ws)` mounts the kernel plus every `ws/*.py`, sorted; the directory **is** the manifest (`mv` a file out to disable it, `git init` it for provenance). Because self-change is just a tool call, the `approval_gate` that guards `bash` guards `adapter_load`, and the session log records every mount like any other step. The kernel is itself an adapter: don't mount it and the agent is frozen.
+**The kernel** (`core/kernel.py`) hands the same lever to the model: four tools — `adapter_list / adapter_load / adapter_unload / adapter_reload` — over a path-jailed workspace directory of adapter files. The workspace has no default — where an agent keeps its own parts is your call, never core's guess: `boot(agent, "external")` mounts the kernel plus every `*.py` under that directory, sorted; the directory **is** the manifest (`mv` a file out to disable it, keep it under git for provenance). Because self-change is just a tool call, the `approval_gate` that guards `bash` guards `adapter_load`, and the session log records every mount like any other step. The kernel is itself an adapter: don't mount it and the agent is frozen.
 
-The three `self_*` examples are the proof: the agent writes a tool for itself and it survives a restart (`self_extend`), swaps its own LLM mid-session with the transcript intact (`self_swap`), and blocks itself with a hook it wrote (`self_guard`).
+`examples/cc/cc.py` boots over `external/`, so the Claude Code replica can write a tool for itself, swap its own LLM mid-session, or gate itself with a hook it wrote — each surviving a restart, because the workspace is on disk and the mount is in the log. `tests/test_kernel.py` exercises that loop end to end.
 
 Trust model, plainly: adapter code runs in-process with full interpreter privileges — this is not a sandbox. The boundary is who can write the workspace directory plus your `before_tool` gate on `adapter_load` and on writes into it. Never point the workspace at a directory unreviewed third parties can write.
 
@@ -196,6 +195,8 @@ worker.stop_turn()               # graceful, partial reply persisted
 await worker.close()             # drains unrun inputs into the log, unanswered
 ```
 
+`Worker` is a pattern, not core: `examples/cc/worker.py`.
+
 ## Subagents and MCP
 
 ```python
@@ -207,7 +208,7 @@ lead = Agent(llm, tools=[
 ], hooks=[approval_gate(rules, asker)])
 ```
 
-A subagent is just a tool that spawns a child **derived from the running parent**: same LLM (override with `llm=` for a cheaper child), same tools minus itself (`tools=` to narrow or re-enable recursion), and — critically — the same hooks, so the parent's permission gate guards the child's `bash` too. The child's entire event stream forwards through the parent handle (`tool/delta` events, nesting for grandchildren), stop propagates down, depth is guarded. `mcp.py` speaks stdio and streamable HTTP, survives 1MB tool results, dead servers fail loudly.
+A subagent is just a tool that spawns a child **derived from the running parent**: same LLM (override with `llm=` for a cheaper child), same tools minus itself (`tools=` to narrow or re-enable recursion), and — critically — the same hooks, so the parent's permission gate guards the child's `bash` too. The child's entire event stream forwards through the parent handle (`tool/delta` events, nesting for grandchildren), stop propagates down, depth is guarded. `tool_mcp.py` speaks stdio and streamable HTTP, survives 1MB tool results, dead servers fail loudly.
 
 ## Serving
 
@@ -254,11 +255,10 @@ uv run python tests/test_agent.py        # loop, sessions, subagents — fake LL
 uv run python tests/test_session.py      # round-trip, repair, corruption
 uv run python tests/test_adapter.py      # mount/unwind, LIFO, live self-composition
 uv run python tests/test_properties.py   # hypothesis: crash-cut recovery & more
-uv run python -m internal.kernel         # the four self-tools, jail, reload
-uv run python -m internal.llm.anthropic  # every internal module self-checks
-uv run python -m examples.cc.cc selfcheck
+uv run python tests/test_kernel.py       # the four self-tools, jail, reload
+uv run python tests/test_llm_adapters.py # anthropic + openai on fake transports
 ```
 
 ## Deliberate non-features
 
-No DI container, no service registry, no dependency resolver (adapters mount in order and unwind LIFO — that's the whole lifecycle), no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap the adapter: `internal/llm/retry.py`), no sandbox around adapter code (the workspace directory and your `before_tool` gate are the boundary). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.
+No DI container, no service registry, no dependency resolver (adapters mount in order and unwind LIFO — that's the whole lifecycle), no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap the adapter: `internal/llm_retry.py`), no sandbox around adapter code (the workspace directory and your `before_tool` gate are the boundary). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.

@@ -9,8 +9,7 @@ from .llm import LLM, Channel, LLMDelta, LLMError, LLMReply, ReplyBuilder
 from .run import RunContext, RunHandle, RunResult, RunStatus
 from .session import Session, SessionError
 from .tools import Tool, ToolCallContext, ToolSpec, tool, validate_args
-from .tracer import Tracer
-from .tracers import ConsoleTracer, JsonlTracer
+from .tracer import ConsoleTracer, JsonlTracer, Tracer
 from .transport import sse, ws_frames
 from .types import (Block, ErrorInfo, FileBlock, ImageBlock, Message,
                     TextBlock, ToolCall, ToolResult, Usage, file_block,
