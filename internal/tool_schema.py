@@ -5,7 +5,7 @@ omitted it derives JSON Schema from the signature and Google-style
 docstring (description = text before ``Args:``, per-param descriptions
 from the ``Args:`` block):
 
-    from internal.tools.schema import tool
+    from internal.tool_schema import tool
 
     @tool()
     async def search(ctx, query: str, limit: int = 10):
@@ -18,6 +18,9 @@ from the ``Args:`` block):
 
 Explicit ``parameters=`` always wins — use it for nested models or
 anything inference can't express.
+
+A helper, not an adapter — nothing to compose onto an agent, so no
+``setup(ctx)``.
 """
 
 from __future__ import annotations

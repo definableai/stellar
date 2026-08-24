@@ -47,3 +47,9 @@ class RetryLLM:
                     raise
             await asyncio.sleep(min(self.max_delay, self.base_delay * 2 ** attempt)
                                 * (0.5 + random.random() / 2))
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py): wraps the agent's CURRENT llm —
+    mount it after the one it protects. Config = RetryLLM kwargs."""
+    ctx.llm(RetryLLM(ctx.agent.llm, **ctx.config))

@@ -22,7 +22,7 @@ from collections.abc import Mapping
 from typing import Any, AsyncIterator, Callable, Sequence
 
 from core import LLMDelta, LLMError, LLMReply, Message, ReplyBuilder, ToolSpec
-from internal.llm.openai import _to_openai
+from internal.llm_openai import _to_openai
 
 
 def _get(o: Any, key: str, default: Any = None) -> Any:
@@ -103,3 +103,8 @@ class LiteLLM:
                 if args:
                     yield b.tool_args(idx, args)
         yield b.reply()
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = LiteLLM kwargs."""
+    ctx.llm(LiteLLM(**ctx.config))

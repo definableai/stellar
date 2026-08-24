@@ -99,3 +99,11 @@ def subagent(
                       parameters=_PROMPT_SCHEMA),
         handler=handler, parallel_safe=parallel_safe, timeout=timeout,
     )
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = subagent kwargs minus
+    ``name`` — agent.use() reserves that for the adapter name, so the
+    tool takes it: ``agent.use(setup, name="researcher", description=...)``
+    (kernel-mounted, the workspace filename names the tool)."""
+    ctx.tool(subagent(name=ctx.scope.name, **ctx.config))

@@ -19,7 +19,7 @@ from core import (  # noqa: E402
     tool, validate_args,
 )
 from core import ToolResult  # noqa: E402
-from internal.subagent import subagent  # noqa: E402
+from internal.tool_subagent import subagent  # noqa: E402
 
 
 @tool(parameters={"type": "object", "properties": {"x": {"type": "string"}}})

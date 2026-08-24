@@ -1,6 +1,6 @@
 """extract() — schema-validated JSON from any LLM adapter, with retry.
 
-    from internal.llm.structured import extract
+    from internal.llm_structured import extract
 
     data = await extract(llm, schema={
         "type": "object",
@@ -17,6 +17,9 @@ this validator is then the belt to that suspender.
 
 ponytail: validates one level deep — nested object/array items unchecked;
 bring jsonschema via ``validate=`` when that matters.
+
+A helper, not an adapter — nothing to compose onto an agent, so no
+``setup(ctx)``.
 """
 
 from __future__ import annotations

@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from .openai import OpenAILLM
+from internal.llm_openai import OpenAILLM
 
 
 # ---- adapter ----------------------------------------------------------
@@ -41,3 +41,8 @@ class DeepSeekLLM(OpenAILLM):
             raise ValueError("no API key: pass api_key= or set DEEPSEEK_API_KEY")
         super().__init__(model=model, api_key=key, base_url=base_url,
                          client=client, timeout=timeout, **defaults)
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = DeepSeekLLM kwargs."""
+    ctx.llm(DeepSeekLLM(**ctx.config))

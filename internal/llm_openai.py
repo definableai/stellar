@@ -43,7 +43,7 @@ import httpx
 
 from core import (LLMDelta, LLMError, LLMReply, Message, ReplyBuilder,
                   ToolResult, ToolSpec)
-from internal.llm.common import data_url, dump_result, map_blocks
+from internal.llm_common import data_url, dump_result, map_blocks
 
 # ---- request: core -> wire (chat completions) -------------------------
 
@@ -281,3 +281,12 @@ class OpenAIResponsesLLM(OpenAILLM):
                                   ).get("reason", "incomplete")
         b.finish("tool_use" if saw_calls else status)
         yield b.reply()
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = OpenAILLM kwargs, plus
+    ``responses=True`` to pick /responses. Copy: ctx.config is replayed
+    verbatim on remount, so the pop must not touch it."""
+    config = dict(ctx.config)
+    cls = OpenAIResponsesLLM if config.pop("responses", False) else OpenAILLM
+    ctx.llm(cls(**config))

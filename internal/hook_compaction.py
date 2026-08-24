@@ -82,3 +82,8 @@ def compaction(max_chars: int = 400_000, keep_last: int = 8,
                                   meta={"compacted": len(middle)})]
 
     return Hook("before_llm", hook)
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = compaction kwargs."""
+    ctx.hook(compaction(**ctx.config))

@@ -24,8 +24,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from internal.llm.openai import OpenAIResponsesLLM
-from internal.worker import Worker
+from internal.llm_openai import OpenAIResponsesLLM
+from examples.cc.worker import Worker
 from core import Agent, Session, StepKind, StepPhase, Tool, ToolSpec
 
 # ---- capture: prompt + schemas straight from cc.json -----------------------

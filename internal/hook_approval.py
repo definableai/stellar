@@ -1,6 +1,6 @@
 """HITL approval gate for tools — policy allowlist first, then a human.
 
-    from internal.hooks.approval import approval_gate, allow, deny, console_asker
+    from internal.hook_approval import approval_gate, allow, deny, console_asker
 
     agent = Agent(llm, tools=[...], hooks=[approval_gate(
         rules=[allow("read_file"),
@@ -152,3 +152,9 @@ def approval_gate(rules: Iterable[Rule], asker: Asker, timeout: float = 120.0):
             _deny(ctx, reason or "rejected by user")
 
     return Hook("before_tool", gate)
+
+
+def setup(ctx: Any) -> None:
+    """Adapter shape (core/adapter.py); config = approval_gate kwargs
+    (``rules=``, ``asker=``, ``timeout=``)."""
+    ctx.hook(approval_gate(**ctx.config))

@@ -16,6 +16,9 @@ Scope (ponytail, each a documented ceiling):
     * HTTP reads each response fully — no incremental SSE progress; the
       final result is what matters to the loop.
     * No reconnect/resume; a dead server fails every pending call loudly.
+
+No ``setup(ctx)``: connecting and listing tools is async IO, and the core
+adapter contract is sync composition (core/adapter.py).
 """
 
 from __future__ import annotations

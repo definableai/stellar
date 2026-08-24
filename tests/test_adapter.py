@@ -149,6 +149,17 @@ def test_loud_errors() -> None:
         pass
 
 
+def test_setup_named_by_module() -> None:
+    # module entrypoints are all literally named "setup"; bare use() must
+    # fall back to the module name so two adapters don't collide on "setup"
+    def setup(c):
+        pass
+    setup.__module__ = "internal.llm_fake"
+    agent = Agent(L0)
+    assert agent.use(setup).name == "llm_fake"
+    assert "llm_fake" in agent.adapters
+
+
 def test_dispose_collects_inverse_errors() -> None:
     agent = Agent(L0)
     ran: list[str] = []
@@ -285,6 +296,7 @@ def main() -> None:
     test_lifo_nesting_and_shadowing()
     test_partial_failure_mounts_nothing()
     test_loud_errors()
+    test_setup_named_by_module()
     test_dispose_collects_inverse_errors()
     test_out_of_order_drop_relinks()
     test_hook_object_form()

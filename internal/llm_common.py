@@ -14,6 +14,9 @@ Nothing else. Every adapter file has the same sections, in this order:
 
 ``core.ReplyBuilder`` owns transformation 3's assembly; the helpers
 below dedupe the block dispatch in transformation 2.
+
+A helper, not an adapter — nothing to compose onto an agent, so no
+``setup(ctx)``.
 """
 
 from __future__ import annotations

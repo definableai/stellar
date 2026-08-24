@@ -112,6 +112,8 @@ class Agent:
         if not callable(setup):
             raise TypeError(f"not an adapter: {setup!r}")
         name = name or getattr(setup, "__name__", "adapter")
+        if name == "setup":   # a module's entrypoint: name by the module
+            name = getattr(setup, "__module__", "adapter").rsplit(".", 1)[-1]
         if name in self.adapters:
             raise ValueError(f"adapter {name!r} already mounted")
         scope = Scope(name, source)

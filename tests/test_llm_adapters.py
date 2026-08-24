@@ -20,9 +20,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import (  # noqa: E402
     LLMError, LLMReply, Message, ToolCall, ToolResult, ToolSpec, file_block,
 )
-from internal.llm.anthropic import AnthropicLLM, _to_anthropic  # noqa: E402
-from internal.llm.common import data_url, dump_result, map_blocks  # noqa: E402
-from internal.llm.openai import (  # noqa: E402
+from internal.llm_anthropic import AnthropicLLM, _to_anthropic  # noqa: E402
+from internal.llm_common import data_url, dump_result, map_blocks  # noqa: E402
+from internal.llm_openai import (  # noqa: E402
     OpenAILLM, OpenAIResponsesLLM, _blocks, _r_blocks,
 )
 
