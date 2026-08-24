@@ -29,6 +29,17 @@ def named_tool(name: str) -> Tool:
     return Tool(spec=ToolSpec(name=name), handler=lambda ctx: name)
 
 
+class StubLLM:
+    """Identity sentinel for the mount/unwind checks: satisfies the
+    Agent's LLM-adapter contract, never actually streamed."""
+
+    async def stream(self, messages, tools, **params):
+        raise AssertionError("stub LLM must not be streamed")
+
+
+L0, L1, L2 = StubLLM(), StubLLM(), StubLLM()
+
+
 class ScriptedLLM:
     """Canned replies; records the messages AND tool specs of each request."""
 
@@ -59,7 +70,7 @@ def text_reply(text: str) -> LLMReply:
 # ---- mount / drop ------------------------------------------------------
 
 def test_mount_drop_restores_everything() -> None:
-    agent = Agent("llm0", tools=[echo], system="s0")
+    agent = Agent(L0, tools=[echo], system="s0")
     before = dict(agent.tools)
     order: list[str] = []
 
@@ -67,7 +78,7 @@ def test_mount_drop_restores_everything() -> None:
         assert ctx.config == {"k": 1}
         ctx.tool(named_tool("t1"))
         ctx.hook("before_tool", guard)
-        ctx.llm("llm1")
+        ctx.llm(L1)
         ctx.effect(lambda: order.append("custom"))
 
     def guard(hctx):  # never fired here
@@ -75,33 +86,33 @@ def test_mount_drop_restores_everything() -> None:
 
     scope = agent.use(pack, k=1)
     assert scope.name == "pack" and scope.source is None
-    assert "tool:t1" in scope.notes and "llm:str" in scope.notes
+    assert "tool:t1" in scope.notes and "llm:StubLLM" in scope.notes
     assert any(n.startswith("hook:before_tool:") and n.endswith("guard")
                for n in scope.notes)
-    assert "t1" in agent.tools and agent.llm == "llm1"
+    assert "t1" in agent.tools and agent.llm is L1
     assert agent.hooks.get("before_tool") == [guard]
 
     assert agent.drop("pack") == []
-    assert agent.tools == before and agent.llm == "llm0"
+    assert agent.tools == before and agent.llm is L0
     assert agent.hooks.get("before_tool") == [] and order == ["custom"]
     assert agent.adapters == {}
 
 
 def test_lifo_nesting_and_shadowing() -> None:
-    agent = Agent("L0", tools=[named_tool("t")])
+    agent = Agent(L0, tools=[named_tool("t")])
     v0 = agent.tools["t"]
-    agent.use(lambda c: (c.llm("L1"), c.tool(named_tool("t"))), name="a")
+    agent.use(lambda c: (c.llm(L1), c.tool(named_tool("t"))), name="a")
     v1 = agent.tools["t"]
-    agent.use(lambda c: (c.llm("L2"), c.tool(named_tool("t"))), name="b")
-    assert agent.llm == "L2" and agent.tools["t"] is not v1
+    agent.use(lambda c: (c.llm(L2), c.tool(named_tool("t"))), name="b")
+    assert agent.llm is L2 and agent.tools["t"] is not v1
     agent.drop("b")
-    assert agent.llm == "L1" and agent.tools["t"] is v1   # shadow restored
+    assert agent.llm is L1 and agent.tools["t"] is v1   # shadow restored
     agent.drop("a")
-    assert agent.llm == "L0" and agent.tools["t"] is v0
+    assert agent.llm is L0 and agent.tools["t"] is v0
 
 
 def test_partial_failure_mounts_nothing() -> None:
-    agent = Agent(None)
+    agent = Agent(L0)
     undone: list[str] = []
 
     def bad(ctx):
@@ -119,7 +130,7 @@ def test_partial_failure_mounts_nothing() -> None:
 
 
 def test_loud_errors() -> None:
-    agent = Agent(None)
+    agent = Agent(L0)
     agent.use(lambda c: None, name="x")
     try:
         agent.use(lambda c: None, name="x")
@@ -139,7 +150,7 @@ def test_loud_errors() -> None:
 
 
 def test_dispose_collects_inverse_errors() -> None:
-    agent = Agent(None)
+    agent = Agent(L0)
     ran: list[str] = []
 
     def pack(ctx):
@@ -155,20 +166,20 @@ def test_dispose_collects_inverse_errors() -> None:
 def test_out_of_order_drop_relinks() -> None:
     # dropping A first must not resurrect A's tool/llm when B drops later:
     # drop(A) unwinds B, drops A, re-runs B's setup on the new base
-    agent = Agent("L0", tools=[named_tool("x")])
+    agent = Agent(L0, tools=[named_tool("x")])
     v0 = agent.tools["x"]
-    agent.use(lambda c: (c.llm("L1"), c.tool(named_tool("x"))), name="a")
-    agent.use(lambda c: (c.llm("L2"), c.tool(named_tool("x"))), name="b")
+    agent.use(lambda c: (c.llm(L1), c.tool(named_tool("x"))), name="a")
+    agent.use(lambda c: (c.llm(L2), c.tool(named_tool("x"))), name="b")
     agent.drop("a")
-    assert agent.llm == "L2" and list(agent.adapters) == ["b"]
+    assert agent.llm is L2 and list(agent.adapters) == ["b"]
     assert agent.tools["x"].handler(None) == "x"      # b's tool, live
     agent.drop("b")
-    assert agent.llm == "L0" and agent.tools["x"] is v0
+    assert agent.llm is L0 and agent.tools["x"] is v0
     assert agent.adapters == {}
 
 
 def test_hook_object_form() -> None:
-    agent = Agent(None)
+    agent = Agent(L0)
     fn = lambda hctx: None  # noqa: E731
     agent.use(lambda c: c.hook(Hook("after_tool", fn)), name="h")
     assert agent.hooks.get("after_tool") == [fn]
@@ -179,7 +190,7 @@ def test_hook_object_form() -> None:
 @given(st.lists(st.sampled_from("abc"), max_size=8))
 @settings(max_examples=50, deadline=None)
 def prop_reverse_drops_restore(names: list[str]) -> None:
-    agent = Agent(None, tools=[echo])
+    agent = Agent(L0, tools=[echo])
     original = dict(agent.tools)
     for i, n in enumerate(names):
         t = named_tool(n)

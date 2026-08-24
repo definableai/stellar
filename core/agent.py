@@ -51,6 +51,11 @@ class Agent:
         parallel_tools: bool = False,
         params: dict[str, Any] | None = None,
     ) -> None:
+        if not isinstance(llm, LLM):   # runtime_checkable: stream must exist
+            raise TypeError(
+                "Agent needs an LLM adapter: an object with "
+                "async stream(messages, tools, **params) -> LLMDelta/LLMReply "
+                "— see core/llm.py")
         self.llm = llm
         self.tools: dict[str, Tool] = {t.spec.name: t for t in tools}
         self.hooks = hooks if isinstance(hooks, Hooks) else Hooks(hooks)

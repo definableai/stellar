@@ -503,6 +503,22 @@ async def test_hook_decorator_dx() -> None:
     assert llm.seen[0][-1].content == "[injected]"
 
 
+def test_agent_requires_llm_adapter() -> None:
+    for bad in (None, object()):
+        try:
+            Agent(bad)
+            raise AssertionError(f"{bad!r} must not pass as an LLM")
+        except TypeError as ex:
+            assert "LLM adapter" in str(ex)
+
+    class Minimal:                       # the whole contract: async stream
+        async def stream(self, messages, tools, **params):
+            yield text_reply("ok")
+
+    llm = Minimal()
+    assert Agent(llm).llm is llm
+
+
 async def main() -> None:
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
@@ -525,6 +541,7 @@ async def main() -> None:
         await test_subagent_stop_propagates()
         await test_send_after_finish_rejected()
         await test_state_shared_by_identity()
+        test_agent_requires_llm_adapter()
         test_replybuilder()
         test_validate_args()
         test_blocks()

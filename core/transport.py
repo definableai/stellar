@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import AsyncIterator
 
-from core import StepEvent
+from .events import StepEvent
 
 
 async def sse(events: AsyncIterator[StepEvent]) -> AsyncIterator[str]:

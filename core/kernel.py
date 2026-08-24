@@ -5,8 +5,8 @@
     adapter_unload(name)    drop it — inverses unwind LIFO
     adapter_reload(name)    drop + fresh import (the edit loop)
 
-    agent.use(kernel, workspace=".stellar/adapters")   # just the tools
-    boot(agent, ".stellar/adapters")   # kernel + every workspace *.py
+    agent.use(kernel, workspace="external")   # just the tools
+    boot(agent, "external")                   # + every workspace *.py
 
 Self-modification is a tool call: the same before_tool hooks that gate
 bash gate adapter_load (wire your approval rules to ``adapter_*``), and
@@ -30,7 +30,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from core import Agent, Scope, Tool, ToolSpec
+from .adapter import Scope
+from .agent import Agent
+from .tools import Tool, ToolSpec
 
 _seq = count(1)
 
@@ -47,16 +49,25 @@ def load_module(path: Path) -> ModuleType:
     return mod
 
 
-def _mount_file(agent: Agent, path: Path, name: str | None = None) -> Scope:
+def _name(ws: Path, path: Path) -> str:
+    # workspace-relative, so tool/x.py and hook/x.py never collide
+    return path.relative_to(ws).with_suffix("").as_posix()
+
+
+def _mount_file(agent: Agent, ws: Path, path: Path) -> Scope:
     return agent.use(load_module(path).setup,
-                     name=name or path.stem, source=str(path))
+                     name=_name(ws, path), source=str(path))
 
 
 def kernel(ctx: Any) -> None:
-    """The four self-composition tools. Config: ``workspace=`` (the only
-    directory adapter_load may read; default .stellar/adapters)."""
+    """The four self-composition tools. Config: ``workspace=`` — the only
+    directory adapter_load may read. Required: where an agent keeps its
+    own parts is the developer's call, never core's guess."""
     agent: Agent = ctx.agent
-    ws = Path(ctx.config.get("workspace", ".stellar/adapters")).resolve()
+    if not (workspace := ctx.config.get("workspace")):
+        raise ValueError("kernel needs workspace=<dir>: "
+                         "agent.use(kernel, workspace=...)")
+    ws = Path(workspace).resolve()
 
     def jail(rel: str) -> Path:
         p = (ws / rel).resolve()
@@ -72,9 +83,10 @@ def kernel(ctx: Any) -> None:
     def adapter_load(cctx: Any, path: str = "") -> str:
         """Load an adapter file from the workspace and mount it."""
         p = jail(path)
-        if p.stem in agent.adapters:   # before exec: module body runs once
-            raise ValueError(f"{p.stem!r} already mounted; adapter_reload picks up edits")
-        scope = _mount_file(agent, p)
+        if _name(ws, p) in agent.adapters:   # before exec: module body runs once
+            raise ValueError(
+                f"{_name(ws, p)!r} already mounted; adapter_reload picks up edits")
+        scope = _mount_file(agent, ws, p)
         return f"mounted {scope.name!r}: {', '.join(scope.notes) or 'nothing registered'}"
 
     def adapter_unload(cctx: Any, name: str = "") -> str:
@@ -108,18 +120,23 @@ def kernel(ctx: Any) -> None:
                       handler=fn, parallel_safe=False))
 
 
-def boot(agent: Agent, workspace: str | Path = ".stellar/adapters",
+def boot(agent: Agent, workspace: str | Path,
          *, mount_kernel: bool = True) -> list[Scope]:
     """Mount the kernel plus every workspace ``*.py`` sorted by name
-    (prefix ``00-``, ``10-`` to order mounts). The directory IS the
-    manifest: move a file out to disable it. Missing dir = empty self.
-    A broken file fails the boot loudly; files mounted before it stay."""
+    (prefix ``00-``, ``10-`` to order mounts). Subdirectories are mounted
+    too, named by relative path (``tool/x.py`` mounts as ``tool/x``), so
+    an agent may file its parts under hooks/, llm/, tool/ — its choice;
+    a leading ``_`` on a file or folder skips it. The directory
+    IS the manifest: move a file out to disable it. Missing dir = empty
+    self. A broken file fails the boot loudly; files mounted before it
+    stay."""
     ws = Path(workspace).resolve()
     scopes = []
     if mount_kernel:
         scopes.append(agent.use(kernel, workspace=str(ws)))
     if ws.is_dir():
-        scopes += [_mount_file(agent, p) for p in sorted(ws.glob("*.py"))
-                   if not p.name.startswith("_")]
+        scopes += [_mount_file(agent, ws, p) for p in sorted(ws.rglob("*.py"))
+                   if not any(part.startswith("_")
+                              for part in p.relative_to(ws).parts)]
     return scopes
 

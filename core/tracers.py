@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from core import StepEvent
+from .events import StepEvent
 
 
 class ConsoleTracer:

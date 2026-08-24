@@ -13,8 +13,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core import Agent, LLMDelta, LLMReply, Message, ToolCall  # noqa: E402
-from internal.kernel import boot  # noqa: E402
+from core import (  # noqa: E402
+    Agent, LLMDelta, LLMReply, Message, ToolCall, boot, kernel,
+)
 
 CALC_V1 = '''
 from core import Tool, ToolSpec
@@ -53,12 +54,25 @@ async def test_kernel_self_composition() -> None:
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d)
         (ws / "calc.py").write_text(CALC_V1)
+        (ws / "tool").mkdir()
+        (ws / "tool" / "probe.py").write_text(CALC_V1.replace('"calc"', '"probe"'))
+        (ws / "_wip.py").write_text("syntax error(")        # skipped: leading _
+        (ws / "__pycache__").mkdir()
+        (ws / "__pycache__" / "calc.py").write_text("syntax error(")
 
-        # boot: kernel + the workspace file, both mounted
+        # a workspace is the developer's call: no default, no silent guess
+        try:
+            Agent(Scripted([])).use(kernel)
+            raise AssertionError("kernel without workspace must raise")
+        except ValueError as ex:
+            assert "workspace=" in str(ex)
+
+        # boot: kernel + the workspace files (subdirectories included)
         agent = Agent(Scripted([]), max_steps=8)
         scopes = boot(agent, ws)
-        assert [s.name for s in scopes] == ["kernel", "calc"]
+        assert [s.name for s in scopes] == ["kernel", "calc", "tool/probe"]
         assert "adapter_load" in agent.tools and "calc" in agent.tools
+        assert "probe" in agent.tools
 
         # the full loop: agent inspects itself, unloads calc, reloads it,
         # calls it — every self-change is an ordinary, logged tool step

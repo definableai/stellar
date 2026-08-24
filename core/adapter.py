@@ -22,7 +22,7 @@ Rules:
       re-runs the setups of adapters mounted above the dropped one.
     * ``ctx.agent`` is the real Agent, no jail: registrars are the
       recorded paths, ``ctx.effect`` covers any other mutation.
-      Loading adapter *files* is internal/kernel.py, not core.
+      Loading adapter *files* is ``core/kernel.py``.
 """
 
 from __future__ import annotations
