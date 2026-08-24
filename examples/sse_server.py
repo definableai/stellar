@@ -19,7 +19,8 @@ from urllib.parse import parse_qs
 
 import httpx
 
-from core import Agent, LLMDelta, LLMReply, Message, RunHandle, ToolCall, sse, tool
+from core import Agent, LLMDelta, LLMReply, Message, RunHandle, ToolCall, tool
+from internal.transport import sse
 
 RUNS: dict[str, RunHandle] = {}
 

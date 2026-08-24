@@ -1,14 +1,11 @@
 """The tool layer.
 
-A tool is a spec (name + description + JSON Schema) plus an async
-handler. The handler receives a ``ToolCallContext`` first, then the
-call's arguments as keyword args. Through the context a tool can
-stream progress (``await ctx.emit_delta({...})`` -> tool/delta events)
-and request a run stop (``ctx.run.stop(...)``).
-
-Schemas are plain JSON Schema dicts on purpose: derive them however
-you like (by hand, pydantic, TypeBox-style builders) — the core does
-not care.
+A tool is a spec (name + description + JSON Schema) plus a handler
+receiving a ``ToolCallContext`` first, then the call's arguments as
+kwargs. Through the context a tool streams progress (``await
+ctx.emit_delta({...})`` -> tool/delta) and can stop the run
+(``ctx.run.stop()``). Schemas are plain JSON Schema dicts on purpose:
+derive them however you like — the core does not care.
 """
 
 from __future__ import annotations
@@ -53,11 +50,10 @@ class Tool:
     spec: ToolSpec
     handler: Callable[..., Any]  # (ctx: ToolCallContext, **arguments) -> Any
     parallel_safe: bool = True   # False (writes/side effects) forces the batch sequential
-    timeout: float | None = None  # secs -> error result. Async handlers only:
-    # a blocking sync handler holds the event loop and cannot be preempted.
-    validate: bool = True        # check arguments against spec.parameters
-    # before dispatch: mismatches become a readable error result for the
-    # model, and the handler never sees kwargs its signature can't take.
+    timeout: float | None = None  # secs -> error result; async handlers only (a
+    # blocking sync handler holds the event loop and cannot be preempted)
+    validate: bool = True  # pre-dispatch schema check: mismatches become a readable
+    # error result; the handler never sees kwargs its signature can't take
 
 
 def tool(
@@ -82,9 +78,7 @@ def tool(
         spec = ToolSpec(
             name=name or getattr(fn, "__name__", "tool"),
             description=description or inspect.getdoc(fn) or "",
-            parameters=parameters
-            or {"type": "object", "properties": {}},
-        )
+            parameters=parameters or {"type": "object", "properties": {}})
         return Tool(spec=spec, handler=fn, parallel_safe=parallel_safe,
                     timeout=timeout, validate=validate)
 
@@ -93,15 +87,13 @@ def tool(
 
 _JSON_TYPES: dict[str, type | tuple[type, ...]] = {
     "string": str, "integer": int, "number": (int, float),
-    "boolean": bool, "array": list, "object": dict, "null": type(None),
-}
+    "boolean": bool, "array": list, "object": dict, "null": type(None)}
 
 
 def validate_args(schema: dict[str, Any], args: dict[str, Any]) -> list[str]:
     """Model-facing problems with ``args`` against a JSON-Schema subset
-    ([] = valid). Covers type / required / properties / enum / items —
-    a guardrail between adapter output and handler signatures, not a
-    full validator. ponytail: no anyOf/format/pattern; add if hit."""
+    ([] = valid). Covers type/required/properties/enum/items — a guardrail
+    not a validator. ponytail: no anyOf/format/pattern; add if hit."""
     problems: list[str] = []
     props: dict[str, Any] = schema.get("properties") or {}
     for key in schema.get("required") or []:

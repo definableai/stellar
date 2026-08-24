@@ -1,10 +1,5 @@
 """The hook layer. Exactly four points, mutation semantics.
-
-    @hook("before_llm")
-    async def redact(ctx: LLMHookContext):
-        ctx.messages[:] = scrub(ctx.messages)
-
-    agent = Agent(llm, hooks=[redact, compaction(max_tokens=100_000)])
+(See the ``@hook`` decorator below for the attach recipe.)
 
     before_llm   sees (messages, tools) — may edit/extend them
     after_llm    additionally sees ``reply`` — may edit it
@@ -14,8 +9,7 @@
     after_tool   sees ``ctx.result`` — may replace/redact it
 
 Rules:
-    * Hooks mutate their context in place; return value is ignored.
-    * Hooks may be sync or async.
+    * Hooks mutate their context in place (return ignored); sync or async.
     * A hook raising ABORTS the run (fail closed — a guardrail that
       fails must not fail silently). Wrap best-effort hooks yourself.
     * Every hook invocation is itself a step: hook/start + hook/end.
@@ -34,11 +28,7 @@ if TYPE_CHECKING:
 
 HookPoint = Literal["before_llm", "after_llm", "before_tool", "after_tool"]
 HOOK_POINTS: tuple[HookPoint, ...] = (
-    "before_llm",
-    "after_llm",
-    "before_tool",
-    "after_tool",
-)
+    "before_llm", "after_llm", "before_tool", "after_tool")
 
 
 @dataclass
@@ -90,9 +80,8 @@ def hook(point: HookPoint) -> Callable[[HookFn], Hook]:
 
 
 class Hooks:
-    """Ordered registry, per point. Rarely constructed by hand — pass
-    Agent(hooks=[...]) a list of ``Hook``s (or a {point: [fn]} mapping)
-    and it builds one."""
+    """Ordered registry, per point. Rarely hand-built: Agent(hooks=[...])
+    takes a flat list of ``Hook``s (or a {point: [fns]} mapping)."""
 
     def __init__(
         self,
@@ -115,9 +104,9 @@ class Hooks:
         self._hooks[point].append(fn)
         return fn
 
-    def on(self, point: HookPoint) -> Callable[[HookFn], HookFn]:
-        """Decorator form:  @hooks.on("before_tool")"""
-        return lambda fn: self.add(point, fn)
+    def remove(self, point: HookPoint, fn: HookFn) -> None:
+        """Detach ``fn`` from a point. ValueError if not attached (loud)."""
+        self._hooks[point].remove(fn)
 
     def get(self, point: HookPoint) -> list[HookFn]:
         return self._hooks[point]

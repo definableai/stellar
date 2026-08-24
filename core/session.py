@@ -12,9 +12,9 @@ it, so the durable transcript and the live one can never diverge.
 Rules:
     * Append-only. Compaction/pruning are *views* (before_llm hooks
       mutate the derived request list); the log is never rewritten.
-    * Messages only, no deltas — a crash loses at most the partial text
-      of the step in flight. ponytail: message granularity; chunk-level
-      persistence only if token-exact crash recovery ever matters.
+    * Messages only — a crash loses at most the step in flight's partial
+      text. ponytail: chunk-level persistence only if token-exact crash
+      recovery ever matters.
     * The system message is agent config, not conversation — it is
       prepended by the loop and never stored.
     * ``load()`` repairs: a crash mid-tool-batch leaves dangling tool
@@ -23,11 +23,10 @@ Rules:
     * Message content must be JSON-serializable; ``append`` is
       all-or-nothing, so a bad payload fails loudly instead of letting
       memory and disk diverge.
-    * Single writer per file, enforced by an advisory flock on the
-      append handle — a second open (other process or this one) raises.
-      One run at a time within that writer: two concurrent runs on one
-      session interleave into a provider-invalid transcript. ponytail:
-      no run guard; Worker serializes runs.
+    * Single writer per file (advisory flock on the append handle — a
+      second open, any process, raises). One run at a time within that
+      writer: concurrent runs interleave into a provider-invalid
+      transcript. ponytail: no run guard; Worker serializes runs.
 """
 
 from __future__ import annotations

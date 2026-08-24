@@ -1,8 +1,5 @@
-"""Generic data types. The loop speaks only this vocabulary.
-
-Provider adapters translate these to/from provider-specific formats.
-Nothing in this file knows about OpenAI, Anthropic, or anyone else.
-"""
+"""Generic data types — the loop speaks only this vocabulary; adapters
+translate to/from provider formats. Nothing here knows any provider."""
 
 from __future__ import annotations
 
@@ -17,10 +14,8 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
-# ---- content blocks ---------------------------------------------------
-# The input vocabulary: what a Message.content list may hold. Plain dicts
-# on the wire (serializable, hackable); TypedDicts + constructors give
-# adapter authors and tool writers the full picture.
+# ---- content blocks: what a Message.content list may hold. Plain dicts
+# on the wire (serializable, hackable); TypedDicts give the full picture.
 
 class TextBlock(TypedDict):
     type: Literal["text"]
@@ -96,9 +91,9 @@ class ToolResult:
 
 @dataclass
 class ErrorInfo:
-    """The one error shape: any ``"error"`` key in an event payload or
+    """The one error shape: any ``"error"`` key in event payloads or
     RunResult holds this, serialized. Model-facing channels (ToolResult
-    content) stay plain strings — models read prose, consumers parse this."""
+    content) stay plain prose strings; consumers parse this."""
 
     type: str                  # exception class or code: "UnknownTool", "Cancelled"
     message: str
@@ -115,13 +110,10 @@ class ErrorInfo:
 
 @dataclass
 class Message:
-    """One turn in the conversation. Generic across all providers.
-
-    - assistant messages may carry ``tool_calls``
-    - tool messages carry exactly one ``tool_result``
-    - ``content`` is a string, or a list of Blocks for multimodal input —
-      build them with ``text_block`` / ``image_block`` / ``file_block``
-    """
+    """One turn in the conversation, generic across providers. Assistant
+    messages may carry ``tool_calls``; tool messages carry exactly one
+    ``tool_result``; ``content`` is a string or a list of Blocks
+    (multimodal — build with text_block / image_block / file_block)."""
 
     role: Role
     content: str | list[Block] | list[dict[str, Any]] | None = None

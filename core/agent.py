@@ -15,8 +15,6 @@
             fire after_tool hooks             (may rewrite result)
             tool/end
     run/end
-
-Everything else in the package exists to serve these ~200 lines.
 """
 
 from __future__ import annotations
@@ -24,8 +22,9 @@ from __future__ import annotations
 import asyncio
 import json
 import traceback
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
+from .adapter import Ctx, Scope
 from .events import StepKind, StepPhase
 from .hooks import Hook, HookFn, HookPoint, Hooks, LLMHookContext, ToolHookContext
 from .llm import LLM, LLMDelta, LLMReply
@@ -60,6 +59,7 @@ class Agent:
         self.max_steps = max_steps
         self.parallel_tools = parallel_tools
         self.params = params or {}
+        self.adapters: dict[str, Scope] = {}
 
     # ---- public API ----------------------------------------------------
 
@@ -74,14 +74,10 @@ class Agent:
         params: dict[str, Any] | None = None,   # per-run LLM param overrides
     ) -> RunHandle:
         """Start a run. Returns immediately; events stream on the handle.
-
         ``await agent.run(...)`` yields the RunResult; keep the handle
-        un-awaited to stream events instead.
-        Must be called inside a running asyncio event loop.
-
+        un-awaited to stream instead. Needs a running asyncio loop.
         With ``session=``, the request derives from the session log and
-        every new message is appended through it (durable transcript).
-        """
+        every new message is appended through it (durable transcript)."""
         if session is not None:
             if history is not None:
                 raise ValueError("pass session or history, not both")
@@ -105,15 +101,37 @@ class Agent:
             self._run(handle, ctx, messages, merged, session))
         return handle
 
+    def use(self, setup: Callable[[Ctx], Any], /, name: str | None = None,
+            source: str | None = None, **config: Any) -> Scope:
+        """Mount an adapter (a ``setup(ctx)`` function): registrations
+        record inverses; a raising setup unwinds its partial work and
+        mounts nothing. See core/adapter.py."""
+        if not callable(setup):
+            raise TypeError(f"not an adapter: {setup!r}")
+        name = name or getattr(setup, "__name__", "adapter")
+        if name in self.adapters:
+            raise ValueError(f"adapter {name!r} already mounted")
+        scope = Scope(name, source)
+        try:
+            setup(Ctx(self, scope, config))
+        except BaseException:
+            scope.dispose()
+            raise
+        self.adapters[name] = scope
+        return scope
+
+    def drop(self, name: str) -> list[ErrorInfo]:
+        """Unmount: run the adapter's inverses newest-first. KeyError if
+        not mounted; inverse failures are returned, never raised."""
+        return self.adapters.pop(name).dispose()
+
     # ---- internals -------------------------------------------------------
 
     def _input_messages(
         self, input: str | Message | Iterable[Message]) -> list[Message]:
         if isinstance(input, str):
             return [Message(role="user", content=input)]
-        if isinstance(input, Message):
-            return [input]
-        return list(input)
+        return [input] if isinstance(input, Message) else list(input)
 
     def _build_messages(
         self, input: str | Message | Iterable[Message],
@@ -231,8 +249,8 @@ class Agent:
                           for c in calls),
                         return_exceptions=True,
                     )
-                    # hook failure: fail closed, but only after siblings
-                    # settle — and their real results stay in the transcript
+                    # hook failure: fail closed after siblings settle —
+                    # their real results stay in the transcript
                     exc = next((m for m in settled if isinstance(m, BaseException)),
                                None)
                     tool_msgs = [m for m in settled if isinstance(m, Message)]
@@ -277,11 +295,9 @@ class Agent:
     async def _exec_tool(self, h: RunHandle, ctx: RunContext, call: ToolCall,
                          *, malformed: bool = False) -> Message:
         """One tool call: start -> before hooks -> exec -> after hooks -> end.
-
         Never raises: failures become ToolResult(is_error=True) so the
-        LLM can see and recover from them. Hook failures still abort
-        the run (fail closed) — they propagate out of _fire.
-        """
+        LLM can see and recover. Hook failures still abort the run
+        (fail closed) — they propagate out of _fire."""
         sid = new_id("tool")
         await h.emit(StepKind.TOOL, START, {
             "call_id": call.id, "name": call.name, "arguments": call.arguments,

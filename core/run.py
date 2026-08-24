@@ -1,15 +1,11 @@
 """Run machinery: RunContext, RunResult, RunHandle.
 
-``agent.run()`` returns a RunHandle immediately. The handle:
-
-    * owns the event stream — every event is buffered with a monotonic
-      ``seq``, so any number of consumers can attach at any time and
-      ``events(after_seq=n)`` replays the past then follows live
-      (your durable stream / reconnect story);
-    * owns cancellation — ``stop()`` is graceful: current chunk finishes,
-      text/end (partial), tool/end (cancelled), run/end (status="stopped")
-      still reach every tracer and subscriber;
-    * owns completion — ``await handle.result()`` yields the RunResult.
+``agent.run()`` returns a RunHandle immediately. The handle owns the
+event stream (every event buffered with monotonic ``seq``; any number
+of consumers attach any time — ``events(after_seq=n)`` replays the past
+then follows live), cancellation (``stop()`` is graceful: text/end
+partial, tool/end cancelled, run/end stopped still reach every tracer
+and subscriber), and completion (``await handle`` -> RunResult).
 """
 
 from __future__ import annotations
@@ -31,8 +27,7 @@ _DONE = object()  # stream sentinel
 class RunResult:
     run_id: str
     status: RunStatus
-    messages: list[Message]        # the run's final request view + new turns
-                                   # (compacted view; the session log has all)
+    messages: list[Message]  # final request view + new turns (the log has all)
     output: str | None             # final assistant text (may be partial on stop)
     usage: Usage
     error: ErrorInfo | None = None
@@ -50,8 +45,7 @@ class RunContext:
     state: dict[str, Any] = field(default_factory=dict)
     usage: Usage = field(default_factory=Usage)
     last_usage: Usage = field(default_factory=Usage)  # most recent LLM step
-    # (last_usage.input_tokens == the context size the provider just saw —
-    # what token-based compaction keys on)
+    # (its input_tokens == context size the provider just saw; compaction keys on it)
 
     @property
     def stop_requested(self) -> bool:
@@ -65,10 +59,9 @@ class RunContext:
 class RunHandle:
     # ponytail: fixed caps as class attrs — override on the class or a
     # subclass. Hours-long runs must not grow memory without bound:
-    # events(after_seq=n) replays only what's still in the ring (gaps are
-    # visible via seq), and a slow subscriber loses its OLDEST queued
-    # events first — run/end and the done sentinel always arrive
-    # (needs max_queue >= 2: at 1 the sentinel evicts run/end).
+    # events(after_seq=n) replays only what the ring still holds (gaps
+    # visible via seq); a slow subscriber sheds its OLDEST queued events,
+    # run/end + done sentinel always arrive (needs max_queue >= 2).
     max_buffer = 10_000     # replay ring (events)
     max_queue = 1_000       # per-subscriber queue (events)
 
@@ -155,9 +148,8 @@ class RunHandle:
 
     def send(self, input: "str | Message") -> bool:
         """Queue a user message mid-run; the loop picks it up before its
-        next LLM step (or its final drain). Returns False — input NOT
-        accepted — once the run is finished or past that drain; callers
-        that must never lose input requeue it elsewhere on False."""
+        next LLM step (or its final drain). False = NOT accepted (run
+        finished / past the drain) — requeue elsewhere, never drop."""
         if self._finished or self._inbox_closed:
             return False
         self._inbox.append(Message(role="user", content=input)

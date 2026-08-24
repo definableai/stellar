@@ -1,17 +1,10 @@
-"""The LLM layer contract.
-
-An LLM adapter is anything with a ``stream()`` method that:
-
-    1. yields zero or more ``LLMDelta`` (incremental text), then
-    2. yields exactly one ``LLMReply`` (the complete assistant message,
-       with any tool calls fully assembled) and stops.
-
-That single rule — "deltas, then exactly one reply" — is the whole
-contract. All provider-specific mess (partial tool-call JSON
-accumulation, event formats, retries, stop reasons) lives inside the
-adapter. The loop only ever sees generic ``Message``/``ToolCall`` data,
-which is what keeps the core hackable and provider-agnostic.
-Adapters may honor cancellation; the loop stops consuming on stop.
+"""The LLM layer contract: an adapter is anything with a ``stream()``
+method that yields zero or more ``LLMDelta`` (incremental text), then
+exactly one ``LLMReply`` (the complete assistant message, tool calls
+fully assembled) and stops. That single rule is the whole contract:
+provider mess (partial tool-call JSON, event formats, retries, stop
+reasons) lives inside the adapter; the loop sees only ``types.py``
+data. Adapters may honor cancellation; the loop stops on stop.
 """
 
 from __future__ import annotations
@@ -42,9 +35,9 @@ class LLMError(RuntimeError):
 @dataclass
 class LLMDelta:
     """An incremental chunk of assistant output. ``channel``: "text",
-    "reasoning", or "tool_args" (raw partial JSON of tool call #``index`` —
-    display only; the loop executes from the assembled LLMReply). Reasoning
-    never lands in the reply (adapters stash raw blocks in ``message.meta``)."""
+    "reasoning", or "tool_args" (partial JSON of call #``index``, display
+    only — the loop executes from the assembled LLMReply). Reasoning never
+    lands in the reply; adapters stash raw blocks in ``message.meta``."""
 
     text: str = ""
     channel: Channel = "text"
@@ -76,12 +69,12 @@ class ReplyBuilder:
         yield b.reply()
 
     The builder owns the assembly rules so adapters cannot get them
-    wrong: text joins in stream order, tool-call argument fragments
-    accumulate per index, and unparseable argument JSON (length-stop
-    truncation, provider bugs) yields the call with ``arguments={}``
-    plus its raw fragment in ``message.meta["invalid_tool_args"]`` —
-    the loop turns that into a readable error for the model instead of
-    silently dropping the call. Provider extras go in ``.meta``."""
+    wrong: text joins in stream order, argument fragments accumulate
+    per index, and unparseable argument JSON (length-stop truncation,
+    provider bugs) yields the call with ``arguments={}`` plus its raw
+    fragment in ``message.meta["invalid_tool_args"]`` — the loop turns
+    that into a readable model-facing error instead of a silent drop.
+    Provider extras go in ``.meta``."""
 
     def __init__(self) -> None:
         self._text: list[str] = []
@@ -98,9 +91,8 @@ class ReplyBuilder:
         return LLMDelta(text=chunk, channel="reasoning")
 
     def tool_call(self, index: int, *, id: str = "", name: str = "") -> None:
-        """Open (or extend) tool call #index. ``name`` fragments
-        concatenate (some providers stream names in pieces — pass each
-        piece exactly once); first non-empty ``id`` wins."""
+        """Open (or extend) call #index. ``name`` fragments concatenate
+        (providers stream names in pieces); first non-empty ``id`` wins."""
         slot = self._calls.setdefault(index, {"id": "", "name": "", "json": ""})
         slot["id"] = slot["id"] or id
         slot["name"] += name
