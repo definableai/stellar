@@ -102,6 +102,10 @@ def _to_openai(messages: Sequence[Message]) -> list[dict[str, Any]]:
 
 
 class OpenAILLM:
+    # the evolution seam: subclass and override to change what crosses the
+    # wire (e.g. tool results carrying images) without copying the stream loop
+    to_wire = staticmethod(_to_openai)
+
     def __init__(
         self,
         model: str = "gpt-4o",
@@ -131,7 +135,7 @@ class OpenAILLM:
     ) -> AsyncIterator[LLMDelta | LLMReply]:
         payload: dict[str, Any] = {
             "model": self.model,
-            "messages": _to_openai(messages),
+            "messages": self.to_wire(messages),
             "stream": True,
             "stream_options": {"include_usage": True},
             **{**self.defaults, **params},
@@ -224,12 +228,14 @@ class OpenAIResponsesLLM(OpenAILLM):
     reasoning summaries. ponytail: resends full transcript per turn
     (stateless); previous_response_id server-state if traffic matters."""
 
+    to_wire = staticmethod(_to_responses)
+
     async def stream(
         self, messages: Sequence[Message], tools: Sequence[ToolSpec], **params: Any
     ) -> AsyncIterator[LLMDelta | LLMReply]:
         payload: dict[str, Any] = {
             "model": self.model,
-            "input": _to_responses(messages),
+            "input": self.to_wire(messages),
             "stream": True,
             **{**self.defaults, **params},
         }

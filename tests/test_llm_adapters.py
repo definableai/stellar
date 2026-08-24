@@ -23,7 +23,7 @@ from core import (  # noqa: E402
 from internal.llm_anthropic import AnthropicLLM, _to_anthropic  # noqa: E402
 from internal.llm_common import data_url, dump_result, map_blocks  # noqa: E402
 from internal.llm_openai import (  # noqa: E402
-    OpenAILLM, OpenAIResponsesLLM, _blocks, _r_blocks,
+    OpenAILLM, OpenAIResponsesLLM, _blocks, _r_blocks, _to_responses,
 )
 
 
@@ -259,6 +259,48 @@ async def test_openai() -> None:
     kinds = [t["type"] for t in cap2["body"]["tools"]]
     assert kinds == ["web_search", "function"], kinds
     assert cap2["body"]["tools"][1]["strict"] is False
+
+    # the evolution seam: overriding to_wire changes what a tool result may
+    # carry — the shape an agent-written external llm_*.py would take to give
+    # itself eyes, without copying the stream loop
+    class Eyes(OpenAIResponsesLLM):
+        @staticmethod
+        def to_wire(messages):
+            items = []
+            for m in messages:
+                tr = m.tool_result
+                if (m.role == "tool" and tr and isinstance(tr.content, dict)
+                        and tr.content.get("type") == "image"):
+                    items.append({"type": "function_call_output",
+                                  "call_id": tr.call_id,
+                                  "output": "(rendered image follows)"})
+                    items.append({"role": "user", "content": [
+                        {"type": "input_image", "image_url":
+                         "data:image/png;base64," + tr.content["data"]}]})
+                else:
+                    items += _to_responses([m])
+            return items
+
+    cap3: dict[str, Any] = {}
+
+    def capture_e(req: httpx.Request) -> httpx.Response:
+        cap3["body"] = json.loads(req.content)
+        return httpx.Response(200, content=resp_body,
+                              headers={"content-type": "text/event-stream"})
+
+    eyes = Eyes(api_key="test", client=httpx.AsyncClient(
+        transport=httpx.MockTransport(capture_e), base_url="http://fake"))
+    [x async for x in eyes.stream([
+        Message(role="user", content="verify the pdf"),
+        Message(role="assistant",
+                tool_calls=[ToolCall("v1", "render_page", {"page": 1})]),
+        Message(role="tool", tool_result=ToolResult(
+            call_id="v1", name="render_page",
+            content={"type": "image", "data": "QUJD"})),
+    ], [])]
+    shapes = [i.get("type") or i.get("role") for i in cap3["body"]["input"]]
+    assert shapes == ["user", "function_call", "function_call_output", "user"], shapes
+    assert cap3["body"]["input"][3]["content"][0]["type"] == "input_image"
 
 
 async def main() -> None:
