@@ -1,38 +1,18 @@
 """Claude Code, rebuilt on this core — same prompt, same tool schemas, GPT brain.
 
-``cc.json`` is a captured Claude Code request. Everything the model sees
-is read straight out of it (system blocks, tool names, descriptions and
-JSON Schemas) — nothing is retyped, so the replica cannot drift from the
-capture. Only the *handlers* are ours, and only for the tools that do
-something local:
-
-    Read / Write / Edit / Bash
-
-The rest of cc.json's tools (Agent, Artifact, Skill, Workflow, ToolSearch,
-...) are harness features that do not exist here; they are left out rather
-than faked, and calls to them come back as UnknownTool for the model to
-recover from. The system prompt still describes them — that is what "same
-prompt" means.
-
-Where the handlers knowingly fall short of what their (verbatim) descriptions
-promise: Bash is NOT sandboxed — ``dangerouslyDisableSandbox`` is accepted and
-ignored, every command runs with this process's full permissions — its cwd
-does not persist between calls, and ``run_in_background`` is refused; Read is
-text-only, so ``pages`` is ignored and binary files error out.
-
     export OPENAI_API_KEY=...
     uv run python -m examples.cc.cc "add a healthcheck route to app.py"
     uv run python -m examples.cc.cc --session 7b2f "big refactor task"
-    uv run python -m examples.cc.cc --session 7b2f          # REPL (Worker)
-    uv run python -m examples.cc.cc selfcheck               # no network
+    uv run python -m examples.cc.cc --session 7b2f      # REPL (Worker)
+    uv run python -m examples.cc.cc selfcheck           # no network
 
-``--session`` takes a plain id (any slug you like); the log lives at
-``.cc-sessions/<id>.jsonl`` under the cwd.
-
-With ``--session`` the whole conversation is durable: Ctrl-C stops the
-run gracefully (partial reply persisted), kill -9 loses at most the
-step in flight — rerun the same command and it repairs the log and
-continues where it died. That one flag is the core's whole pitch.
+Everything the model sees is read verbatim from cc.json (a captured Claude
+Code request) — only the handlers are ours: Read / Write / Edit / Bash. The
+other captured tools (Agent, Skill, Workflow, ...) stay in the prompt but are
+not faked; calls come back as UnknownTool. Bash is NOT sandboxed — commands
+run with this process's full permissions. ``--session <id>`` logs to
+``.cc-sessions/<id>.jsonl``: Ctrl-C stops gracefully, kill -9 loses at most
+the step in flight — rerun the same command and it resumes.
 """
 
 from __future__ import annotations
@@ -50,9 +30,10 @@ from internal.worker import Worker
 from core import (Agent, LLMReply, Message, Session, StepKind, StepPhase,
                   Tool, ToolCall, ToolSpec)
 
+# ---- capture: prompt + schemas straight from cc.json -----------------------
+
 CC = json.loads((Path(__file__).parent / "cc.json").read_text())
-# [0] is an x-anthropic-billing header, not prompt text.
-SYSTEM = "\n\n".join(b["text"] for b in CC["system"][1:])
+SYSTEM = "\n\n".join(b["text"] for b in CC["system"][1:])   # [0] is a billing header
 SCHEMAS = {t["name"]: t for t in CC["tools"]}
 
 MAX_LINES = 2000        # Read default, per the tool description
@@ -61,16 +42,14 @@ TOOLS: list[Tool] = []
 
 
 def handler(name: str, parallel_safe: bool = True):
-    """Bind a function to cc.json's spec for ``name`` — name, description
-    and schema all come from the capture."""
-
+    # bind fn to cc.json's spec — name, description and schema from the capture
     def wrap(fn):
         spec = SCHEMAS[name]
         TOOLS.append(Tool(
             spec=ToolSpec(
                 name=name,
                 description=spec["description"],
-                # $schema is an Anthropic-side annotation; other providers reject it.
+                # $schema is an Anthropic-side annotation; other providers reject it
                 parameters={k: v for k, v in spec["input_schema"].items()
                             if k != "$schema"},
             ),
@@ -78,24 +57,23 @@ def handler(name: str, parallel_safe: bool = True):
             parallel_safe=parallel_safe,
         ))
         return fn
-
     return wrap
 
 
-# Files Read so far, by resolved path. Edit/Write refuse to touch anything else.
-# ponytail: process-global, so it is one conversation per process — the real
-# harness scopes this per session. Move onto ctx.run.state once a run's state
-# is threaded across turns.
+# ---- tool handlers ---------------------------------------------------------
+
+# Files Read so far, by resolved path; Edit/Write refuse to touch anything else.
+# ponytail: process-global, so one conversation per process — the real harness
+# scopes this per session. Move onto ctx.run.state once run state spans turns.
 SEEN: set[str] = set()
 
 
 def _key(file_path: str) -> str:
-    """`sub/../a.py`, `a.py` and a symlink to it are the same file."""
-    return str(Path(file_path).resolve())
+    return str(Path(file_path).resolve())   # `sub/../a.py` == `a.py` == symlink
 
 
 def _slurp(file_path: str) -> str:
-    """Read as text, preserving line endings. Binary is an error, not mojibake."""
+    # text only, line endings preserved; binary is an error, not mojibake
     try:
         with open(file_path, encoding="utf-8", newline="") as f:
             return f.read()
@@ -106,6 +84,8 @@ def _slurp(file_path: str) -> str:
 @handler("Read")
 def read(ctx, file_path: str, offset: int = 0, limit: int = MAX_LINES,
          pages: str | None = None) -> str:
+    # ponytail: text only, `pages` ignored — images/PDF/notebooks need a
+    # multimodal ToolResult; add when the core carries non-text content blocks.
     lines = _slurp(file_path).split("\n")   # not splitlines(): \f, \v, U+2028 are
     if lines[-1] == "":                     # not line breaks to cat -n or any editor
         lines.pop()                         # a trailing newline terminates, not adds
@@ -121,8 +101,6 @@ def read(ctx, file_path: str, offset: int = 0, limit: int = MAX_LINES,
     body = "\n".join(f"{start + i + 1:>6}\t{ln}" for i, ln in enumerate(window))
     tail = len(lines) - (start + len(window))
     return body + (f"\n… {tail} more lines" if tail > 0 else "")
-    # ponytail: text only, `pages` ignored. Images/PDF/notebooks need a
-    # multimodal ToolResult; add when the core carries non-text content blocks.
 
 
 @handler("Write", parallel_safe=False)
@@ -163,14 +141,14 @@ def edit(ctx, file_path: str, old_string: str, new_string: str,
 async def bash(ctx, command: str, timeout: float = 120_000,
                description: str | None = None, run_in_background: bool = False,
                dangerouslyDisableSandbox: bool = False) -> str:
+    # ponytail: one subprocess per call — cwd/env do not persist across calls,
+    # unlike the real Bash tool. A long-lived shell + sentinel framing if it matters.
     if run_in_background:
         raise ValueError("run_in_background is not supported here — run it in the foreground")
     proc = await asyncio.create_subprocess_shell(
         command, cwd=os.getcwd(), start_new_session=True,  # own group, so we can kill children
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
     )
-    # ponytail: one subprocess per call — cwd/env do not persist across calls,
-    # unlike the real Bash tool. A long-lived shell + sentinel framing if it matters.
     chunks: list[bytes] = []
 
     async def drain() -> None:
@@ -201,10 +179,11 @@ async def bash(ctx, command: str, timeout: float = 120_000,
     return (text + note) or "(no output)"
 
 
-class CliTracer:
-    """Streams the run to the terminal, Claude-Code style. A tracer, so
-    one-shot runs and Worker turns render through the same code."""
+# ---- tracer ----------------------------------------------------------------
 
+class CliTracer:
+    # streams the run to the terminal, Claude-Code style; a tracer, so
+    # one-shot runs and Worker turns render through the same code
     def __init__(self) -> None:
         self._channel: str | None = None
 
@@ -226,7 +205,9 @@ class CliTracer:
             print(f"\n\n[{p['status']}]", flush=True)
 
 
-def build(model: str = "gpt-5.6-sol", tracers: Any = (), **params: Any) -> Agent:
+# ---- agent -----------------------------------------------------------------
+
+def build(model: str = "gpt-5.6-luna", tracers: Any = (), **params: Any) -> Agent:
     return Agent(
         llm=OpenAIResponsesLLM(model=model, reasoning={"effort": "high",
                                                        "summary": "auto"}),
@@ -239,6 +220,8 @@ def build(model: str = "gpt-5.6-sol", tracers: Any = (), **params: Any) -> Agent
     )
 
 
+# ---- entrypoints -----------------------------------------------------------
+
 SESSIONS_DIR = Path(".cc-sessions")             # <cwd>/.cc-sessions/<id>.jsonl
 
 
@@ -246,17 +229,15 @@ def _open_session(sid: str | None) -> Session:
     if sid is None:
         return Session()                        # in-memory: no resume
     path = SESSIONS_DIR / f"{sid}.jsonl"
-    if path.exists():
-        return Session.load(path)               # repair + continue
-    return Session(path, id=sid)
+    return Session.load(path) if path.exists() else Session(path, id=sid)
 
 
-async def main(prompt: str, session_path: str | None = None) -> None:
-    with _open_session(session_path) as s:
+async def main(prompt: str, session_id: str | None = None) -> None:
+    with _open_session(session_id) as s:
         handle = build(tracers=[CliTracer()]).run(input=prompt, session=s)
         hits = 0
 
-        def on_int() -> None:
+        def on_int() -> None:                   # first Ctrl-C graceful, second hard
             nonlocal hits
             hits += 1
             if hits == 1:
@@ -269,9 +250,9 @@ async def main(prompt: str, session_path: str | None = None) -> None:
         await handle
 
 
-async def repl(session_path: str) -> None:
-    """A long-lived Worker on a durable session: Claude Code as a REPL."""
-    with _open_session(session_path) as s:
+async def repl(session_id: str) -> None:
+    # a long-lived Worker on a durable session: Claude Code as a REPL
+    with _open_session(session_id) as s:
         worker = Worker(build(tracers=[CliTracer()]), s)
         serve = asyncio.create_task(worker.serve())
         loop = asyncio.get_running_loop()
@@ -291,8 +272,10 @@ async def repl(session_path: str) -> None:
         await serve
 
 
+# ---- selfcheck -------------------------------------------------------------
+
 async def _selfcheck() -> None:
-    """Every handler, plus the read-before-write gate, over a fake LLM."""
+    # every handler, plus the read-before-write gate, over a fake LLM
     import tempfile
 
     class _FakeLLM:
@@ -375,6 +358,7 @@ async def _selfcheck() -> None:
 
         assert (await bash(ctx, "printf hello")) == "hello"
         assert "exit code 3" in await bash(ctx, "exit 3")
+
         # timeout: keeps the output already printed, and kills the whole tree
         canary = f"{d}/canary"
         out = await bash(ctx, f"printf early; (sleep 1.5; touch {canary}) &  wait",
@@ -427,6 +411,8 @@ async def _selfcheck() -> None:
 
     print("cc replica self-check ok")
 
+
+# ---- cli -------------------------------------------------------------------
 
 if __name__ == "__main__":
     args = sys.argv[1:]

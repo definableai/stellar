@@ -5,7 +5,7 @@ omitted it derives JSON Schema from the signature and Google-style
 docstring (description = text before ``Args:``, per-param descriptions
 from the ``Args:`` block):
 
-    from builtin.tools.schema import tool
+    from internal.tools.schema import tool
 
     @tool()
     async def search(ctx, query: str, limit: int = 10):
@@ -19,7 +19,7 @@ from the ``Args:`` block):
 Explicit ``parameters=`` always wins — use it for nested models or
 anything inference can't express. Self-check:
 
-    uv run python -m builtin.tools.schema
+    uv run python -m internal.tools.schema
 """
 
 from __future__ import annotations
@@ -95,6 +95,7 @@ def tool(
     description: str | None = None,
     parameters: dict[str, Any] | None = None,
     parallel_safe: bool = True,
+    timeout: float | None = None,
 ):
     """Like ``core.tool`` but infers what you don't pass."""
 
@@ -105,6 +106,7 @@ def tool(
             description=description or inferred_desc,
             parameters=parameters or inferred_schema,
             parallel_safe=parallel_safe,
+            timeout=timeout,
         )(fn)
 
     return wrap
