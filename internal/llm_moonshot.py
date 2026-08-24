@@ -38,8 +38,3 @@ class MoonshotLLM(OpenAILLM):
             raise ValueError("no API key: pass api_key= or set MOONSHOT_API_KEY")
         super().__init__(model=model, api_key=key, base_url=base_url,
                          client=client, timeout=timeout, **defaults)
-
-
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py); config = MoonshotLLM kwargs."""
-    ctx.llm(MoonshotLLM(**ctx.config))

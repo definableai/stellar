@@ -298,12 +298,3 @@ class OpenAIResponsesLLM(OpenAILLM):
                                   ).get("reason", "incomplete")
         b.finish("tool_use" if saw_calls else status)
         yield b.reply()
-
-
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py); config = OpenAILLM kwargs, plus
-    ``responses=True`` to pick /responses. Copy: ctx.config is replayed
-    verbatim on remount, so the pop must not touch it."""
-    config = dict(ctx.config)
-    cls = OpenAIResponsesLLM if config.pop("responses", False) else OpenAILLM
-    ctx.llm(cls(**config))

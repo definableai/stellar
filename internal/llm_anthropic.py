@@ -212,8 +212,3 @@ class AnthropicLLM:
         if thinking_blocks:
             b.meta["anthropic_thinking"] = thinking_blocks
         yield b.reply()
-
-
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py); config = AnthropicLLM kwargs."""
-    ctx.llm(AnthropicLLM(**ctx.config))

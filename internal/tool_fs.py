@@ -1,6 +1,6 @@
 """File primitives, rooted: read / write / edit / list one directory.
 
-    agent.use(tool_fs.setup, root="workspace")
+    agent = Agent(llm, tools=[*fs_tools("workspace")])
 
 Every ``path`` is relative to ``root`` and resolved before use, so
 ``..`` and symlinks are judged by where they land, not how they spell
@@ -71,13 +71,11 @@ def _listed(root: Path, p: Path) -> str | None:
     return None if _SKIP & set(rel.parts) else rel.as_posix()
 
 
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py). Config: ``root=`` — the directory
-    every path resolves under, created if missing. Required: where an
-    agent keeps its files is the developer's call, never core's guess."""
-    if not (configured := ctx.config.get("root")):
-        raise ValueError("tool_fs needs root=<dir>: agent.use(setup, root=...)")
-    root = Path(configured).resolve()
+def fs_tools(root: str | Path) -> list[Tool]:
+    """The four file tools, rooted at ``root`` — the directory every path
+    resolves under, created if missing. Required: where an agent keeps
+    its files is the developer's call, never core's guess."""
+    root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=True)
 
     def jail(rel: str) -> Path:
@@ -143,8 +141,8 @@ def setup(ctx: Any) -> None:
             found = found[:MAX_ENTRIES] + [f"… {len(found) - MAX_ENTRIES} more"]
         return "\n".join(found) or "(no files)"
 
-    for fn, params, parallel_safe in [
-            (read_file, _READ, True), (write_file, _WRITE, False),
-            (edit_file, _EDIT, False), (list_files, _LIST, True)]:
-        ctx.tool(Tool(spec=ToolSpec(fn.__name__, fn.__doc__ or "", params),
-                      handler=fn, parallel_safe=parallel_safe))
+    return [Tool(spec=ToolSpec(fn.__name__, fn.__doc__ or "", params),
+                 handler=fn, parallel_safe=parallel_safe)
+            for fn, params, parallel_safe in [
+                (read_file, _READ, True), (write_file, _WRITE, False),
+                (edit_file, _EDIT, False), (list_files, _LIST, True)]]

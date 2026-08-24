@@ -16,7 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import Agent  # noqa: E402
-from internal import tool_bash, tool_fs  # noqa: E402
+from internal.tool_bash import MAX_OUTPUT, bash_tool  # noqa: E402
+from internal.tool_fs import fs_tools  # noqa: E402
 
 
 class StubLLM:
@@ -26,17 +27,15 @@ class StubLLM:
         raise AssertionError("stub LLM must not be streamed")
 
 
-def mount(tmp: Path) -> Agent:
-    agent = Agent(StubLLM())
-    agent.use(tool_fs.setup, root=str(tmp))
-    agent.use(tool_bash.setup, root=str(tmp))
-    return agent
+def build(tmp: Path) -> Agent:
+    return Agent(StubLLM(), tools=[*fs_tools(tmp), bash_tool(tmp)])
 
 
 def fails(fn, *a, **kw) -> str:
+    """Call fn expecting a rejection; hand back the message."""
     try:
         fn(*a, **kw)
-    except ValueError as ex:
+    except (TypeError, ValueError) as ex:
         return str(ex)
     raise AssertionError(f"{getattr(fn, '__name__', fn)}{a} should have raised")
 
@@ -54,7 +53,7 @@ CTX = None
 
 
 def test_fs(tmp: Path) -> None:
-    agent = mount(tmp)
+    agent = build(tmp)
     read = agent.tools["read_file"].handler
     write = agent.tools["write_file"].handler
     edit = agent.tools["edit_file"].handler
@@ -132,7 +131,7 @@ def test_fs(tmp: Path) -> None:
 
 
 async def test_bash(tmp: Path) -> None:
-    bash = mount(tmp).tools["bash"].handler
+    bash = build(tmp).tools["bash"].handler
     clock = asyncio.get_running_loop().time
 
     assert await bash(CTX, "printf hello") == "hello"
@@ -161,19 +160,20 @@ async def test_bash(tmp: Path) -> None:
     # output cap, with the truncation note
     out = await bash(CTX, "head -c 40000 /dev/zero | tr '\\0' x")
     assert out.startswith("x" * 100) and out.endswith("… truncated (10000 more chars)")
-    assert len(out) == tool_bash.MAX_OUTPUT + len("\n… truncated (10000 more chars)")
+    assert len(out) == MAX_OUTPUT + len("\n… truncated (10000 more chars)")
 
 
-def test_setup_contract(tmp: Path) -> None:
-    for mod in (tool_fs, tool_bash):
-        assert "root=" in fails(Agent(StubLLM()).use, mod.setup)
+def test_factory_contract(tmp: Path) -> None:
+    # root is a required argument, not a guess
+    for factory in (fs_tools, bash_tool):
+        assert "root" in fails(factory)
 
     # the root is created if it is missing
     made = tmp / "brand" / "new"
-    Agent(StubLLM()).use(tool_fs.setup, root=str(made))
+    fs_tools(made)
     assert made.is_dir()
 
-    agent = mount(tmp)
+    agent = build(tmp)
     assert sorted(agent.tools) == [
         "bash", "edit_file", "list_files", "read_file", "write_file"]
 
@@ -184,16 +184,13 @@ def test_setup_contract(tmp: Path) -> None:
         assert set(t.spec.parameters["properties"]) <= takes, name
         assert set(t.spec.parameters.get("required", ())) <= takes, name
         assert t.spec.description, name
-    agent.drop("tool_bash")
-    agent.drop("tool_fs")
-    assert agent.tools == {} and agent.adapters == {}
 
 
 async def main() -> None:
     with tempfile.TemporaryDirectory() as d:
         test_fs(Path(d) / "fs")
         await test_bash(Path(d) / "bash")
-        test_setup_contract(Path(d) / "contract")
+        test_factory_contract(Path(d) / "contract")
     print("test_primitives: all ok")
 
 

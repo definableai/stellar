@@ -103,8 +103,3 @@ class LiteLLM:
                 if args:
                     yield b.tool_args(idx, args)
         yield b.reply()
-
-
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py); config = LiteLLM kwargs."""
-    ctx.llm(LiteLLM(**ctx.config))

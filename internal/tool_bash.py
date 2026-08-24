@@ -1,6 +1,6 @@
-"""Bash, rooted: one shell command per call, cwd = the configured root.
+"""Bash, rooted: one shell command per call, cwd = the given root.
 
-    agent.use(tool_bash.setup, root="workspace")
+    agent = Agent(llm, tools=[bash_tool("workspace")])
 
 NOT a sandbox. Commands run with this process's full permissions and
 can walk straight out of the root (``cd /``, absolute paths, network) —
@@ -31,13 +31,11 @@ _SCHEMA = {"type": "object", "required": ["command"], "properties": {
                                f"(default 120, max {MAX_TIMEOUT:g})."}}}
 
 
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py). Config: ``root=`` — the working
-    directory every command starts in, created if missing. Required: a
-    shell's cwd is the developer's call, never core's guess."""
-    if not (configured := ctx.config.get("root")):
-        raise ValueError("tool_bash needs root=<dir>: agent.use(setup, root=...)")
-    root = Path(configured).resolve()
+def bash_tool(root: str | Path) -> Tool:
+    """The bash tool, rooted at ``root`` — the working directory every
+    command starts in, created if missing. Required: a shell's cwd is
+    the developer's call, never core's guess."""
+    root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=True)
 
     async def bash(cctx: Any, command: str = "", timeout: float = 120) -> str:
@@ -83,5 +81,5 @@ def setup(ctx: Any) -> None:
             text += f"\n(exit code {proc.returncode})"
         return (text + note) or "(no output)"
 
-    ctx.tool(Tool(spec=ToolSpec("bash", bash.__doc__ or "", _SCHEMA),
-                  handler=bash, parallel_safe=False))
+    return Tool(spec=ToolSpec("bash", bash.__doc__ or "", _SCHEMA),
+                handler=bash, parallel_safe=False)

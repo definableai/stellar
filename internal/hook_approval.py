@@ -152,9 +152,3 @@ def approval_gate(rules: Iterable[Rule], asker: Asker, timeout: float = 120.0):
             _deny(ctx, reason or "rejected by user")
 
     return Hook("before_tool", gate)
-
-
-def setup(ctx: Any) -> None:
-    """Adapter shape (core/adapter.py); config = approval_gate kwargs
-    (``rules=``, ``asker=``, ``timeout=``)."""
-    ctx.hook(approval_gate(**ctx.config))
