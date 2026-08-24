@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from hypothesis import given, settings, strategies as st  # noqa: E402
 
 from core import (  # noqa: E402
-    Message, ReplyBuilder, Session, SessionError, ToolCall, ToolResult,
+    Message, ReplyBuilder, Session, ToolCall, ToolResult,
     validate_args,
 )
 
