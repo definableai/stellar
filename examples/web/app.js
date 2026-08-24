@@ -75,7 +75,7 @@ function list(id, items, onclick) {
       small.textContent = " " + it.note;
       li.append(small);
     }
-    if (it.id) {
+    if (onclick && it.id) {
       li.className = it.id === current ? "on" : "";
       li.onclick = () => onclick(it.id).catch(fail);
     }
@@ -92,12 +92,27 @@ async function refreshSessions() {
   return rows;
 }
 
+// a listing entry is clickable unless it is the "… N more" tail
+const files = (names) => names.map((n) => ({ id: n.startsWith("…") ? null : n, label: n }));
+
 async function refreshAdapters() {
   const a = await api("/api/adapters");
   list("mounted", a.mounted.map((m) => ({ label: m.name, note: m.notes.join(" ") })));
   list("internal", a.internal.map((n) => ({ label: n })));
-  list("external", a.external.map((n) => ({ label: n })));
+  list("external", files(a.external), (p) => openFile("external", p));
+  list("workspace", files(a.workspace), (p) => openFile("workspace", p));
 }
+
+// ---- the file viewer (read-only) --------------------------------------------
+
+async function openFile(root, path) {
+  const f = await api(`/api/file?root=${root}&path=${encodeURIComponent(path)}`);
+  $("viewer-name").textContent = f.path;
+  $("viewer-body").textContent = f.content;   // server output, still not innerHTML
+  $("viewer").hidden = false;
+}
+
+const closeViewer = () => { $("viewer").hidden = true; };
 
 async function openSession(id) {
   current = id;
@@ -197,6 +212,10 @@ $("composer").onsubmit = async (ev) => {
 const create = () => api("/api/sessions", { method: "POST" }).then((s) => s.id);
 
 $("new").onclick = () => create().then(openSession).catch(fail);
+
+$("viewer-close").onclick = closeViewer;
+$("viewer").onclick = (ev) => { if (ev.target.id === "viewer") closeViewer(); };
+document.onkeydown = (ev) => { if (ev.key === "Escape") closeViewer(); };
 
 (async () => {
   await refreshAdapters();

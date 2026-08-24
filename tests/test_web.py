@@ -1,5 +1,6 @@
-"""examples/web over real localhost HTTP: the agent grows a tool, mounts a
-shipped adapter, and the panels/session log agree — scripted LLM, no network.
+"""examples/web over real localhost HTTP: the agent works in its scratch
+workspace, grows a tool into external/, mounts a shipped adapter, and the
+panels / viewer / session log agree — scripted LLM, no network.
 
 Run: uv run python tests/test_web.py
 """
@@ -11,6 +12,7 @@ import json
 import os
 import sys
 import tempfile
+import textwrap
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -18,7 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # the server assembles its agent at import: knobs first, into a tmpdir
 _TMP = tempfile.TemporaryDirectory()
 os.environ["OPENAI_API_KEY"] = "unused-the-llm-is-scripted"
-os.environ["STELLAR_WEB_WORKSPACE"] = str(Path(_TMP.name) / "workspace")
+os.environ["STELLAR_WEB_EXTERNAL"] = str(Path(_TMP.name) / "external")
+os.environ["STELLAR_WEB_SCRATCH"] = str(Path(_TMP.name) / "workspace")
 os.environ["STELLAR_WEB_SESSIONS"] = str(Path(_TMP.name) / "sessions")
 
 import httpx  # noqa: E402
@@ -26,15 +29,18 @@ import httpx  # noqa: E402
 from core import LLMDelta, LLMReply, Message, ToolCall  # noqa: E402
 from examples.web import server  # noqa: E402
 
+# the shape the SYSTEM prompt documents: setup(ctx) composing, handler
+# taking the call context first and the schema's properties as kwargs
 CALC_V1 = '''
 from core import Tool, ToolSpec
 
 def setup(ctx):
-    ctx.tool(Tool(ToolSpec("calc", "Add a and b.",
-                           {"type": "object", "required": ["a", "b"],
-                            "properties": {"a": {"type": "number"},
-                                           "b": {"type": "number"}}}),
-                  handler=lambda cctx, a, b: a + b))
+    def calc(cctx, a=0, b=0):
+        return a + b
+    ctx.tool(Tool(spec=ToolSpec("calc", "Add a and b.", {
+        "type": "object", "required": ["a", "b"],
+        "properties": {"a": {"type": "number"},
+                       "b": {"type": "number"}}}), handler=calc))
 '''
 
 
@@ -80,6 +86,14 @@ def frames(raw: str) -> list[tuple[str, dict]]:
     return out
 
 
+def fails(fn, *a) -> str:
+    try:
+        fn(*a)
+    except ValueError as ex:
+        return str(ex)
+    raise AssertionError(f"{getattr(fn, '__name__', fn)}{a} should have raised")
+
+
 def events(fs, kind, phase):
     return [e["payload"] for name, e in fs
             if name != "done" and e["kind"] == kind and e["phase"] == phase]
@@ -106,8 +120,8 @@ async def static_routes(c) -> None:
 async def grow_a_tool(c) -> None:
     sid = (await c.post("/api/sessions")).json()["id"]
     server.AGENT.llm = Scripted([
-        call("c1", "workspace_write", {"path": "calc.py", "content": CALC_V1}),
-        call("c2", "adapter_load", {"path": "calc.py"}),
+        call("c1", "adapter_write", {"path": "tool_calc.py", "content": CALC_V1}),
+        call("c2", "adapter_load", {"path": "tool_calc.py"}),
         call("c3", "calc", {"a": 2, "b": 3}),
         text("calc says 5."),
     ])
@@ -117,30 +131,138 @@ async def grow_a_tool(c) -> None:
     deltas = events(fs, "text", "delta")
     assert "".join(d["text"] for d in deltas) == "calc says 5."
     assert [p["name"] for p in events(fs, "tool", "start")] == [
-        "workspace_write", "adapter_load", "calc"]
+        "adapter_write", "adapter_load", "calc"]
     ends = events(fs, "tool", "end")
     assert not any(p["is_error"] for p in ends), ends
     assert ends[2]["result"] == 5                         # the new tool ran
     assert events(fs, "run", "end")[0]["status"] == "completed"
 
     a = (await c.get("/api/adapters")).json()
-    assert "calc" in [m["name"] for m in a["mounted"]]
-    assert a["external"] == ["calc.py"]
+    grown = next(m for m in a["mounted"] if m["name"] == "tool_calc")  # the file
+    assert grown["notes"] == ["tool:calc"]                             # what it added
+    assert a["external"] == ["tool_calc.py"]
     assert "llm_anthropic" in a["internal"]               # has setup(ctx)
     assert "llm_common" not in a["internal"]              # a helper, not an adapter
+    # the primitives are mounted like everything else, from internal/
+    assert {"tool_fs", "tool_bash"} <= {m["name"] for m in a["mounted"]}
+    assert {"bash", "read_file", "write_file", "edit_file", "list_files"} <= \
+        set(server.AGENT.tools)
+
+    # external/ is browsable through the same viewer the panel clicks
+    f = (await c.get("/api/file?root=external&path=tool_calc.py")).json()
+    assert f["path"] == "external/tool_calc.py" and f["content"] == CALC_V1
 
     h = (await c.get(f"/api/sessions/{sid}")).json()
     assert {"role": "user", "content": "write yourself a calculator"} in h
     assert {"role": "assistant", "content": "calc says 5."} in h
-    ww = next(m for m in h if m["role"] == "tool" and m["name"] == "workspace_write")
-    assert '"path"' in ww["args"] and "calc.py" in ww["args"]   # input visible
-    assert ww["result"] and not ww["error"]                     # output paired in
+    ww = next(m for m in h if m["role"] == "tool" and m["name"] == "adapter_write")
+    assert '"path"' in ww["args"] and "tool_calc.py" in ww["args"]   # input visible
+    assert ww["result"] and not ww["error"]                         # output paired in
     calc = next(m for m in h if m["role"] == "tool" and m["name"] == "calc")
     assert calc["result"] == "5"                                # rendered, not wire
 
     rows = await c.get("/api/sessions")
     row = next(s for s in rows.json() if s["id"] == sid)
     assert row["messages"] == 8   # user + 3x(assistant+tool) + assistant
+
+
+async def works_in_the_workspace(c) -> None:
+    """The scratch space: a shell, files, and the viewer reading them back."""
+    sid = (await c.post("/api/sessions")).json()["id"]
+    server.AGENT.llm = Scripted([
+        call("w1", "bash", {"command": "printf hi"}),
+        call("w2", "write_file", {"path": "notes/hello.txt",
+                                  "content": "hello workspace\n"}),
+        call("w3", "read_file", {"path": "notes/hello.txt"}),
+        text("scratch works."),
+    ])
+    fs = await run_sse(c, sid, "try your hands")
+
+    ends = events(fs, "tool", "end")
+    assert not any(p["is_error"] for p in ends), ends
+    assert [p["result"] for p in ends] == [
+        "hi", "Wrote 1 line to notes/hello.txt", "hello workspace"]
+
+    scratch = Path(os.environ["STELLAR_WEB_SCRATCH"])
+    assert (scratch / "notes" / "hello.txt").read_text() == "hello workspace\n"
+
+    f = (await c.get("/api/file?root=workspace&path=notes/hello.txt")).json()
+    assert f == {"path": "workspace/notes/hello.txt", "content": "hello workspace\n"}
+
+    (scratch / "__pycache__").mkdir(exist_ok=True)
+    (scratch / "__pycache__" / "junk.pyc").write_text("x")
+    listing = (await c.get("/api/adapters")).json()["workspace"]
+    assert "notes/hello.txt" in listing, listing
+    assert not any("__pycache__" in n for n in listing), listing
+
+
+def adapter_write_gate() -> None:
+    """external/ is the manifest: .py, jailed, and named for what it adds."""
+    write = server.AGENT.tools["adapter_write"].handler
+    ws = Path(os.environ["STELLAR_WEB_EXTERNAL"])
+
+    assert write(None, "tool_calc.py", CALC_V1).startswith("wrote")   # idempotent
+    assert write(None, "tool/tool_x.py", "def setup(ctx): pass\n").startswith("wrote")
+
+    for bad in ("calc.py", "skills_adapter.py", "tool/x.py", "TOOL_x.py"):
+        msg = fails(write, None, bad, "# nope\n")
+        assert "tool_*.py" in msg and "tool_calc.py" in msg, (bad, msg)
+
+    for escape in ("../escaped.py", str(ws.parent / "escaped.py"), "notes.txt"):
+        assert "holds .py files under" in fails(write, None, escape, "# nope\n"), escape
+    assert not (ws.parent / "escaped.py").exists(), "a rejected write still wrote"
+
+
+def the_prompt_does_not_lie() -> None:
+    """The adapter example in SYSTEM is real code: lifted out of the prompt
+    byte for byte it passes the naming gate, mounts, and the tool it claims
+    to register answers a call. A prompt that documents a wrong handler
+    signature is the bug this guards."""
+    body, keep = [], False
+    for ln in server.SYSTEM.splitlines():
+        if ln.strip() == "# tool_calc.py":
+            keep = True
+        elif keep:
+            if ln.strip() and not ln.startswith("    "):   # the block ends here
+                break
+            body.append(ln)
+    src = textwrap.dedent("\n".join(body).strip("\n")) + "\n"
+    assert "def setup(ctx):" in src and "cctx" in src, src
+
+    server.AGENT.tools["adapter_write"].handler(None, "tool_example.py", src)
+    assert "tool:add" in server.AGENT.tools["adapter_load"].handler(
+        None, "tool_example.py")
+    assert server.AGENT.tools["add"].handler(None, a=2, b=3) == 5
+    server.AGENT.tools["adapter_unload"].handler(None, "tool_example")
+    assert "add" not in server.AGENT.tools
+
+
+async def file_endpoint(c) -> None:
+    scratch = Path(os.environ["STELLAR_WEB_SCRATCH"])
+    (scratch / "logo.png").write_bytes(b"\x89PNG\x00\xff\xfe")
+    assert (await c.get("/api/file?root=workspace&path=logo.png")).json() == {
+        "path": "workspace/logo.png", "content": "binary file (7 bytes)"}
+
+    (scratch / "big.txt").write_text("x" * (server.MAX_FILE + 50))
+    big = (await c.get("/api/file?root=workspace&path=big.txt")).json()["content"]
+    assert big.endswith("\n… truncated (50 more chars)") and \
+        len(big) == server.MAX_FILE + len("\n… truncated (50 more chars)")
+
+    for bad in ("root=internal&path=llm_openai.py",        # not one of the two
+                "root=&path=logo.png", "path=logo.png",    # no root at all
+                "root=workspace&path=../../etc/passwd",    # out of the jail
+                f"root=workspace&path={scratch.parent}/x", # absolute, likewise
+                "root=workspace&path=notes",               # a directory
+                "root=external&path=absent.py"):           # simply not there
+        r = await c.get("/api/file?" + bad)
+        assert r.status_code == 404, (bad, r.status_code)
+        assert "not found" in r.text, (bad, r.text)
+
+    # percent-encoded paths survive: the panel sends encodeURIComponent
+    (scratch / "a b").mkdir(exist_ok=True)
+    (scratch / "a b" / "c.txt").write_text("spaced\n")
+    assert (await c.get("/api/file?root=workspace&path=a%20b%2Fc.txt")).json() == {
+        "path": "workspace/a b/c.txt", "content": "spaced\n"}
 
 
 async def mount_internal(c) -> None:
@@ -208,7 +330,11 @@ async def main() -> None:
     try:
         async with httpx.AsyncClient(base_url=base, timeout=10.0) as c:
             await static_routes(c)
-            await grow_a_tool(c)
+            await grow_a_tool(c)          # asserts the exact external listing
+            await works_in_the_workspace(c)
+            adapter_write_gate()
+            the_prompt_does_not_lie()
+            await file_endpoint(c)
             await mount_internal(c)
             await one_run_per_session(c)
             await survives_a_dropped_client(c)

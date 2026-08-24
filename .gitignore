@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 *.jsonl
 .DS_Store
+workspace/
+skills/
+output/
