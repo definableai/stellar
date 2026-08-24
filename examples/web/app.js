@@ -19,6 +19,12 @@ const short = (v, n = 120) => {
   return s.length > n ? s.slice(0, n) + "…" : s;
 };
 
+// whitespace-preserving cap for tool payloads (short() is for one-liners)
+const cap = (v, n = 4000) => {
+  const s = typeof v === "string" ? v : JSON.stringify(v, null, 2);
+  return s.length > n ? s.slice(0, n) + "…" : s;
+};
+
 // ---- rendering --------------------------------------------------------------
 
 function bubble(role, text) {
@@ -28,6 +34,34 @@ function bubble(role, text) {
   $("messages").append(el);
   $("messages").scrollTop = $("messages").scrollHeight;
   return el;
+}
+
+function pre(cls, text) {
+  const el = document.createElement("pre");
+  el.className = cls;
+  el.textContent = text;
+  return el;
+}
+
+// one tool call: ● name, its input, its output — collapsible
+function toolBlock(name, args, open) {
+  const d = document.createElement("details");
+  d.className = "tool";
+  d.open = open;
+  const s = document.createElement("summary");
+  s.textContent = "● " + name;
+  d.append(s);
+  if (args) d.append(pre("io args", args));
+  const result = pre("io result", "…");
+  d.append(result);
+  $("messages").append(d);
+  $("messages").scrollTop = $("messages").scrollHeight;
+  return { d, result };
+}
+
+function finishTool(t, result, isError) {
+  t.result.textContent = result || "(no output)";
+  if (isError) t.d.classList.add("err");
 }
 
 function list(id, items, onclick) {
@@ -68,7 +102,10 @@ async function refreshAdapters() {
 async function openSession(id) {
   current = id;
   $("messages").replaceChildren();
-  for (const m of await api("/api/sessions/" + id)) bubble(m.role, m.content);
+  for (const m of await api("/api/sessions/" + id)) {
+    if (m.role === "tool") finishTool(toolBlock(m.name, m.args, false), m.result, m.error);
+    else bubble(m.role, m.content);
+  }
   await refreshSessions();
 }
 
@@ -103,10 +140,12 @@ async function run(input) {
   if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).trim()}`);
 
   let text = null;   // the assistant bubble currently being appended to
+  const open = new Map();   // call_id -> live tool block
   for await (const frame of frames(res.body)) {
     if (frame.event === "done") return;
     const e = JSON.parse(frame.data), p = e.payload;
     if (e.kind === "text" && e.phase === "delta") {
+      if (p.channel === "tool_args") continue;   // full args land on tool/start
       if (!text || text.channel !== p.channel) {
         text = { channel: p.channel, el: bubble(p.channel === "text" ? "assistant" : "dim", "") };
       }
@@ -116,9 +155,12 @@ async function run(input) {
     }
     text = null;
     if (e.kind === "tool" && e.phase === "start") {
-      bubble("tool", `● ${p.name}(${short(JSON.stringify(p.arguments))})`);
+      open.set(p.call_id, toolBlock(p.name, cap(p.arguments), true));
     } else if (e.kind === "tool" && e.phase === "end") {
-      bubble("tool", `  ⎿ ${short(p.result)}`);
+      const t = open.get(p.call_id) || toolBlock(p.name, "", true);
+      open.delete(p.call_id);
+      finishTool(t, cap(p.result), p.is_error);
+      $("messages").scrollTop = $("messages").scrollHeight;
     } else if (e.kind === "run" && e.phase === "end") {
       const err = p.error ? ` — ${p.error.type}: ${short(p.error.message)}` : "";
       bubble(p.error ? "error" : "status", `[${p.status}]${err}`);

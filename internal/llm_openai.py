@@ -25,6 +25,9 @@ per run (dict values deep-merge one level). Chat Completions accepts:
 Responses renames: ``max_output_tokens``, ``instructions``,
 ``reasoning={"effort","summary"}``, ``text={"verbosity","format"}``,
 ``previous_response_id``/``store``, ``background``, ``truncation``.
+Responses also takes OpenAI built-in tools via the ``tools`` param or
+default — ``tools=[{"type": "web_search"}]`` — run on OpenAI's side;
+the adapter appends the loop's function tools to them.
 
     OpenAILLM(model="gpt-5.6-luna", reasoning_effort="low",
               max_completion_tokens=8000)
@@ -230,11 +233,14 @@ class OpenAIResponsesLLM(OpenAILLM):
             "stream": True,
             **{**self.defaults, **params},
         }
-        if tools:
-            # /responses defaults function tools to strict=true, which rejects
-            # any schema with optional params. ToolSpec promises no such thing.
-            payload["tools"] = [{"type": "function", "strict": False, **s.to_dict()}
-                                for s in tools]
+        # a "tools" param/default carries OpenAI built-ins (web_search, ...)
+        # run server-side; the loop's function tools are appended to them.
+        # /responses defaults function tools to strict=true, which rejects
+        # any schema with optional params. ToolSpec promises no such thing.
+        builtin = payload.pop("tools", None)
+        if tools or builtin:
+            payload["tools"] = list(builtin or []) + [
+                {"type": "function", "strict": False, **s.to_dict()} for s in tools]
 
         b = ReplyBuilder()
         saw_calls = False
@@ -266,6 +272,11 @@ class OpenAIResponsesLLM(OpenAILLM):
                     saw_calls = True
                     b.tool_call(idx, id=it["call_id"], name=it["name"])
                     b.tool_args(idx, it.get("arguments") or "")
+                elif (t == "response.output_item.done"
+                      and ev["item"].get("type") == "web_search_call"):
+                    # server-side tool: display-only, nothing to execute
+                    q = (ev["item"].get("action") or {}).get("query") or ""
+                    yield LLMDelta(text=f"[web search] {q}\n", channel="status")
                 elif t in ("response.completed", "response.incomplete",
                            "response.failed"):
                     resp = ev.get("response") or {}

@@ -35,14 +35,18 @@ from pathlib import Path
 from typing import Any
 
 from core import Agent, Session, Tool, ToolSpec, boot, sse
-from internal.llm_openai import OpenAILLM
+from internal.llm_openai import OpenAIResponsesLLM
 
 # ---- knobs (env-overridable at import so a test can point them at a tmpdir) --
 
 WORKSPACE = os.environ.get("STELLAR_WEB_WORKSPACE", "external")
 SESSIONS_DIR = Path(os.environ.get("STELLAR_WEB_SESSIONS", ".web-sessions"))
 PORT = int(os.environ.get("STELLAR_WEB_PORT", "8765"))
-MODEL = os.environ.get("OPENAI_MODEL")      # unset -> OpenAILLM's own default
+# a reasoning model that actually CALLS tools — gpt-4o-class models tend to
+# print imitation tool-call JSON as prose instead (observed), which reads as
+# the agent "refusing" to grow itself
+MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.6-luna")
+SEARCH = os.environ.get("STELLAR_WEB_SEARCH", "1") != "0"   # OpenAI web_search
 MAX_STEPS = 20
 
 HERE = Path(__file__).resolve().parent
@@ -68,7 +72,11 @@ writing your own.
 
 Adapters are real Python: import Tool, ToolSpec and Hook from `core`.
 Prefer writing the tool you are missing over apologising for not having
-it. Keep answers short."""
+it. Tools are real function calls — make them; never print imitation
+tool-call JSON as text. Keep answers short.""" + ("""
+
+web_search is built in (runs on OpenAI's side): use it when you need
+current facts or documentation.""" if SEARCH else "")
 
 
 # ---- the agent's two extra tools (both trust boundaries: the model is input) -
@@ -120,7 +128,9 @@ TOOLS = [
 if not os.environ.get("OPENAI_API_KEY"):
     sys.exit("OPENAI_API_KEY is not set — export it and rerun")
 
-AGENT = Agent(llm=OpenAILLM(**({"model": MODEL} if MODEL else {})),
+AGENT = Agent(llm=OpenAIResponsesLLM(
+                  model=MODEL, reasoning={"effort": "medium", "summary": "auto"},
+                  **({"tools": [{"type": "web_search"}]} if SEARCH else {})),
               tools=TOOLS, system=SYSTEM, max_steps=MAX_STEPS)
 boot(AGENT, WORKSPACE)   # the kernel + whatever it has already written
 
@@ -169,24 +179,33 @@ def _text(content: Any) -> str:
     return content if isinstance(content, str) else ""
 
 
-def _short(value: Any, n: int = 160) -> str:
-    s = value if isinstance(value, str) else json.dumps(value, default=str)
-    s = " ".join(s.split())
+def _pretty(value: Any, n: int = 4000) -> str:
+    s = value if isinstance(value, str) else json.dumps(value, indent=2,
+                                                        default=str)
     return s if len(s) <= n else s[:n] + "…"
 
 
-def _history(s: Session) -> list[dict[str, str]]:
-    """Render for the browser: lines, never wire structures."""
-    out: list[dict[str, str]] = []
+def _history(s: Session) -> list[dict[str, Any]]:
+    """Render for the browser. Tool entries pair a call with its result
+    by call_id: {"role": "tool", "name", "args", "result", "error"}."""
+    out: list[dict[str, Any]] = []
+    pending: dict[str, dict[str, Any]] = {}
     for m in s.messages():
         if m.role == "tool" and m.tool_result:
-            out.append({"role": "tool", "content":
-                        f"⎿ {m.tool_result.name}: {_short(m.tool_result.content)}"})
+            r = m.tool_result
+            e = pending.pop(r.call_id, None)
+            if e is None:                     # repaired log: result, no call
+                e = {"role": "tool", "name": r.name, "args": ""}
+                out.append(e)
+            e["result"], e["error"] = _pretty(r.content), bool(r.is_error)
         elif m.role in ("user", "assistant"):
             if _text(m.content):
                 out.append({"role": m.role, "content": _text(m.content)})
-            out += [{"role": "tool", "content": f"● {c.name}({_short(c.arguments)})"}
-                    for c in m.tool_calls]
+            for c in m.tool_calls:
+                e = {"role": "tool", "name": c.name,
+                     "args": _pretty(c.arguments), "result": "", "error": False}
+                pending[c.id] = e
+                out.append(e)
     return out
 
 
@@ -310,7 +329,11 @@ async def start(port: int = PORT) -> asyncio.Server:
 
 
 async def main() -> None:
-    server = await start()
+    try:
+        server = await start()
+    except OSError as ex:
+        sys.exit(f"cannot bind 127.0.0.1:{PORT} ({ex.strerror}) — "
+                 "set STELLAR_WEB_PORT to a free port")
     print(f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}", flush=True)
     async with server:
         await server.serve_forever()

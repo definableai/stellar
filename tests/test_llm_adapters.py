@@ -242,6 +242,24 @@ async def test_openai() -> None:
             rep2.usage.reasoning_tokens) == (5, 9, 4)
     assert rep2.stop_reason == "tool_use"
 
+    # a "tools" default carries OpenAI built-ins; function tools append
+    cap2: dict[str, Any] = {}
+
+    def capture_r(req: httpx.Request) -> httpx.Response:
+        cap2["body"] = json.loads(req.content)
+        return httpx.Response(200, content=resp_body,
+                              headers={"content-type": "text/event-stream"})
+
+    bllm = OpenAIResponsesLLM(api_key="test", tools=[{"type": "web_search"}],
+                              client=httpx.AsyncClient(
+                                  transport=httpx.MockTransport(capture_r),
+                                  base_url="http://fake"))
+    [x async for x in bllm.stream([Message(role="user", content="hi")],
+                                  [ToolSpec("t", "d", {"type": "object"})])]
+    kinds = [t["type"] for t in cap2["body"]["tools"]]
+    assert kinds == ["web_search", "function"], kinds
+    assert cap2["body"]["tools"][1]["strict"] is False
+
 
 async def main() -> None:
     test_common_helpers()

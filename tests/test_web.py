@@ -132,8 +132,11 @@ async def grow_a_tool(c) -> None:
     h = (await c.get(f"/api/sessions/{sid}")).json()
     assert {"role": "user", "content": "write yourself a calculator"} in h
     assert {"role": "assistant", "content": "calc says 5."} in h
-    assert any(m["content"].startswith("● workspace_write(") for m in h)
-    assert all(isinstance(m["content"], str) for m in h)  # lines, not wire structs
+    ww = next(m for m in h if m["role"] == "tool" and m["name"] == "workspace_write")
+    assert '"path"' in ww["args"] and "calc.py" in ww["args"]   # input visible
+    assert ww["result"] and not ww["error"]                     # output paired in
+    calc = next(m for m in h if m["role"] == "tool" and m["name"] == "calc")
+    assert calc["result"] == "5"                                # rendered, not wire
 
     rows = await c.get("/api/sessions")
     row = next(s for s in rows.json() if s["id"] == sid)
