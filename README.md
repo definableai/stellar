@@ -21,7 +21,6 @@ internal/             replaceable adapters built ON the core (not in the budget)
 ├── llm_openai.py     chat + responses;  llm_anthropic.py — + prompt caching
 ├── llm_litellm.py    100+ providers through one optional dep
 ├── llm_deepseek.py   OpenAI-compatible reuse of llm_openai;  llm_moonshot.py too
-├── llm_retry.py      backoff wrapper;  llm_structured.py — extract() to a schema
 ├── llm_common.py     the 3-transformation adapter recipe, shared block helpers
 ├── hook_approval.py  HITL permission gate;  hook_compaction.py — token-aware
 ├── tool_schema.py    signature + docstring → JSON Schema
@@ -262,4 +261,4 @@ uv run python tests/test_llm_adapters.py # anthropic + openai on fake transports
 
 ## Deliberate non-features
 
-No DI container, no service registry, no dependency resolver (adapters mount in order and unwind LIFO — that's the whole lifecycle), no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap the adapter: `internal/llm_retry.py`), no sandbox around adapter code (the workspace directory and your `before_tool` gate are the boundary). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.
+No DI container, no service registry, no dependency resolver (adapters mount in order and unwind LIFO — that's the whole lifecycle), no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap your LLM adapter if you need one), no sandbox around adapter code (the workspace directory and your `before_tool` gate are the boundary). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.
