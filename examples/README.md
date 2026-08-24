@@ -4,7 +4,8 @@ Every example runs **offline by default** — scripted fake LLMs, real everythin
 
 ```
 for e in quickstart durable_chat human_approval multi_agent \
-         long_lived_worker mcp_agent custom_adapter sse_server; do
+         long_lived_worker mcp_agent custom_adapter sse_server \
+         self_extend self_swap self_guard; do
     uv run python -m examples.$e || break
 done
 ```
@@ -21,5 +22,8 @@ Read them in this order:
 | `mcp_agent.py` | a real MCP stdio subprocess (inline fake server) → `mcp_tools()` → agent; server-side state round-trips | swap in any real MCP server |
 | `custom_adapter.py` | write an LLM adapter in ~25 lines with `ReplyBuilder` — alien wire format in, core contract out, malformed-args policy included | — |
 | `sse_server.py` | serving with zero web framework: SSE stream, `after=` reconnect replay, stop endpoint | `serve` binds :8080, curl lines in the docstring |
+| `self_extend.py` | the agent writes a tool for itself, mounts it with `adapter_load`, uses it — and it survives a restart (the workspace directory is the manifest) | — |
+| `self_swap.py` | the agent swaps its own LLM mid-session via an adapter file; the next step streams from the new provider, transcript intact; `drop` restores | — |
+| `self_guard.py` | the agent writes a `before_tool` hook restricting its own bash, mounts it, and is blocked by its own guardrail | — |
 
 **`cc/`** is the flagship: Claude Code rebuilt on this core — same captured system prompt and tool schemas, durable `--session <id>`, kill/resume, REPL on a Worker. See `cc/cc.py`.

@@ -9,25 +9,28 @@ core/                 the heart — 1500 lines exactly, stdlib only, py.typed
 ├── llm.py            LLM protocol + ReplyBuilder (the adapter skeleton)
 ├── tools.py          Tool, @tool, ToolCallContext, validate_args guardrail
 ├── hooks.py          @hook decorator — before/after llm + tool
+├── adapter.py        Ctx + Scope — agent.use()/drop(), reversible composition
 ├── session.py        durable append-only JSONL log, crash repair, resume
 ├── run.py            RunHandle: stream, replay, stop, steer; bounded buffers
-├── tracer.py         Tracer protocol + Console/Jsonl tracers
-├── transport.py      sse() / ws_frames() — pure serializers
-└── agent.py          the loop (~370 lines) — everything else serves it
+├── tracer.py         Tracer protocol (the sinks live in internal/)
+└── agent.py          the loop (~390 lines) — everything else serves it
 
 internal/             replaceable patterns built ON the core (not in the budget)
 ├── llm/              openai (chat + responses), anthropic (+ prompt caching),
-│                     litellm (100+ providers, optional dep), moonshot,
+│                     litellm (100+ providers, optional dep), deepseek, moonshot,
 │                     retry wrapper, structured extraction; common.py holds
 │                     the 3-transformation adapter recipe
 ├── hooks/            approval (HITL permission gate), compaction (token-aware)
 ├── tools/schema.py   signature + docstring → JSON Schema
+├── kernel.py         the agent's hands on itself: adapter_list/load/unload/reload
 ├── subagent.py       subagent() — spawn a child derived from the parent
 ├── worker.py         the long-lived agent: queue → turns → one durable session
+├── tracers.py        Console/Jsonl tracer sinks
+├── transport.py      sse() / ws_frames() — pure serializers
 └── mcp.py            MCP client (stdio + streamable HTTP) → core Tools
 
 tests/                fake-LLM suites + hypothesis property tests, no pytest
-examples/             8 offline-runnable examples (see examples/README.md)
+examples/             11 offline-runnable examples (see examples/README.md)
 examples/cc/          the flagship: Claude Code rebuilt on this core
 ```
 
@@ -42,18 +45,20 @@ flowchart LR
         A <--> HK["hooks.py<br/>@hook points"]
         A <--> LP["llm.py<br/>LLM Protocol + ReplyBuilder"]
         A <--> TL["tools.py<br/>Tool + validate_args"]
+        A <--> AD["adapter.py<br/>use / drop"]
         A <--> SS["session.py<br/>durable log"]
         A -->|StepEvents| RH["run.py<br/>RunHandle"]
-        RH --> TR["tracer.py"]
-        RH --> TP["transport.py<br/>sse / ws"]
+        RH --> TR["tracer.py<br/>protocol"]
     end
 
     subgraph INTERNAL["internal — patterns, all replaceable"]
         OA["llm adapters"] -.implement.-> LP
         AP["approval / compaction"] -.hook into.-> HK
         SB["subagent()"] -.is a.-> TL
+        KN["kernel adapter_* tools"] -.self-compose via.-> AD
         WK["worker.Worker"] -.drives.-> A
         MC["mcp client"] -.produces.-> TL
+        TP["transport sse/ws"] -.serialize.-> RH
     end
 
     RH -->|"events / RunResult"| U
@@ -155,7 +160,30 @@ agent = Agent(llm, tools=[...], hooks=[
 
 `before_tool` setting `ctx.result` short-circuits execution — that one rule is your permission gate, HITL approval, cache hit, and dry-run mode. Hook failures abort the run (fail closed); tracer failures are swallowed (fail open); tool failures become error results the model can read (fail forward).
 
-**Tracer** — `async on_event(event)`, every event in order. `JsonlTracer` is a replayable run record; point OTel, your DB, or a TUI at the same seam.
+**Tracer** — `async on_event(event)`, every event in order. `JsonlTracer` (internal/tracers.py) is a replayable run record; point OTel, your DB, or a TUI at the same seam.
+
+## Self-composition — adapters
+
+The loop never captures its collaborators: `self.llm`, `self.tools`, `self.hooks` are re-resolved at every step, so composition is live by construction. `core/adapter.py` makes changing it *reversible*: an adapter is a `setup(ctx)` function, and everything registered through the ctx records its inverse.
+
+```python
+def observability(ctx):
+    ctx.tool(metrics)                    # tools[name]=… / restore on drop
+    ctx.hook("after_tool", record)       # hooks.add / remove
+    ctx.llm(Moonshot())                  # swap; inverse restores the prior LLM
+    ctx.effect(lambda: sink.close())     # escape hatch: any mutation + its inverse
+
+agent.use(observability)
+agent.drop("observability")              # unwinds newest-first (LIFO)
+```
+
+A raising `setup` unwinds its partial work and mounts nothing. Nested swaps restore correctly: mount B's LLM over A's, drop B, A's is back.
+
+**The kernel** (`internal/kernel.py`) hands the same lever to the model: four tools — `adapter_list / adapter_load / adapter_unload / adapter_reload` — over a path-jailed workspace directory of adapter files. `boot(agent, ws)` mounts the kernel plus every `ws/*.py`, sorted; the directory **is** the manifest (`mv` a file out to disable it, `git init` it for provenance). Because self-change is just a tool call, the `approval_gate` that guards `bash` guards `adapter_load`, and the session log records every mount like any other step. The kernel is itself an adapter: don't mount it and the agent is frozen.
+
+The three `self_*` examples are the proof: the agent writes a tool for itself and it survives a restart (`self_extend`), swaps its own LLM mid-session with the transcript intact (`self_swap`), and blocks itself with a hook it wrote (`self_guard`).
+
+Trust model, plainly: adapter code runs in-process with full interpreter privileges — this is not a sandbox. The boundary is who can write the workspace directory plus your `before_tool` gate on `adapter_load` and on writes into it. Never point the workspace at a directory unreviewed third parties can write.
 
 ## Long-lived agents
 
@@ -204,6 +232,9 @@ Buffers are bounded (`RunHandle.max_buffer/max_queue`): a slow consumer sheds it
 5. The request is derived from the session log; with a session attached, the durable and live transcripts cannot diverge.
 6. Tool failures never crash the loop; hook failures abort it; tracer failures are invisible.
 7. The loop only speaks `types.py`. Provider data inside `agent.py` is a bug.
+8. Everything mounted can unmount: every `use()` registration records an inverse; `drop()` unwinds newest-first; a failed `setup` unwinds its partial work and mounts nothing.
+9. The loop is the only fixed point: llm / tools / hooks / tracers resolve at use time — composition changes land at the next step, never mid-step.
+10. Self-change is a tool call: `adapter_*` pass `before_tool` like any tool and land in the session log like any step. Workspace + log reconstruct what the agent is and how it became it.
 
 ## Event grammar
 
@@ -221,11 +252,13 @@ Three phases (`step_start` / `step_delta` / `step_end` on the wire) × four kind
 ```
 uv run python tests/test_agent.py        # loop, sessions, subagents — fake LLM
 uv run python tests/test_session.py      # round-trip, repair, corruption
+uv run python tests/test_adapter.py      # mount/unwind, LIFO, live self-composition
 uv run python tests/test_properties.py   # hypothesis: crash-cut recovery & more
+uv run python -m internal.kernel         # the four self-tools, jail, reload
 uv run python -m internal.llm.anthropic  # every internal module self-checks
 uv run python -m examples.cc.cc selfcheck
 ```
 
 ## Deliberate non-features
 
-No DI container, no plugin system, no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap the adapter: `internal/llm/retry.py`). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.
+No DI container, no service registry, no dependency resolver (adapters mount in order and unwind LIFO — that's the whole lifecycle), no phase machine, no delta-level persistence, no code-mode, no SDK codegen, no retry policy in the loop (wrap the adapter: `internal/llm/retry.py`), no sandbox around adapter code (the workspace directory and your `before_tool` gate are the boundary). Multimodal input is typed blocks (`text_block` / `image_block` / `file_block`) — PDFs included, translated per provider. Everything else is an adapter, a hook, a tracer, or a tool you write on top: the seams are there, the opinions are not.
