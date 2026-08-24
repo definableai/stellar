@@ -48,8 +48,8 @@ li {
   word-break: break-word;
 }
 
-#sessions li, #external li, #workspace li { cursor: pointer; }
-#sessions li:hover, #external li:hover, #workspace li:hover { background: #262a33; }
+#sessions li { cursor: pointer; }
+#sessions li:hover { background: #262a33; }
 #sessions li.on { background: #262a33; color: var(--accent); }
 li small { color: var(--dim); font-family: var(--mono); }
 
@@ -116,44 +116,3 @@ button { cursor: pointer; }
 button:hover:enabled { border-color: var(--accent); color: var(--accent); }
 button:disabled, input:disabled { opacity: .5; cursor: default; }
 #new { width: 100%; }
-
-/* the file viewer: a full-height overlay, read-only */
-#viewer { position: fixed; inset: 0; z-index: 10; display: flex; padding: 24px;
-          background: rgba(0, 0, 0, .55); }
-#viewer[hidden] { display: none; }   /* display:flex outranks the UA rule */
-
-#viewer article {
-  display: flex;
-  flex-direction: column;
-  margin: auto;
-  width: min(900px, 100%);
-  height: 100%;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-#viewer header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 6px 6px 12px;
-  border-bottom: 1px solid var(--line);
-  font: 12px/1.5 var(--mono);
-  color: var(--accent);
-}
-
-#viewer-name { flex: 1; overflow-wrap: anywhere; }
-#viewer-close { padding: 0 8px; border: 0; background: none; color: var(--dim);
-                font-size: 18px; line-height: 1.2; }
-#viewer-close:hover { color: var(--fg); }
-
-#viewer-body {
-  flex: 1;
-  margin: 0;
-  padding: 12px;
-  overflow: auto;
-  white-space: pre;
-  tab-size: 4;
-  font: 12px/1.5 var(--mono);
-}
