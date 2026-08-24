@@ -22,9 +22,8 @@ from __future__ import annotations
 import asyncio
 import json
 import traceback
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Iterable, Mapping
 
-from .adapter import Ctx, Scope
 from .events import StepKind, StepPhase
 from .hooks import Hook, HookFn, HookPoint, Hooks, LLMHookContext, ToolHookContext
 from .llm import LLM, LLMDelta, LLMReply
@@ -64,7 +63,6 @@ class Agent:
         self.max_steps = max_steps
         self.parallel_tools = parallel_tools
         self.params = params or {}
-        self.adapters: dict[str, Scope] = {}
 
     # ---- public API ----------------------------------------------------
 
@@ -104,46 +102,6 @@ class Agent:
         handle._task = asyncio.create_task(
             self._run(handle, ctx, messages, merged, session))
         return handle
-
-    def use(self, setup: Callable[[Ctx], Any], /, name: str | None = None,
-            source: str | None = None, **config: Any) -> Scope:
-        """Mount an adapter — a ``setup(ctx)`` function: registrations
-        record inverses; a raising setup mounts nothing (core/adapter.py)."""
-        if not callable(setup):
-            raise TypeError(f"not an adapter: {setup!r}")
-        name = name or getattr(setup, "__name__", "adapter")
-        if name == "setup":   # a module's entrypoint: name by the module
-            name = getattr(setup, "__module__", "adapter").rsplit(".", 1)[-1]
-        if name in self.adapters:
-            raise ValueError(f"adapter {name!r} already mounted")
-        scope = Scope(name, source)
-        scope._remount = (setup, config)   # drop() rebuilds those above
-        try:
-            setup(Ctx(self, scope, config))
-        except BaseException as ex:
-            for e in scope.dispose():      # partial-unwind failures stay visible
-                ex.add_note(f"inverse failed during unwind: {e.type}: {e.message}")
-            raise
-        self.adapters[name] = scope
-        return scope
-
-    def drop(self, name: str) -> list[ErrorInfo]:
-        """Unmount. Adapters mounted after ``name`` unwind first and
-        remount on the new base — recorded priors never go stale.
-        Inverse failures are returned, never raised; a raising remount
-        propagates, leaving it and later adapters unmounted (loud)."""
-        if name not in self.adapters:
-            raise KeyError(name)
-        order = list(self.adapters)
-        above = [self.adapters[n] for n in order[order.index(name) + 1:]]
-        errors: list[ErrorInfo] = []
-        for s in reversed(above):
-            errors += self.adapters.pop(s.name).dispose()
-        errors += self.adapters.pop(name).dispose()
-        for s in above:
-            setup, config = s._remount
-            self.use(setup, name=s.name, source=s.source, **config)
-        return errors
 
     # ---- internals -------------------------------------------------------
 
@@ -198,7 +156,7 @@ class Agent:
                 messages = hctx.messages   # hooks may rebind, not just mutate
 
                 # -- LLM step ----------------------------------------------
-                sid = new_id("text")
+                sid: str = new_id("text")
                 await h.emit(StepKind.TEXT, START, {"step": step_index}, sid)
                 reply: LLMReply | None = None
                 partial = False
@@ -385,9 +343,8 @@ class Agent:
 
     async def _fire(self, h: RunHandle, point: HookPoint,
                     hctx: LLMHookContext | ToolHookContext) -> None:
-        """Fire all hooks at a point, each its own step. Snapshot: a
-        hook mutating composition must not skip a sibling."""
-        for fn in list(self.hooks.get(point)):
+        """Fire every hook at a point, each one its own step."""
+        for fn in list(self.hooks.get(point)):   # copy: firing may edit the list
             sid = new_id("hook")
             name = getattr(fn, "__qualname__", repr(fn))
             await h.emit(StepKind.HOOK, START, {"point": point, "hook": name}, sid)

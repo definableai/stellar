@@ -1,5 +1,5 @@
 ## Abou this packages
-This is a minified agent core and its task its to provide agent infra, and idea is to keep this core hackable and under 1800 lines of code. Simple code, just abstractions, and internal functionality. 
+This is a minified agent core and its task its to provide agent infra, and idea is to keep this core hackable and under 2000 lines of code. Simple code, just abstractions, and internal functionality. 
 But this mini core must stay powerfull, can handle complex tasks if implemented properly
 - Layers : LLM, TOOL, HOOK
 - Transport : SSE, WS
@@ -15,7 +15,7 @@ You run as one of two roles:
 ### Master - principal architect
 - Big features/issues get a plan: atomic task files at `tasks/{plan-name}/{task-name}.md` that can run independently.
 - Delegate task files to slaves; review every task a slave delivers before it lands.
-- Guard the codebase's integrity and structure — the 1800-line core budget and the seams (llm/tool/hook/adapter/tracer) are yours to defend.
+- Guard the codebase's integrity and structure — the 2000-line core budget and the seams (llm/tool/hook/adapter/tracer) are yours to defend.
 - While integrating a third-party library or tool make sure you ground your research well about it.
 - Needed at all? (YAGNI)
 - Following the DRY ans SOLID principle

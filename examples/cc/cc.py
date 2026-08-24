@@ -12,12 +12,6 @@ not faked; calls come back as UnknownTool. Bash is NOT sandboxed — commands
 run with this process's full permissions. ``--session <id>`` logs to
 ``.cc-sessions/<id>.jsonl``: Ctrl-C stops gracefully, kill -9 loses at most
 the step in flight — rerun the same command and it resumes.
-
-The agent boots over ``external/``, so it may write adapters into that
-workspace and mount them with ``adapter_load`` — see ``core/kernel.py``.
-Like Bash, that is ungated here: a demo runs at full trust, so wire
-``hook_approval`` onto ``adapter_*`` (and Bash) before pointing this at
-anything you would not run by hand.
 """
 
 from __future__ import annotations
@@ -31,8 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from internal.llm_openai import OpenAIResponsesLLM
-from examples.cc.worker import Worker
-from core import Agent, Session, StepKind, StepPhase, Tool, ToolSpec, boot
+from core import Agent, Session, StepKind, StepPhase, Tool, ToolSpec, Worker
 
 # ---- capture: prompt + schemas straight from cc.json -----------------------
 
@@ -212,7 +205,7 @@ class CliTracer:
 # ---- agent -----------------------------------------------------------------
 
 def build(model: str = "gpt-5.6-luna", tracers: Any = (), **params: Any) -> Agent:
-    agent = Agent(
+    return Agent(
         llm=OpenAIResponsesLLM(model=model, reasoning={"effort": "high",
                                                        "summary": "auto"}),
         tools=TOOLS,
@@ -222,14 +215,11 @@ def build(model: str = "gpt-5.6-luna", tracers: Any = (), **params: Any) -> Agen
         parallel_tools=True,
         params={"max_output_tokens": CC["max_tokens"], **params},
     )
-    boot(agent, WORKSPACE)   # the kernel + whatever it has written for itself
-    return agent
 
 
 # ---- entrypoints -----------------------------------------------------------
 
 SESSIONS_DIR = Path(".cc-sessions")             # <cwd>/.cc-sessions/<id>.jsonl
-WORKSPACE = "external"                          # <cwd>/external — its own adapters
 
 
 def _open_session(sid: str | None) -> Session:

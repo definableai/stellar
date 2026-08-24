@@ -103,9 +103,5 @@ class Hooks:
         self._hooks[point].append(fn)
         return fn
 
-    def remove(self, point: HookPoint, fn: HookFn) -> None:
-        """Detach ``fn`` from a point. ValueError if not attached (loud)."""
-        self._hooks[point].remove(fn)
-
     def get(self, point: HookPoint) -> list[HookFn]:
         return self._hooks[point]

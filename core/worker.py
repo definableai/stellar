@@ -29,7 +29,10 @@ import asyncio
 import contextlib
 from typing import Any
 
-from core import Agent, Message, RunHandle, Session
+from .agent import Agent
+from .run import RunHandle
+from .session import Session
+from .types import Message
 
 _CLOSE = object()
 
