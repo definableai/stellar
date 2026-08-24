@@ -1,6 +1,6 @@
 """Bash, rooted: one shell command per call, cwd = the given root.
 
-    agent = Agent(llm, tools=[bash_tool("workspace")])
+    agent = Agent(llm, tools=[bash_tool("scratch")])
 
 NOT a sandbox. Commands run with this process's full permissions and
 can walk straight out of the root (``cd /``, absolute paths, network) —

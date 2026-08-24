@@ -1,6 +1,6 @@
 """File primitives, rooted: read / write / edit / list one directory.
 
-    agent = Agent(llm, tools=[*fs_tools("workspace")])
+    agent = Agent(llm, tools=[*fs_tools("scratch")])
 
 Every ``path`` is relative to ``root`` and resolved before use, so
 ``..`` and symlinks are judged by where they land, not how they spell
