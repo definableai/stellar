@@ -66,13 +66,12 @@ class Hook:
 
 
 def hook(point: HookPoint) -> Callable[[HookFn], Hook]:
-    """Decorator: bind a (ctx) -> None function to a hook point.
+    """Decorator: bind a (ctx) -> None function to a hook point,
+    then attach the flat list — ``Agent(llm, hooks=[redact])``.
 
         @hook("before_llm")
         async def redact(ctx: LLMHookContext):
             ctx.messages[:] = scrub(ctx.messages)
-
-        agent = Agent(llm, hooks=[redact])
     """
     if point not in HOOK_POINTS:
         raise ValueError(f"Unknown hook point: {point!r}. Use one of {HOOK_POINTS}.")

@@ -3,8 +3,8 @@ method that yields zero or more ``LLMDelta`` (incremental text), then
 exactly one ``LLMReply`` (the complete assistant message, tool calls
 fully assembled) and stops. That single rule is the whole contract:
 provider mess (partial tool-call JSON, event formats, retries, stop
-reasons) lives inside the adapter; the loop sees only ``types.py``
-data. Adapters may honor cancellation; the loop stops on stop.
+reasons) lives inside the adapter; the loop sees only ``types.py`` data
+and stops consuming on stop (adapters may honor cancellation).
 """
 
 from __future__ import annotations
@@ -105,12 +105,10 @@ class ReplyBuilder:
     def usage(self, *, input_tokens: int | None = None,
               output_tokens: int | None = None,
               reasoning_tokens: int | None = None) -> None:
-        if input_tokens is not None:
-            self._usage.input_tokens = input_tokens
-        if output_tokens is not None:
-            self._usage.output_tokens = output_tokens
-        if reasoning_tokens is not None:
-            self._usage.reasoning_tokens = reasoning_tokens
+        for k, v in (("input_tokens", input_tokens), ("output_tokens", output_tokens),
+                     ("reasoning_tokens", reasoning_tokens)):
+            if v is not None:
+                setattr(self._usage, k, v)
 
     def finish(self, stop_reason: str | None) -> None:
         self._stop = stop_reason or self._stop

@@ -1,6 +1,5 @@
 """The tracer seam: a sink receiving every StepEvent in seq order,
 including everything through run/end on a stop — the durable record.
-
 Isolation rule: a tracer raising NEVER kills the run (the opposite of
 hooks). Console/Jsonl implementations live in ``internal/tracers.py``.
 """

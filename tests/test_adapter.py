@@ -152,6 +152,21 @@ def test_dispose_collects_inverse_errors() -> None:
     assert ran == ["first"]               # a failing inverse strands nothing
 
 
+def test_out_of_order_drop_relinks() -> None:
+    # dropping A first must not resurrect A's tool/llm when B drops later:
+    # drop(A) unwinds B, drops A, re-runs B's setup on the new base
+    agent = Agent("L0", tools=[named_tool("x")])
+    v0 = agent.tools["x"]
+    agent.use(lambda c: (c.llm("L1"), c.tool(named_tool("x"))), name="a")
+    agent.use(lambda c: (c.llm("L2"), c.tool(named_tool("x"))), name="b")
+    agent.drop("a")
+    assert agent.llm == "L2" and list(agent.adapters) == ["b"]
+    assert agent.tools["x"].handler(None) == "x"      # b's tool, live
+    agent.drop("b")
+    assert agent.llm == "L0" and agent.tools["x"] is v0
+    assert agent.adapters == {}
+
+
 def test_hook_object_form() -> None:
     agent = Agent(None)
     fn = lambda hctx: None  # noqa: E731
@@ -212,6 +227,27 @@ async def test_agent_swaps_its_own_llm_mid_run() -> None:
     assert len(llm_b.seen[0]) >= 3   # ...with the full transcript intact
 
 
+async def test_hook_dropping_itself_skips_no_sibling() -> None:
+    # _fire snapshots the hook list: a's self-drop must not skip b
+    fired: list[str] = []
+    llm = ScriptedLLM([call_reply("c1", "echo", {"x": "hi"}), text_reply("ok")])
+    agent = Agent(llm, tools=[echo])
+
+    def a_hook(hctx):
+        fired.append("a")
+        agent.drop("a")
+
+    def b_hook(hctx):
+        fired.append("b")
+
+    agent.use(lambda c: c.hook("before_tool", a_hook), name="a")
+    agent.use(lambda c: c.hook("before_tool", b_hook), name="b")
+    result = await agent.run("go")
+    assert result.status == "completed"
+    assert fired == ["a", "b"]
+    assert "a" not in agent.adapters and "b" in agent.adapters
+
+
 async def test_self_mounted_hook_guards_itself() -> None:
     def deny_echo(hctx):
         from core import ToolResult
@@ -239,10 +275,12 @@ def main() -> None:
     test_partial_failure_mounts_nothing()
     test_loud_errors()
     test_dispose_collects_inverse_errors()
+    test_out_of_order_drop_relinks()
     test_hook_object_form()
     prop_reverse_drops_restore()
     asyncio.run(test_agent_extends_itself_mid_run())
     asyncio.run(test_agent_swaps_its_own_llm_mid_run())
+    asyncio.run(test_hook_dropping_itself_skips_no_sibling())
     asyncio.run(test_self_mounted_hook_guards_itself())
     print("test_adapter: all ok")
 

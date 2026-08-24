@@ -46,19 +46,15 @@ def text_block(text: str) -> TextBlock:
 
 def image_block(*, url: str | None = None, data: str | None = None,
                 media_type: str = "image/png") -> ImageBlock:
-    if url:
-        return {"type": "image", "url": url}
-    return {"type": "image", "media_type": media_type, "data": data or ""}
+    return ({"type": "image", "url": url} if url else
+            {"type": "image", "media_type": media_type, "data": data or ""})
 
 
 def file_block(*, url: str | None = None, data: str | None = None,
                media_type: str = "application/pdf",
                name: str | None = None) -> FileBlock:
-    b: FileBlock = {"type": "file", "media_type": media_type}
-    if url:
-        b["url"] = url
-    else:
-        b["data"] = data or ""
+    b: FileBlock = ({"type": "file", "media_type": media_type, "url": url} if url
+                    else {"type": "file", "media_type": media_type, "data": data or ""})
     if name:
         b["name"] = name
     return b

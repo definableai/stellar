@@ -73,11 +73,10 @@ class Agent:
         run_id: str | None = None,
         params: dict[str, Any] | None = None,   # per-run LLM param overrides
     ) -> RunHandle:
-        """Start a run. Returns immediately; events stream on the handle.
-        ``await agent.run(...)`` yields the RunResult; keep the handle
-        un-awaited to stream instead. Needs a running asyncio loop.
-        With ``session=``, the request derives from the session log and
-        every new message is appended through it (durable transcript)."""
+        """Start a run; events stream on the returned handle. ``await
+        agent.run(...)`` yields the RunResult; keep the handle un-awaited
+        to stream instead. Needs a running asyncio loop. With ``session=``
+        the request derives from the log and appends through it."""
         if session is not None:
             if history is not None:
                 raise ValueError("pass session or history, not both")
@@ -103,27 +102,41 @@ class Agent:
 
     def use(self, setup: Callable[[Ctx], Any], /, name: str | None = None,
             source: str | None = None, **config: Any) -> Scope:
-        """Mount an adapter (a ``setup(ctx)`` function): registrations
-        record inverses; a raising setup unwinds its partial work and
-        mounts nothing. See core/adapter.py."""
+        """Mount an adapter — a ``setup(ctx)`` function: registrations
+        record inverses; a raising setup mounts nothing (core/adapter.py)."""
         if not callable(setup):
             raise TypeError(f"not an adapter: {setup!r}")
         name = name or getattr(setup, "__name__", "adapter")
         if name in self.adapters:
             raise ValueError(f"adapter {name!r} already mounted")
         scope = Scope(name, source)
+        scope._remount = (setup, config)   # drop() rebuilds those above
         try:
             setup(Ctx(self, scope, config))
-        except BaseException:
-            scope.dispose()
+        except BaseException as ex:
+            for e in scope.dispose():      # partial-unwind failures stay visible
+                ex.add_note(f"inverse failed during unwind: {e.type}: {e.message}")
             raise
         self.adapters[name] = scope
         return scope
 
     def drop(self, name: str) -> list[ErrorInfo]:
-        """Unmount: run the adapter's inverses newest-first. KeyError if
-        not mounted; inverse failures are returned, never raised."""
-        return self.adapters.pop(name).dispose()
+        """Unmount. Adapters mounted after ``name`` unwind first and
+        remount on the new base — recorded priors never go stale.
+        Inverse failures are returned, never raised; a raising remount
+        propagates, leaving it and later adapters unmounted (loud)."""
+        if name not in self.adapters:
+            raise KeyError(name)
+        order = list(self.adapters)
+        above = [self.adapters[n] for n in order[order.index(name) + 1:]]
+        errors: list[ErrorInfo] = []
+        for s in reversed(above):
+            errors += self.adapters.pop(s.name).dispose()
+        errors += self.adapters.pop(name).dispose()
+        for s in above:
+            setup, config = s._remount
+            self.use(setup, name=s.name, source=s.source, **config)
+        return errors
 
     # ---- internals -------------------------------------------------------
 
@@ -136,13 +149,8 @@ class Agent:
     def _build_messages(
         self, input: str | Message | Iterable[Message],
         history: Iterable[Message] | None) -> list[Message]:
-        messages: list[Message] = []
-        if self.system:
-            messages.append(Message(role="system", content=self.system))
-        if history:
-            messages.extend(history)
-        messages.extend(self._input_messages(input))
-        return messages
+        sys_ = [Message(role="system", content=self.system)] if self.system else []
+        return [*sys_, *(history or []), *self._input_messages(input)]
 
     async def _run(
         self, h: RunHandle, ctx: RunContext, messages: list[Message],
@@ -370,8 +378,9 @@ class Agent:
 
     async def _fire(self, h: RunHandle, point: HookPoint,
                     hctx: LLMHookContext | ToolHookContext) -> None:
-        """Fire all hooks at a point; each is its own hook step."""
-        for fn in self.hooks.get(point):
+        """Fire all hooks at a point, each its own step. Snapshot: a
+        hook mutating composition must not skip a sibling."""
+        for fn in list(self.hooks.get(point)):
             sid = new_id("hook")
             name = getattr(fn, "__qualname__", repr(fn))
             await h.emit(StepKind.HOOK, START, {"point": point, "hook": name}, sid)

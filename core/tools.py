@@ -66,10 +66,9 @@ def tool(
 ) -> Callable[[Callable[..., Any]], Tool]:
     """Decorator: turn a function into a Tool.
 
-        @tool(parameters={"type": "object",
+        @tool(parameters={"type": "object", "required": ["a", "b"],
                           "properties": {"a": {"type": "number"},
-                                         "b": {"type": "number"}},
-                          "required": ["a", "b"]})
+                                         "b": {"type": "number"}}})
         async def add(ctx, a: float, b: float):
             return a + b
     """

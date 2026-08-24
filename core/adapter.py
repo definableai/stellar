@@ -15,9 +15,11 @@ unwinds them newest-first:
 
 Rules:
     * A raising ``setup()`` unwinds its partial work; nothing mounts.
-    * The loop resolves llm/tools/hooks at each use: composition
-      changes land at the NEXT step, never mid-step.
-    * ``setup`` is sync — mounting is composition, not IO.
+    * The loop resolves llm/tools/hooks at each use: the LLM's toolset
+      updates next step; within one tool batch, a tool mounted by
+      call #1 is already callable by call #2.
+    * ``setup`` is sync, idempotent composition, not IO — ``drop()``
+      re-runs the setups of adapters mounted above the dropped one.
     * ``ctx.agent`` is the real Agent, no jail: registrars are the
       recorded paths, ``ctx.effect`` covers any other mutation.
       Loading adapter *files* is internal/kernel.py, not core.
@@ -45,6 +47,7 @@ class Scope:
         self.name, self.source = name, source
         self.notes: list[str] = []
         self._undo: list[Callable[[], Any]] = []
+        self._remount: tuple[Callable, dict] = (lambda ctx: None, {})  # set by use()
 
     def dispose(self) -> list[ErrorInfo]:
         """Run inverses LIFO. Never raises: one failing inverse must

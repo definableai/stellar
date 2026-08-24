@@ -1,11 +1,11 @@
 """The event grammar. One shape, two axes: kind x phase.
 
 Every observable thing the agent does is a *step*: ``start`` and
-``end`` exactly once, zero or more ``delta`` between. That is the
-entire grammar. kinds: run / text (one LLM generation) / tool (one
-execution) / hook (one invocation); payload contracts per (kind,
-phase) in the README. ``seq`` is a per-run monotonic counter — the
-total order of the run and the resume cursor.
+``end`` exactly once, zero or more ``delta`` between — the entire
+grammar. kinds: run / text (one LLM generation) / tool (one execution)
+/ hook (one invocation); payload contracts per (kind, phase) in the
+README. ``seq``, a per-run monotonic counter, is the total order of
+the run and the resume cursor.
 """
 
 from __future__ import annotations

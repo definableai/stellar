@@ -73,7 +73,10 @@ def kernel(ctx: Any) -> None:
 
     def adapter_load(cctx: Any, path: str = "") -> str:
         """Load an adapter file from the workspace and mount it."""
-        scope = _mount_file(agent, jail(path))
+        p = jail(path)
+        if p.stem in agent.adapters:   # before exec: module body runs once
+            raise ValueError(f"{p.stem!r} already mounted; adapter_reload picks up edits")
+        scope = _mount_file(agent, p)
         return f"mounted {scope.name!r}: {', '.join(scope.notes) or 'nothing registered'}"
 
     def adapter_unload(cctx: Any, name: str = "") -> str:
@@ -88,8 +91,9 @@ def kernel(ctx: Any) -> None:
         source = agent.adapters[name].source   # KeyError -> readable tool error
         if not source:
             raise ValueError(f"{name!r} is not file-backed; unload it instead")
-        agent.drop(name)
-        scope = _mount_file(agent, Path(source), name)
+        mod = load_module(Path(source))   # import FIRST: a broken edit is a
+        agent.drop(name)                  # readable error, the old version stays
+        scope = agent.use(mod.setup, name=name, source=source)
         return f"reloaded {scope.name!r}: {', '.join(scope.notes) or 'nothing registered'}"
 
     path_arg = {"type": "object", "required": ["path"], "properties": {
@@ -110,7 +114,8 @@ def boot(agent: Agent, workspace: str | Path = ".stellar/adapters",
          *, mount_kernel: bool = True) -> list[Scope]:
     """Mount the kernel plus every workspace ``*.py`` sorted by name
     (prefix ``00-``, ``10-`` to order mounts). The directory IS the
-    manifest: move a file out to disable it. Missing dir = empty self."""
+    manifest: move a file out to disable it. Missing dir = empty self.
+    A broken file fails the boot loudly; files mounted before it stay."""
     ws = Path(workspace).resolve()
     scopes = []
     if mount_kernel:
@@ -198,9 +203,26 @@ async def _selfcheck() -> None:
         results = [m.tool_result for m in result.messages if m.role == "tool"]
         assert results[1].content == 6
 
+        # a broken edit must not cost the working adapter (atomic reload)
+        (ws / "calc.py").write_text("def setup(ctx:\n")
+        agent.llm = Scripted([call("c8", "adapter_reload", {"name": "calc"}),
+                              call("c9", "calc", {"a": 1, "b": 1}), text("ok")])
+        result = await agent.run("bad edit")
+        rs = [m.tool_result for m in result.messages if m.role == "tool"]
+        assert rs[0].is_error and "SyntaxError" in rs[0].content
+        assert rs[1].content == 1        # the a*b version is still mounted
+
+        # double-load: rejected BEFORE the module body would run again
+        agent.llm = Scripted([call("c10", "adapter_load", {"path": "calc.py"}),
+                              text("ok")])
+        result = await agent.run("dup")
+        dup = [m.tool_result for m in result.messages if m.role == "tool"][0]
+        assert dup.is_error and "already mounted" in dup.content
+
         # self-lockdown: dropping the kernel removes the four tools
+        # (calc mounted after it remounts on the new base and survives)
         agent.drop("kernel")
-        assert "adapter_load" not in agent.tools
+        assert "adapter_load" not in agent.tools and "calc" in agent.tools
 
     print("kernel selfcheck ok")
 

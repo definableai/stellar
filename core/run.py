@@ -1,6 +1,5 @@
-"""Run machinery: RunContext, RunResult, RunHandle.
-
-``agent.run()`` returns a RunHandle immediately. The handle owns the
+"""Run machinery: RunContext, RunResult, RunHandle — ``agent.run()``
+returns the RunHandle immediately. The handle owns the
 event stream (every event buffered with monotonic ``seq``; any number
 of consumers attach any time — ``events(after_seq=n)`` replays the past
 then follows live), cancellation (``stop()`` is graceful: text/end
@@ -170,9 +169,7 @@ class RunHandle:
 
     @property
     def status(self) -> RunStatus:
-        if not self._finished:
-            return "running"
-        return self._result_fut.result().status
+        return self._result_fut.result().status if self._finished else "running"
 
     async def result(self) -> RunResult:
         return await asyncio.shield(self._result_fut)

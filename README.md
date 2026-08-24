@@ -177,7 +177,7 @@ agent.use(observability)
 agent.drop("observability")              # unwinds newest-first (LIFO)
 ```
 
-A raising `setup` unwinds its partial work and mounts nothing. Nested swaps restore correctly: mount B's LLM over A's, drop B, A's is back.
+A raising `setup` unwinds its partial work and mounts nothing. Nested swaps restore correctly: mount B's LLM over A's, drop B, A's is back. Out-of-order drops stay exact too — dropping A first unwinds B, drops A, and re-runs B's setup on the new base (position is dependency; setups are idempotent composition).
 
 **The kernel** (`internal/kernel.py`) hands the same lever to the model: four tools — `adapter_list / adapter_load / adapter_unload / adapter_reload` — over a path-jailed workspace directory of adapter files. `boot(agent, ws)` mounts the kernel plus every `ws/*.py`, sorted; the directory **is** the manifest (`mv` a file out to disable it, `git init` it for provenance). Because self-change is just a tool call, the `approval_gate` that guards `bash` guards `adapter_load`, and the session log records every mount like any other step. The kernel is itself an adapter: don't mount it and the agent is frozen.
 
@@ -233,7 +233,7 @@ Buffers are bounded (`RunHandle.max_buffer/max_queue`): a slow consumer sheds it
 6. Tool failures never crash the loop; hook failures abort it; tracer failures are invisible.
 7. The loop only speaks `types.py`. Provider data inside `agent.py` is a bug.
 8. Everything mounted can unmount: every `use()` registration records an inverse; `drop()` unwinds newest-first; a failed `setup` unwinds its partial work and mounts nothing.
-9. The loop is the only fixed point: llm / tools / hooks / tracers resolve at use time — composition changes land at the next step, never mid-step.
+9. The loop is the only fixed point: llm / tools / hooks / tracers resolve at use time. The toolset the LLM sees updates at the next step; within one tool batch, a tool mounted by call #1 is already callable by call #2.
 10. Self-change is a tool call: `adapter_*` pass `before_tool` like any tool and land in the session log like any step. Workspace + log reconstruct what the agent is and how it became it.
 
 ## Event grammar
