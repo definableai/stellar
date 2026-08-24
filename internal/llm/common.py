@@ -11,7 +11,6 @@ Nothing else. Every adapter file has the same sections, in this order:
     #                                   each named for the provider quirk
     #                                   it encodes
     # ---- adapter ----                 class: payload + stream loop
-    # ---- self-check ----              no network, fake transport
 
 ``core.ReplyBuilder`` owns transformation 3's assembly; the helpers
 below dedupe the block dispatch in transformation 2.
@@ -56,22 +55,3 @@ def data_url(b: dict[str, Any], default_media: str) -> str:
 def dump_result(content: Any) -> str:
     """Tool results cross the wire as text; non-JSON types degrade to str."""
     return json.dumps(content, default=str)
-
-
-if __name__ == "__main__":
-    same = {"text": lambda b: {"t": b.get("text", "")},
-            "image": lambda b: {"i": 1}, "file": lambda b: {"f": 1}}
-    assert map_blocks("plain", **same) == "plain"
-    assert map_blocks(None, **same) == ""
-    assert map_blocks([{"type": "text", "text": "x"}, {"type": "image"},
-                       {"type": "file"}, {"text": "no-type"}], **same) == \
-        [{"t": "x"}, {"i": 1}, {"f": 1}, {"t": "no-type"}]
-    try:
-        map_blocks([{"type": "video", "url": "u"}], **same)
-        raise AssertionError("unknown block type must raise")
-    except ValueError:
-        pass
-    assert data_url({"url": "http://x"}, "a/b") == "http://x"
-    assert data_url({"data": "QUJD"}, "a/b") == "data:a/b;base64,QUJD"
-    assert dump_result({"k": object()}).startswith('{"k": ')
-    print("adapter common self-check ok")

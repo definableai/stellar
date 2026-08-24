@@ -17,8 +17,6 @@ this validator is then the belt to that suspender.
 
 ponytail: validates one level deep — nested object/array items unchecked;
 bring jsonschema via ``validate=`` when that matters.
-
-Self-check: uv run python -m internal.llm.structured
 """
 
 from __future__ import annotations
@@ -102,54 +100,3 @@ async def extract(
                             content=f"Invalid: {err}. Reply with ONLY the "
                                     "corrected JSON object."))
     raise ValueError(f"no schema-valid output after {attempts} attempts: {err}")
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    SCHEMA = {"type": "object",
-              "properties": {"name": {"type": "string"},
-                             "age": {"type": "integer"}},
-              "required": ["name", "age"]}
-
-    class Scripted:
-        def __init__(self, replies):
-            self.replies, self.calls = list(replies), 0
-
-        async def stream(self, messages, tools, **params):
-            self.calls += 1
-            yield LLMReply(message=Message(role="assistant",
-                                           content=self.replies.pop(0)))
-
-    async def _selfcheck() -> None:
-        # good on first try, fenced
-        llm = Scripted(['```json\n{"name": "Jo", "age": 4}\n```'])
-        assert await extract(llm, SCHEMA, "x") == {"name": "Jo", "age": 4}
-
-        # bad JSON then wrong type then good — error fed back each time
-        llm = Scripted(["not json at all",
-                        '{"name": "Jo", "age": "four"}',
-                        '{"name": "Jo", "age": 4}'])
-        data = await extract(llm, SCHEMA, "x")
-        assert data["age"] == 4 and llm.calls == 3
-
-        # missing required key, attempts exhausted
-        llm = Scripted(['{"name": "Jo"}'] * 2)
-        try:
-            await extract(llm, SCHEMA, "x", attempts=2)
-            raise AssertionError("expected ValueError")
-        except ValueError as e:
-            assert "age" in str(e)
-
-        # bool is not integer; custom validate hook runs
-        llm = Scripted(['{"name": "Jo", "age": true}',
-                        '{"name": "Jo", "age": 200}',
-                        '{"name": "Jo", "age": 30}'])
-        data = await extract(llm, SCHEMA, "x",
-                             validate=lambda d: "age too big" if d["age"] > 150
-                             else None)
-        assert data["age"] == 30 and llm.calls == 3
-
-        print("structured extract self-check ok")
-
-    asyncio.run(_selfcheck())

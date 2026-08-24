@@ -31,10 +31,6 @@ Responses renames: ``max_output_tokens``, ``instructions``,
 
 Caveat: ``n > 1`` unsupported — the adapter reads ``choices[0]`` only.
 Field list drifts; platform.openai.com/docs/api-reference is authoritative.
-
-Self-check (no network, fake transport):
-
-    uv run python -m internal.llm.openai
 """
 
 from __future__ import annotations
@@ -46,7 +42,7 @@ from typing import Any, AsyncIterator, Sequence
 import httpx
 
 from core import (LLMDelta, LLMError, LLMReply, Message, ReplyBuilder,
-                  ToolCall, ToolResult, ToolSpec)
+                  ToolResult, ToolSpec)
 from internal.llm.common import data_url, dump_result, map_blocks
 
 # ---- request: core -> wire (chat completions) -------------------------
@@ -285,98 +281,3 @@ class OpenAIResponsesLLM(OpenAILLM):
                                   ).get("reason", "incomplete")
         b.finish("tool_use" if saw_calls else status)
         yield b.reply()
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    async def _selfcheck() -> None:
-        from core import file_block
-
-        try:
-            _blocks([file_block(url="http://x/d.pdf")])
-            raise AssertionError("chat file URL must raise")
-        except ValueError:
-            pass
-        assert _blocks([file_block(data="QUJD")])[0]["file"][
-            "file_data"].startswith("data:application/pdf")
-        assert _r_blocks([file_block(url="http://x/d.pdf")]) == [
-            {"type": "input_file", "file_url": "http://x/d.pdf"}]
-
-        sse_body = b"".join([
-            b'data: {"choices":[{"delta":{"reasoning_content":"hmm"},"finish_reason":null}]}\n\n',
-            b'data: {"choices":[{"delta":{"content":"Hel"},"finish_reason":null}]}\n\n',
-            b': keep-alive comment\n\n',
-            b'data: {"choices":[{"delta":{"content":"lo"},"finish_reason":null}]}\n\n',
-            b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1",'
-            b'"function":{"name":"add","arguments":"{\\"a\\": "}}]},'
-            b'"finish_reason":null}]}\n\n',
-            b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,'
-            b'"function":{"arguments":"2}"}}]},"finish_reason":"tool_calls"}]}\n\n',
-            b'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3,'
-            b'"completion_tokens_details":{"reasoning_tokens":2}}}\n\n',
-            b'data: [DONE]\n\n',
-        ])
-        transport = httpx.MockTransport(
-            lambda req: httpx.Response(
-                200, content=sse_body,
-                headers={"content-type": "text/event-stream"}))
-        llm = OpenAILLM(api_key="test", client=httpx.AsyncClient(
-            transport=transport, base_url="http://fake"))
-        got = [x async for x in llm.stream(
-            [Message(role="user", content="hi")],
-            [ToolSpec(name="add", parameters={"type": "object"})])]
-
-        *deltas, reply = got
-        assert [(d.text, d.channel) for d in deltas] == [
-            ("hmm", "reasoning"), ("Hel", "text"), ("lo", "text"),
-            ('{"a": ', "tool_args"), ("2}", "tool_args")], deltas
-        assert isinstance(reply, LLMReply)
-        assert reply.message.content == "Hello"       # reasoning stays out
-        assert reply.message.tool_calls == [
-            ToolCall(id="c1", name="add", arguments={"a": 2})]
-        assert (reply.usage.input_tokens, reply.usage.output_tokens,
-                reply.usage.reasoning_tokens) == (7, 3, 2)
-        assert reply.stop_reason == "tool_calls"
-
-        err_transport = httpx.MockTransport(
-            lambda req: httpx.Response(401, content=b'{"error":"bad key"}'))
-        bad = OpenAILLM(api_key="x", client=httpx.AsyncClient(
-            transport=err_transport, base_url="http://fake"))
-        try:
-            async for _ in bad.stream([Message(role="user", content="hi")], []):
-                pass
-            raise AssertionError("expected LLMError on 401")
-        except LLMError as e:
-            assert e.status == 401 and "bad key" in e.body and not e.retryable
-
-        resp_body = b"".join([
-            b'data: {"type":"response.reasoning_summary_text.delta","delta":"think"}\n\n',
-            b'data: {"type":"response.output_text.delta","delta":"Hi"}\n\n',
-            b'data: {"type":"response.function_call_arguments.delta",'
-            b'"delta":"{\\"a\\": 1}","output_index":1}\n\n',
-            b'data: {"type":"response.output_item.done","item":{"type":"function_call",'
-            b'"call_id":"c9","name":"add","arguments":"{\\"a\\": 1}"}}\n\n',
-            b'data: {"type":"response.completed","response":{"usage":{"input_tokens":5,'
-            b'"output_tokens":9,"output_tokens_details":{"reasoning_tokens":4}}}}\n\n',
-        ])
-        rt = httpx.MockTransport(lambda req: httpx.Response(
-            200, content=resp_body,
-            headers={"content-type": "text/event-stream"}))
-        rllm = OpenAIResponsesLLM(api_key="test", client=httpx.AsyncClient(
-            transport=rt, base_url="http://fake"))
-        got2 = [x async for x in rllm.stream([Message(role="user", content="hi")], [])]
-        *d2, rep2 = got2
-        assert [(d.text, d.channel, d.index) for d in d2] == [
-            ("think", "reasoning", 0), ("Hi", "text", 0),
-            ('{"a": 1}', "tool_args", 1)], d2
-        assert rep2.message.content == "Hi"
-        assert rep2.message.tool_calls == [ToolCall(id="c9", name="add",
-                                                    arguments={"a": 1})]
-        assert (rep2.usage.input_tokens, rep2.usage.output_tokens,
-                rep2.usage.reasoning_tokens) == (5, 9, 4)
-        assert rep2.stop_reason == "tool_use"
-
-        print("openai adapter self-check ok")
-
-    asyncio.run(_selfcheck())

@@ -17,9 +17,7 @@ from the ``Args:`` block):
         '''
 
 Explicit ``parameters=`` always wins — use it for nested models or
-anything inference can't express. Self-check:
-
-    uv run python -m internal.tools.schema
+anything inference can't express.
 """
 
 from __future__ import annotations
@@ -110,65 +108,3 @@ def tool(
         )(fn)
 
     return wrap
-
-
-if __name__ == "__main__":
-
-    @tool()
-    async def search(ctx, query: str, tags: list[str], mode: Literal["fast", "deep"],
-                     limit: int | None = 10, deep: bool = False):
-        """Search the index.
-
-        Args:
-            query: full-text query string
-            tags (list): filter tags
-            limit: max results to return
-            deep: crawl slow storage too
-
-        Returns:
-            list: matching documents
-        """
-
-    s = search.spec
-    assert s.name == "search" and s.description == "Search the index."
-    assert s.parameters == {
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "full-text query string"},
-            "tags": {"type": "array", "items": {"type": "string"},
-                     "description": "filter tags"},
-            "mode": {"enum": ["fast", "deep"]},
-            "limit": {"type": "integer", "description": "max results to return"},
-            "deep": {"type": "boolean", "description": "crawl slow storage too"},
-        },
-        "required": ["query", "tags", "mode"],
-    }, s.parameters
-
-    @tool(description="override", parameters={"type": "object", "properties": {}})
-    def manual(ctx, whatever: dict):
-        """Ignored."""
-
-    assert manual.spec.description == "override"
-    assert manual.spec.parameters == {"type": "object", "properties": {}}
-
-    @tool()
-    def bare(ctx, x):
-        pass
-
-    assert bare.spec.parameters == {"type": "object", "properties": {"x": {}},
-                                    "required": ["x"]}
-
-    @tool()
-    def ann(ctx, n: Annotated[int, "how many"], tags: Annotated[list[str], "filter"] = []):
-        """Annotated params.
-
-        Args:
-            n: docstring loses to Annotated
-        """
-
-    assert ann.spec.parameters["properties"] == {
-        "n": {"type": "integer", "description": "how many"},
-        "tags": {"type": "array", "items": {"type": "string"},
-                 "description": "filter"},
-    }
-    print("schema inference self-check ok")

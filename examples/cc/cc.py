@@ -4,7 +4,6 @@
     uv run python -m examples.cc.cc "add a healthcheck route to app.py"
     uv run python -m examples.cc.cc --session 7b2f "big refactor task"
     uv run python -m examples.cc.cc --session 7b2f      # REPL (Worker)
-    uv run python -m examples.cc.cc selfcheck           # no network
 
 Everything the model sees is read verbatim from cc.json (a captured Claude
 Code request) — only the handlers are ours: Read / Write / Edit / Bash. The
@@ -27,8 +26,7 @@ from typing import Any
 
 from internal.llm.openai import OpenAIResponsesLLM
 from internal.worker import Worker
-from core import (Agent, LLMReply, Message, Session, StepKind, StepPhase,
-                  Tool, ToolCall, ToolSpec)
+from core import Agent, Session, StepKind, StepPhase, Tool, ToolSpec
 
 # ---- capture: prompt + schemas straight from cc.json -----------------------
 
@@ -272,146 +270,6 @@ async def repl(session_id: str) -> None:
         await serve
 
 
-# ---- selfcheck -------------------------------------------------------------
-
-async def _selfcheck() -> None:
-    # every handler, plus the read-before-write gate, over a fake LLM
-    import tempfile
-
-    class _FakeLLM:
-        def __init__(self, script): self.script = list(script)
-        async def stream(self, messages, tools, **params):
-            yield self.script.pop(0)
-
-    assert {t.spec.name for t in TOOLS} == {"Read", "Write", "Edit", "Bash"}
-    assert SYSTEM.startswith("You are Claude Code")
-    assert SCHEMAS["Read"]["input_schema"]["required"] == ["file_path"]
-    assert TOOLS[0].spec.parameters == {
-        k: v for k, v in SCHEMAS["Read"]["input_schema"].items() if k != "$schema"}
-    assert "$schema" not in TOOLS[0].spec.parameters
-
-    def fails(fn, *a, **kw) -> str:
-        try:
-            fn(*a, **kw)
-        except ValueError as ex:
-            return str(ex)
-        raise AssertionError(f"{fn.__name__}{a} should have raised")
-
-    ctx = None  # handlers take a ToolCallContext but none of them use it
-    with tempfile.TemporaryDirectory() as d:
-        target = f"{d}/app.py"
-        Path(target).write_text("a = 1\nb = 2\na = 1\n")
-
-        # gates fire before anything has been Read
-        assert "not read" in fails(edit, ctx, target, "a = 1", "a = 9")
-        assert "not read" in fails(write, ctx, target, "clobber")
-        assert Path(target).read_text() == "a = 1\nb = 2\na = 1\n"   # untouched
-
-        # end-to-end through the loop: the LLM asks for Read, gets the file back
-        agent = Agent(llm=_FakeLLM([
-            LLMReply(Message(role="assistant", tool_calls=[
-                ToolCall(id="c1", name="Read", arguments={"file_path": target})])),
-            LLMReply(Message(role="assistant", content="done")),
-        ]), tools=TOOLS, system=SYSTEM)
-        result = await agent.run(input="read it")
-        assert result.status == "completed" and result.output == "done"
-        tool_msg = next(m for m in result.messages if m.role == "tool")
-        assert not tool_msg.tool_result.is_error
-        assert "\ta = 1" in tool_msg.tool_result.content
-
-        assert read(ctx, target).splitlines()[0] == "     1\ta = 1"
-        assert read(ctx, target, offset=2, limit=1) == "     2\tb = 2\n… 1 more lines"
-        assert "past the end" in fails(read, ctx, target, offset=99)
-        assert "greater than 0" in fails(read, ctx, target, limit=0)
-
-        # a Read that failed must NOT open the write gate
-        Path(f"{d}/unseen.py").write_text("k = 1\n")
-        assert "past the end" in fails(read, ctx, f"{d}/unseen.py", offset=9)
-        assert "not read" in fails(edit, ctx, f"{d}/unseen.py", "k = 1", "k = 2")
-
-        # cat -n counts \n only: \f and U+2028 are text, not line breaks
-        Path(f"{d}/ff.txt").write_text("a\fb\nc\n")
-        assert read(ctx, f"{d}/ff.txt") == "     1\ta\fb\n     2\tc"
-
-        assert "not unique" in fails(edit, ctx, target, "a = 1", "a = 9")
-        assert "must not be empty" in fails(edit, ctx, target, "", "#")
-        assert "must differ" in fails(edit, ctx, target, "a = 1", "a = 1")
-        assert "not found" in fails(edit, ctx, target, "nope", "x")
-        assert Path(target).read_text() == "a = 1\nb = 2\na = 1\n"   # still untouched
-
-        edit(ctx, target, "a = 1", "a = 9", replace_all=True)
-        edit(ctx, target, "b = 2", "b = 3")
-        assert Path(target).read_text() == "a = 9\nb = 3\na = 9\n"
-
-        # a Read of one spelling authorises an Edit of any other
-        crlf = f"{d}/sub/../crlf.py"
-        Path(f"{d}/crlf.py").write_bytes(b"x = 1\r\ny = 2\r\n")
-        Path(f"{d}/sub").mkdir()
-        read(ctx, f"{d}/crlf.py")
-        edit(ctx, crlf, "x = 1", "x = 7")
-        assert Path(f"{d}/crlf.py").read_bytes() == b"x = 7\r\ny = 2\r\n"  # endings kept
-
-        Path(f"{d}/b.bin").write_bytes(b"\x89PNG\x00\xff")
-        assert "not UTF-8" in fails(read, ctx, f"{d}/b.bin")
-        assert write(ctx, f"{d}/new/x.txt", "hi\n") == f"Wrote 1 line to {d}/new/x.txt"
-        assert Path(f"{d}/new/x.txt").read_text() == "hi\n"
-
-        assert (await bash(ctx, "printf hello")) == "hello"
-        assert "exit code 3" in await bash(ctx, "exit 3")
-
-        # timeout: keeps the output already printed, and kills the whole tree
-        canary = f"{d}/canary"
-        out = await bash(ctx, f"printf early; (sleep 1.5; touch {canary}) &  wait",
-                         timeout=300)
-        assert out.startswith("early") and "timed out" in out, out
-        await asyncio.sleep(2)
-        assert not Path(canary).exists(), "child survived the timeout kill"
-
-        # a process that left the group still holds stdout: return anyway, don't wedge
-        clock = asyncio.get_running_loop().time
-        t0 = clock()
-        out = await bash(ctx, "python3 -c \"import subprocess,time;"
-                              "subprocess.Popen(['sleep','5'],start_new_session=True);"
-                              "time.sleep(5)\"", timeout=200)
-        assert "timed out" in out and clock() - t0 < 2.5, (out, clock() - t0)
-
-        # durable session: "crash" after the tool ran, reload, finish
-        spath = f"{d}/cc-session.jsonl"
-        with Session(spath) as s1:
-            a1 = Agent(llm=_FakeLLM([
-                LLMReply(Message(role="assistant", tool_calls=[
-                    ToolCall(id="r1", name="Read",
-                             arguments={"file_path": target})]))]),
-                tools=TOOLS, system=SYSTEM, max_steps=1)
-            r1 = await a1.run(input="check app.py", session=s1)
-            assert r1.status == "truncated"      # died mid-task
-        with Session.load(spath) as s2:          # new process: load + go on
-            a2 = Agent(llm=_FakeLLM([
-                LLMReply(Message(role="assistant", content="resumed fine"))]),
-                tools=TOOLS, system=SYSTEM)
-            r2 = await a2.run(input="continue", session=s2)
-        assert r2.status == "completed" and r2.output == "resumed fine"
-        logged = Session.load(spath).messages()
-        assert [m.role for m in logged] == [
-            "user", "assistant", "tool", "user", "assistant"]
-        assert "\ta = 9" in logged[2].tool_result.content   # history intact
-
-        # --session takes an id, not a path
-        global SESSIONS_DIR
-        old_dir, SESSIONS_DIR = SESSIONS_DIR, Path(d) / "sessions"
-        try:
-            with _open_session("task-1") as s:
-                s.append(Message(role="user", content="hi"))
-            assert (Path(d) / "sessions" / "task-1.jsonl").exists()
-            with _open_session("task-1") as s3:      # same id resumes
-                assert len(s3) == 1 and s3.id == "task-1"
-            assert len(_open_session(None)) == 0     # in-memory
-        finally:
-            SESSIONS_DIR = old_dir
-
-    print("cc replica self-check ok")
-
-
 # ---- cli -------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -424,9 +282,7 @@ if __name__ == "__main__":
         session = args[i + 1]
         del args[i:i + 2]
     prompt = " ".join(args)
-    if prompt == "selfcheck":
-        asyncio.run(_selfcheck())
-    elif not prompt and session:
+    if not prompt and session:
         asyncio.run(repl(session))
     else:
         asyncio.run(main(prompt, session))

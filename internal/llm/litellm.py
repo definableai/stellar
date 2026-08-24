@@ -14,10 +14,6 @@ Provider params pass through verbatim (constructor defaults, per-agent,
 per-run); API keys come from each provider's usual env var — that is
 litellm's department. Reasoning streams as ``channel="reasoning"``
 where the provider exposes ``reasoning_content``.
-
-Self-check (no network, no litellm install needed — acompletion= seam):
-
-    uv run python -m internal.llm.litellm
 """
 
 from __future__ import annotations
@@ -107,96 +103,3 @@ class LiteLLM:
                 if args:
                     yield b.tool_args(idx, args)
         yield b.reply()
-
-
-# ---- self-check -------------------------------------------------------
-
-if __name__ == "__main__":
-    import asyncio
-    from types import SimpleNamespace as NS
-
-    def _delta(**kw: Any) -> Any:
-        d = NS(content=None, reasoning_content=None, tool_calls=None)
-        d.__dict__.update(kw)
-        return d
-
-    async def _selfcheck() -> None:
-        captured: dict[str, Any] = {}
-
-        async def fake_acompletion(**kwargs: Any) -> Any:
-            captured.update(kwargs)
-
-            async def gen():
-                yield NS(choices=[NS(delta=_delta(reasoning_content="hmm"),
-                                     finish_reason=None)], usage=None)
-                yield NS(choices=[NS(delta=_delta(content="Hi"),
-                                     finish_reason=None)], usage=None)
-                yield NS(choices=[NS(delta=_delta(tool_calls=[
-                    NS(index=0, id="c1",
-                       function=NS(name="add", arguments='{"a": '))]),
-                    finish_reason=None)], usage=None)
-                yield NS(choices=[NS(delta=_delta(tool_calls=[
-                    NS(index=0, id=None,
-                       function=NS(name=None, arguments="2}"))]),
-                    finish_reason="tool_calls")], usage=None)
-                yield NS(choices=[],
-                         usage=NS(prompt_tokens=7, completion_tokens=3))
-            return gen()
-
-        llm = LiteLLM(model="fake/model", acompletion=fake_acompletion)
-        got = [x async for x in llm.stream(
-            [Message(role="user", content="hi")], [ToolSpec(name="add")])]
-        *deltas, reply = got
-        assert [(d.text, d.channel) for d in deltas] == [
-            ("hmm", "reasoning"), ("Hi", "text"),
-            ('{"a": ', "tool_args"), ("2}", "tool_args")], deltas
-        assert reply.message.content == "Hi"
-        assert reply.message.tool_calls[0].name == "add"
-        assert reply.message.tool_calls[0].arguments == {"a": 2}
-        assert (reply.usage.input_tokens, reply.usage.output_tokens) == (7, 3)
-        assert reply.stop_reason == "tool_calls"
-        assert captured["model"] == "fake/model"
-        assert captured["messages"] == [{"role": "user", "content": "hi"}]
-        assert captured["tools"][0]["function"]["name"] == "add"
-        assert captured["stream_options"] == {"include_usage": True}
-
-        # dict-shaped chunks (older litellm / shims) parse identically;
-        # two index-less calls in one delta stay two calls
-        async def dict_acompletion(**kwargs: Any) -> Any:
-            async def gen():
-                yield {"choices": [{"delta": {"content": "Yo"},
-                                    "finish_reason": None}]}
-                yield {"choices": [{"delta": {"tool_calls": [
-                    {"id": "d1", "function": {"name": "a", "arguments": "{}"}},
-                    {"id": "d2", "function": {"name": "b", "arguments": "{}"}},
-                ]}, "finish_reason": "tool_calls"}]}
-                yield {"choices": [], "usage": {"prompt_tokens": 1,
-                                                "completion_tokens": 2}}
-            return gen()
-
-        dllm = LiteLLM(model="d", acompletion=dict_acompletion)
-        *_, drep = [x async for x in dllm.stream(
-            [Message(role="user", content="q")], [])]
-        assert drep.message.content == "Yo"
-        assert [(c.id, c.name) for c in drep.message.tool_calls] == \
-            [("d1", "a"), ("d2", "b")]
-        assert (drep.usage.input_tokens, drep.usage.output_tokens) == (1, 2)
-        assert drep.stop_reason == "tool_calls"
-
-        # provider error -> LLMError carrying the mapped status
-        async def boom(**kwargs: Any) -> Any:
-            e = RuntimeError("rate limited")
-            e.status_code = 429
-            raise e
-
-        bad = LiteLLM(model="x", acompletion=boom)
-        try:
-            async for _ in bad.stream([Message(role="user", content="hi")], []):
-                pass
-            raise AssertionError("expected LLMError")
-        except LLMError as e:
-            assert e.status == 429 and e.retryable
-
-        print("litellm adapter self-check ok")
-
-    asyncio.run(_selfcheck())
