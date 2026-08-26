@@ -8,21 +8,23 @@ import re
 import sys
 from pathlib import Path
 
-CORE = sorted((Path(__file__).parent.parent / "core").glob("*.py"))
+ROOT = Path(__file__).parent.parent
+CORE = sorted((ROOT / "core").glob("*.py"))
 BUDGET = 2000
 PRODUCTS = re.compile(
     r"\b(mcp|anthropic|openai|litellm|claude|gpt|a2a|acp)\b", re.IGNORECASE
 )
+ADAPTERS = {"models": {"httpx"}, "hooks": set(), "drivers": set()}
 
 
 def import_roots(source: str) -> list[str]:
-    """The top-level package name of every import in the source."""
+    """Every import's top-level package name. A relative import answers to "."."""
     roots = []
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             roots += [alias.name.split(".")[0] for alias in node.names]
         elif isinstance(node, ast.ImportFrom):
-            roots.append("core" if node.level else (node.module or "").split(".")[0])
+            roots.append("." if node.level else (node.module or "").split(".")[0])
     return roots
 
 
@@ -35,7 +37,7 @@ def test_core_fits_the_budget() -> None:
 def test_core_imports_stdlib_and_itself_only() -> None:
     for f in CORE:
         for root in import_roots(f.read_text()):
-            ok = root == "core" or root in sys.stdlib_module_names
+            ok = root in (".", "core") or root in sys.stdlib_module_names
             assert ok, f"core/{f.name} imports {root}"
 
 
@@ -45,9 +47,21 @@ def test_core_names_no_products() -> None:
         assert not found, f"core/{f.name} says {found.group()!r}"
 
 
+def test_adapters_import_core_and_stdlib_only() -> None:
+    """models/, hooks/ and drivers/ speak core and stdlib — never each other."""
+    for folder, extra in ADAPTERS.items():
+        files = sorted((ROOT / folder).glob("*.py"))
+        assert files, f"no {folder}/*.py files found"
+        for f in files:
+            for root in import_roots(f.read_text()):
+                ok = root in extra or root == "core" or root in sys.stdlib_module_names
+                assert ok, f"{folder}/{f.name} imports {root}"
+
+
 if __name__ == "__main__":
     assert CORE, "no core/*.py files found"
     test_core_fits_the_budget()
     test_core_imports_stdlib_and_itself_only()
     test_core_names_no_products()
+    test_adapters_import_core_and_stdlib_only()
     print("test_rules: all ok")
