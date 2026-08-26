@@ -8,11 +8,5 @@ dependencies = [
     "httpx>=0.27",
 ]
 
-[project.optional-dependencies]
-litellm = ["litellm>=1.60"]
-
-[dependency-groups]
-dev = ["hypothesis>=6"]
-
 [tool.ruff.lint.per-file-ignores]
 "core/__init__.py" = ["F401"]   # the public-API re-export barrel
