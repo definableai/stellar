@@ -32,6 +32,13 @@ class Model:
         return await asyncio.to_thread(self.invoke, agent)
 
 
+def _todo(name: str) -> NotImplementedError:
+    """A missing template method, with the whole template to copy."""
+    return NotImplementedError(
+        f"{name} — a ProviderModel implements all three:\n\n{SKELETONS['provider']}"
+    )
+
+
 class ProviderModel(Model):
     """A Model in three steps: build the request, send it, read the reply.
 
@@ -39,13 +46,13 @@ class ProviderModel(Model):
     """
 
     def to_provider(self, agent) -> Any:
-        raise NotImplementedError("to_provider")
+        raise _todo("to_provider")
 
     async def send(self, body) -> Any:
-        raise NotImplementedError("send")
+        raise _todo("send")
 
     def to_core(self, raw) -> Message:
-        raise NotImplementedError("to_core")
+        raise _todo("to_core")
 
     async def ainvoke(self, agent) -> Message:
         return self.to_core(await self.send(self.to_provider(agent)))
@@ -63,6 +70,11 @@ class Tool:
 
     async def aexecute(self, agent, **args) -> Any:
         return await asyncio.to_thread(partial(self.execute, agent, **args))
+
+
+def wrong(kind: str, problem: str) -> ContractError:
+    """The complaint, then the code to type instead."""
+    return ContractError(f"{problem}\n\n{SKELETONS[kind]}")
 
 
 class Hook:
@@ -95,6 +107,16 @@ SKELETONS: dict[str, str] = {
     def invoke(self, agent) -> Message:
         return Message(role="assistant", content="hello")
 """,
+    "provider": """class MyProvider(ProviderModel):
+    def to_provider(self, agent) -> dict:      # pure: messages+tools -> request body
+        ...
+
+    async def send(self, body) -> dict:        # the network call; retries live here
+        ...
+
+    def to_core(self, raw) -> Message:         # pure: response -> assistant Message
+        ...
+""",
     "tool": """class MyTool(Tool):
     name = "shout"
     description = "Shout a word."
@@ -102,6 +124,8 @@ SKELETONS: dict[str, str] = {
 
     def execute(self, agent, word):
         return word.upper()
+
+# or decorate a plain function with @tool
 """,
     "hook": """class MyHook(Hook):
     def run_pre(self, agent) -> None:

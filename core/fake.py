@@ -12,6 +12,8 @@ class FakeModel(Model):
 
     async def ainvoke(self, agent) -> Message:
         if not self.script:
-            raise ContractError("FakeModel script exhausted")
+            raise ContractError(
+                f"FakeModel script exhausted after reply {agent.step - 1}"
+            )
         answer = self.script.pop(0)
         return Message("assistant", answer) if isinstance(answer, str) else answer

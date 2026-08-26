@@ -75,7 +75,9 @@ def test_missing_methods_say_their_name() -> None:
         try:
             call()
         except NotImplementedError as e:
-            assert str(e) == name, f"{name} raised {e!s}"
+            assert str(e).startswith(name), f"{name} raised {e!s}"
+            if name in ("to_provider", "send", "to_core"):     # template methods
+                assert "class MyProvider" in str(e)            # carry the template
         else:
             raise AssertionError(f"{name} should have raised")
 
@@ -87,8 +89,9 @@ def test_hook_methods_are_the_events() -> None:
 
 
 def test_skeletons() -> None:
-    assert set(SKELETONS) == {"model", "tool", "hook"}
+    assert set(SKELETONS) == {"model", "provider", "tool", "hook"}
     assert "Model" in SKELETONS["model"]
+    assert "ProviderModel" in SKELETONS["provider"]
     assert "Tool" in SKELETONS["tool"]
     assert "Hook" in SKELETONS["hook"]
 

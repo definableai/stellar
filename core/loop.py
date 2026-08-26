@@ -8,13 +8,8 @@ has to import back.
 import inspect
 import json
 
-from core.contracts import EVENTS, SKELETONS, ContractError, Hook, Model, Stop, Tool
+from core.contracts import EVENTS, Hook, Model, Stop, Tool, wrong
 from core.types import Message, ToolCall
-
-
-def _wrong(kind: str, problem: str) -> ContractError:
-    """The complaint, then the code to type instead."""
-    return ContractError(f"{problem}\n\n{SKELETONS[kind]}")
 
 
 def _overrides(obj, base, *names) -> bool:
@@ -33,7 +28,7 @@ def _overrides(obj, base, *names) -> bool:
 def check(agent) -> None:
     """Read the wiring and say what a dev got wrong, before it runs."""
     if not _overrides(agent.model, Model, "invoke", "ainvoke"):
-        raise _wrong(
+        raise wrong(
             "model",
             f"{type(agent.model).__name__} defines neither invoke nor ainvoke"
             " — wrap it in a Model subclass",
@@ -41,16 +36,16 @@ def check(agent) -> None:
     for key, tool in agent.tools.items():
         name = getattr(tool, "name", None)
         if not name or name != key:
-            raise _wrong(
+            raise wrong(
                 "tool", f"tools[{key!r}] calls itself {name!r}; the two must match"
             )
         if not isinstance(getattr(tool, "parameters", None), dict):
-            raise _wrong("tool", f"tool {key!r} needs parameters to be a dict")
+            raise wrong("tool", f"tool {key!r} needs parameters to be a dict")
         if not _overrides(tool, Tool, "execute", "aexecute"):
-            raise _wrong("tool", f"tool {key!r} defines neither execute nor aexecute")
+            raise wrong("tool", f"tool {key!r} defines neither execute nor aexecute")
     for hook in agent.hooks:
         if not _overrides(hook, Hook, *EVENTS):
-            raise _wrong(
+            raise wrong(
                 "hook",
                 f"{type(hook).__name__} listens for nothing; write one of: "
                 + ", ".join(EVENTS),
@@ -70,7 +65,7 @@ def add(agent, *tools) -> None:
     """Put tools in the toolbox. Two tools with one name is a mistake."""
     for tool in tools:
         if tool.name in agent.tools:
-            raise _wrong("tool", f"two tools answer to {tool.name!r}")
+            raise wrong("tool", f"two tools answer to {tool.name!r}")
         agent.tools[tool.name] = tool
 
 
@@ -95,7 +90,7 @@ async def run(agent):
             await fire(agent, "model_pre")
             answer = await agent.model.ainvoke(agent)
             if not isinstance(answer, Message):
-                raise _wrong(
+                raise wrong(
                     "model",
                     f"{type(agent.model).__name__}.ainvoke returned "
                     f"{type(answer).__name__}, expected Message",
