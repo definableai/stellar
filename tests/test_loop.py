@@ -183,9 +183,22 @@ def test_a_bare_function_is_not_a_model() -> None:
     try:
         Agent(lambda agent: Message("assistant", "hi"))
     except ContractError as e:
-        assert "wrap it in a Model subclass" in str(e)
+        assert "subclass Model and" in str(e)
     else:
         raise AssertionError("a function should not pass for a Model")
+
+
+def test_a_look_alike_needs_ainvoke() -> None:
+    class DuckSync:                          # no Model base, sync only:
+        def invoke(self, agent) -> Message:  # nobody bridges this for it
+            return Message("assistant", "hi")
+
+    try:
+        Agent(DuckSync())
+    except ContractError as e:
+        assert "ainvoke" in str(e)
+    else:
+        raise AssertionError("only Model subclasses get the sync bridge")
 
 
 def test_a_hook_can_add_a_hook() -> None:
@@ -300,7 +313,7 @@ def test_the_wiring_is_checked_every_step() -> None:
     try:
         asyncio.run(agent.run())
     except ContractError as e:
-        assert "wrap it in a Model subclass" in str(e)
+        assert "subclass Model and" in str(e)
     else:
         raise AssertionError("a broken swap should not survive into the next step")
     assert agent.step == 1
@@ -343,6 +356,7 @@ if __name__ == "__main__":
         test_the_model_must_return_a_message,
         test_a_hook_must_listen_for_something,
         test_a_bare_function_is_not_a_model,
+        test_a_look_alike_needs_ainvoke,
         test_a_hook_can_add_a_hook,
         test_agents_do_not_share_memory,
         test_a_sync_model_and_a_sync_tool_both_work,

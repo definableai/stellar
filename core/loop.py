@@ -27,11 +27,12 @@ def _overrides(obj, base, *names) -> bool:
 
 def check(agent) -> None:
     """Read the wiring and say what a dev got wrong, before it runs."""
-    if not _overrides(agent.model, Model, "invoke", "ainvoke"):
+    bridged = isinstance(agent.model, Model) and _overrides(agent.model, Model, "invoke")
+    if not (bridged or _overrides(agent.model, Model, "ainvoke")):
         raise wrong(
             "model",
-            f"{type(agent.model).__name__} defines neither invoke nor ainvoke"
-            " — wrap it in a Model subclass",
+            f"{type(agent.model).__name__} is not a Model: subclass Model and"
+            " write invoke, or define your own ainvoke",
         )
     for key, tool in agent.tools.items():
         name = getattr(tool, "name", None)

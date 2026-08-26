@@ -4,16 +4,17 @@ under 2000 lines (`wc -l core/*.py`). Simple code — abstractions and the
 internals that serve them, nothing else. Small, but strong enough for hard
 tasks when it is used well.
 
-- Runtime: `agent` (the loop) + `llm`, `tools`, `hooks`, `session`, `run`,
-  `worker`, `tracer`, `transport` — plus `types` and `events`, the shared
-  vocabulary every seam speaks.
-- Seams: LLM, TOOL, HOOK. Three kinds of adapter, one per seam.
-- Adapters: one file, one plain factory. Call it, pass the result to
-  `Agent(...)`. Ours live in `internal/`, yours in `external/`.
-- Composition is fixed at construction. No runtime mounting, no runtime
-  self-modification: an agent runs with what it was built with.
-- Transport: SSE, WS. Events: step_start, step_delta, step_end.
-  Tracing: Jsonl, Console.
+- Nine nouns, and nothing else gets to be one: `Part`, `ToolCall`, `Message`,
+  `Model`, `Tool`, `Hook`, `Agent`, `ContractError`, `Stop`.
+- Three contracts: Model, Tool, Hook. One signature everywhere, `fn(agent)`.
+  `Agent` has one method, `run()`.
+- Layout: `core/` (stdlib only) plus `models/`, `hooks/`, `drivers/`. Flat
+  imports, one way: they speak `core`, never each other.
+- Composition is by assignment, hot-swap allowed mid-run — `check()` reads the
+  whole backpack again at the top of every step.
+- Two control signals only: `raise Stop`, and a pre-filled `agent.result` in
+  `tool_pre`. `run_post` always fires.
+- The six hook names ARE the six event names. Transport: SSE, WS.
 
 ## Agents
 
@@ -24,7 +25,7 @@ You run as one of two roles:
 ### Master - principal architect
 - Big features/issues get a plan: atomic task files at `tasks/{plan-name}/{task-name}.md` that can run independently.
 - Delegate task files to slaves; review every task a slave delivers before it lands.
-- Guard the codebase's integrity and structure — the 2000-line core budget and the seams (llm/tool/hook/adapter/tracer) are yours to defend.
+- Guard the codebase's integrity and structure — the 2000-line core budget, the nine nouns, and the three contracts (Model/Tool/Hook) are yours to defend.
 - While integrating a third-party library or tool make sure you ground your research well about it.
 - Needed at all? (YAGNI)
 - Following the DRY ans SOLID principle

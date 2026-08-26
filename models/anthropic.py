@@ -1,7 +1,7 @@
 """The Messages API, in three steps: build the request, send it, read the reply.
 
-to_provider and to_core are pure. This file is the only place that knows what
-a Part holds, and the only place that knows what the wire looks like.
+to_provider and to_core are pure. Core never opens a Part and never sees the
+wire — an adapter does both, and here the wire is the Messages API.
 """
 
 import asyncio

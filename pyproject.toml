@@ -1,7 +1,7 @@
 [project]
 name = "stellar"
 version = "0.1.0"
-description = "Add your description here"
+description = "A minified agent core: the infrastructure to run an agent, under 2000 readable lines of stdlib Python."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

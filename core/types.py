@@ -1,7 +1,7 @@
 """The three data nouns: Part, ToolCall, Message.
 
-Plain dataclasses with no methods. To checkpoint one, use
-dataclasses.asdict; to load it back, call the class with the dict.
+Plain dataclasses with no methods. dataclasses.asdict checkpoints one; loading
+it back is yours, including the ToolCalls and Parts nested in a Message.
 """
 
 from dataclasses import dataclass, field
