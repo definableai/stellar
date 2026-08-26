@@ -108,8 +108,9 @@ SKELETONS: dict[str, str] = {
         return Message(role="assistant", content="hello")
 """,
     "provider": """class MyProvider(ProviderModel):
-    def to_provider(self, agent) -> dict:      # pure: messages+tools -> request body
-        ...
+    def to_provider(self, agent) -> dict:      # pure: every message — including
+        ...                                    # tool_calls and tool_call_id — plus
+                                               # agent.tools, as one request body
 
     async def send(self, body) -> dict:        # the network call; retries live here
         ...

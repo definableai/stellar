@@ -40,7 +40,9 @@ async def exchanges(model) -> None:
     said = agent.messages
     asked = next((i for i, m in enumerate(said) if m.tool_calls), None)
     if asked is None:
-        raise wrong(2, "an assistant message carrying tool_calls", said)
+        raise wrong(2, "an assistant message carrying tool_calls — does to_core "
+                       "map them, and does to_provider put agent.tools in the body?",
+                    said)
     call = said[asked].tool_calls[0]
     if not isinstance(call.args, dict):
         kind = type(call.args).__name__
@@ -57,5 +59,10 @@ async def exchanges(model) -> None:
 
 
 def check_model(model) -> None:
-    """Grade an adapter; raise if it fails. Call this from sync code only."""
+    """Grade an adapter; raise if it fails. Call this from sync code only.
+
+    This grades the reply side (to_core) and the loop fit. Nothing here can
+    see whether to_provider built a body your provider will accept — your
+    adapter's own tests must assert that directly.
+    """
     asyncio.run(exchanges(model))

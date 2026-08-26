@@ -8,7 +8,7 @@ has to import back.
 import inspect
 import json
 
-from core.contracts import EVENTS, Hook, Model, Stop, Tool, wrong
+from core.contracts import EVENTS, Hook, Model, ProviderModel, Stop, Tool, wrong
 from core.types import Message, ToolCall
 
 
@@ -90,10 +90,12 @@ async def run(agent):
             await fire(agent, "model_pre")
             answer = await agent.model.ainvoke(agent)
             if not isinstance(answer, Message):
+                template = isinstance(agent.model, ProviderModel)
                 raise wrong(
-                    "model",
+                    "provider" if template else "model",
                     f"{type(agent.model).__name__}.ainvoke returned "
-                    f"{type(answer).__name__}, expected Message",
+                    f"{type(answer).__name__}, expected Message"
+                    + (" — to_core must build one" if template else ""),
                 )
             agent.response = answer
             await fire(agent, "model_post")
