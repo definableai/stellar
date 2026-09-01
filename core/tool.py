@@ -54,11 +54,15 @@ def tool(fn: Callable[..., Any]) -> Tool:
     sees that one.
 
     Gives back an instance, ready for Agent(model, [that]). Raises
-    ContractError on *args/**kwargs: an unreadable signature is no schema.
+    ContractError on *args/**kwargs — an unreadable signature is no schema —
+    and on anything without a __name__: the function's name is the tool's.
     """
+    name = getattr(fn, "__name__", "")
+    if not name:
+        raise wrong("tool", f"@tool needs a named function, not {type(fn).__name__}")
     if any(p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
            for p in inspect.signature(fn).parameters.values()):
-        raise wrong("tool", f"@tool cannot read *args/**kwargs on {fn.__name__}")
+        raise wrong("tool", f"@tool cannot read *args/**kwargs on {name}")
     wants = takes_run(fn)
 
     def call(run: "Run", args: dict[str, Any]) -> Any:
@@ -84,8 +88,8 @@ def tool(fn: Callable[..., Any]) -> Tool:
             return await asyncio.to_thread(call, run, args)
         execute = bridges
 
-    return type(fn.__name__, (Tool,), {
-        "name": fn.__name__,
+    return type(name, (Tool,), {
+        "name": name,
         "description": inspect.getdoc(fn) or "",
         "parameters": schema(fn),
         "execute": execute,
