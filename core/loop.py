@@ -7,6 +7,8 @@ so agent.py can import this file and this file never has to import back.
 Agent.run() calls run(); Agent.__post_init__ and every step call check().
 """
 
+from __future__ import annotations
+
 import inspect
 import json
 from collections.abc import Callable, Mapping
@@ -18,27 +20,16 @@ from core.types import Message, ToolCall
 if TYPE_CHECKING:                       # names for the checker, no runtime edge
     from core.agent import Agent, Run
 
-
-def _own(obj: Any, base: type, name: str) -> Callable[..., Any] | None:
-    """The method obj's own class writes itself, or None.
-
-    Subclasses pass. So do look-alikes that never heard of the base class.
-    A plain function has none of the names, so it fails.
-    """
-    fn = getattr(type(obj), name, None)
-    return None if fn is None or fn is getattr(base, name, None) else fn
+__all__ = ["check", "coerce", "run", "use"]
 
 
-def _sync(fn: Callable[..., Any]) -> bool:
-    """True when the method was not written async — the loop cannot run it."""
-    return not (inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn))
-
-
-def check(agent: "Agent") -> None:
+def check(agent: Agent) -> None:
     """Read the wiring and say what a dev got wrong, before it runs.
 
     Raises ContractError, with the code to type instead. Runs at construction
     and again at the top of every step, so a hot swap is checked too.
+
+    agent: the whole backpack — its model, and every tool in its toolbox.
     """
     invoke = _own(agent.model, Model, "invoke")
     if invoke is None:
@@ -73,6 +64,9 @@ def coerce(result: Any, call: ToolCall) -> Message:
 
     A Message is re-roled and stamped with the call id; a str is the content;
     anything else is json.dumps'd, str() for whatever will not serialise.
+
+    result: anything at all, including None — a tool owes no type.
+    call: the ask being answered; only its id is read.
     """
     if isinstance(result, Message):
         result.role = "tool"
@@ -83,11 +77,15 @@ def coerce(result: Any, call: ToolCall) -> Message:
     return Message("tool", result, tool_call_id=call.id)
 
 
-async def use(run: "Run", tool: Tool, call: ToolCall) -> Message | Any:
+async def use(run: Run, tool: Tool, call: ToolCall) -> Message | Any:
     """Run one tool. An async generator streams: each Part rings tool.delta.
 
     A streaming tool gives back the folded Message; any other tool gives back
     whatever it returned, and coerce() shapes that downstream.
+
+    run: the tool's first argument, and whose hooks hear tool.delta.
+    tool: the one to run — check() already proved its execute is async.
+    call: the ask; call.args become the tool's keyword arguments.
     """
     # Any on purpose: execute is a coroutine OR an async generator, and no
     # single declared type can say so — the isasyncgen sniff is the truth.
@@ -102,11 +100,13 @@ async def use(run: "Run", tool: Tool, call: ToolCall) -> Message | Any:
     return result
 
 
-async def run(run: "Run") -> "Run":
+async def run(run: Run) -> Run:
     """Ask, act, repeat. Ends when the model stops asking for tools.
 
     Stop — from any hook or tool — ends it cleanly; run.post fires either way.
     Hands back the same Run, its notebook filled in.
+
+    run: arrives with at least one message — run.pre rings on the last one.
     """
     try:
         [run.messages[-1]] = await fire(run, "run.pre", run.messages[-1])
@@ -164,3 +164,18 @@ async def run(run: "Run") -> "Run":
         finally:
             run.emit("run.post", last, source="loop")   # streams end on this
     return run
+
+
+def _own(obj: Any, base: type, name: str) -> Callable[..., Any] | None:
+    """The method obj's own class writes itself, or None.
+
+    Subclasses pass. So do look-alikes that never heard of the base class.
+    A plain function has none of the names, so it fails.
+    """
+    fn = getattr(type(obj), name, None)
+    return None if fn is None or fn is getattr(base, name, None) else fn
+
+
+def _sync(fn: Callable[..., Any]) -> bool:
+    """True when the method was not written async — the loop cannot run it."""
+    return not (inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn))

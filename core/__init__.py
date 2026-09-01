@@ -6,6 +6,8 @@ own notebook, its own id — and everything that happens goes out over the
 radio (Events) for whoever is listening.
 """
 
+from __future__ import annotations
+
 from core.agent import Agent, Run
 from core.contracts import (
     ContractError, Hooks, Model, ProviderModel, STAGES, Stop, Tool, hook,
@@ -15,3 +17,9 @@ from core.fake import FakeModel
 from core.loop import check, run
 from core.tool import tool
 from core.types import Message, Part, ToolCall
+
+__all__ = [
+    "STAGES", "Agent", "ContractError", "Event", "Events", "FakeModel",
+    "Hooks", "Message", "Model", "Part", "ProviderModel", "Run", "Stop",
+    "Tool", "ToolCall", "check", "hook", "run", "tool",
+]

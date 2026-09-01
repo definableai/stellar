@@ -4,6 +4,8 @@ One plain reply, then a tool round trip. Exactly three model calls, always
 in that order, so a canned adapter can script its answers against them.
 """
 
+from __future__ import annotations
+
 import asyncio
 
 from core.agent import Agent
@@ -11,44 +13,29 @@ from core.contracts import ContractError, Model, Tool
 from core.tool import tool
 from core.types import Message, Part
 
+__all__ = ["check_model"]
+
 PLAIN = "Say only the word ok."
 ROUND = "Call the echo tool with text='hi', then say done."
 
 
-@tool
-def echo(text: str) -> str:
+@tool                                # @tool hands back an instance, so echo is
+def echo(text: str) -> str:          # a global like the two above, not a function
     """Repeat the text back."""
     return text
 
 
-def wrong(number: int, expected: str, messages: list[Message]) -> ContractError:
-    """Which exchange broke, what it needed, and what came back instead."""
-    seen = ", ".join(m.role + ("+tool_calls" if m.tool_calls else "") for m in messages)
-    return ContractError(f"exchange {number}: expected {expected}; saw [{seen}]")
+def check_model(model: Model) -> None:
+    """Grade an adapter; raise if it fails. Call this from sync code only.
 
+    This grades the reply side — the Parts send yields, the deltas they ring
+    on the way — and the loop fit. Nothing here can see whether encode built
+    a body your provider will accept: your adapter's own tests must assert
+    that directly.
 
-async def talk(model: Model, prompt: str,
-               *tools: Tool) -> tuple[list[Message], list[Part]]:
-    """One throwaway agent, one run: the notebook it filled, the deltas it rang."""
-    agent = Agent(model, tools)
-    deltas: list[Part] = []
-    agent.events.listen(lambda event: deltas.append(event.data), "model.delta")
-    return (await agent.run(prompt)).messages, deltas
-
-
-def adds_up(number: int, said: list[Message], deltas: list[Part]) -> None:
-    """What was streamed has to add up to what landed in the notebook.
-
-    A Model that streams nothing rings no deltas and is excused; every
-    ProviderModel rings one per Part, so its stream is graded in order.
+    model: run for real, three times — a live adapter hits the network.
     """
-    streamed = "".join(p.data for p in deltas if p.type == "text")
-    folded = "".join(m.text for m in said if m.role == "assistant")
-    if streamed and streamed != folded:
-        raise wrong(number, "the text deltas to add up, in order, to the reply — "
-                    f"streamed {streamed!r}, folded {folded!r}", said)
-    if any(p.type == "meta" for p in deltas) and not any(m.meta for m in said):
-        raise wrong(number, "the meta parts merged into message.meta", said)
+    asyncio.run(exchanges(model))
 
 
 async def exchanges(model: Model) -> None:
@@ -91,12 +78,40 @@ async def exchanges(model: Model) -> None:
     adds_up(2, said, deltas)
 
 
-def check_model(model: Model) -> None:
-    """Grade an adapter; raise if it fails. Call this from sync code only.
+async def talk(model: Model, prompt: str,
+               *tools: Tool) -> tuple[list[Message], list[Part]]:
+    """One throwaway agent, one run: the notebook it filled, the deltas it rang.
 
-    This grades the reply side — the Parts send yields, the deltas they ring
-    on the way — and the loop fit. Nothing here can see whether encode built
-    a body your provider will accept: your adapter's own tests must assert
-    that directly.
+    model: the adapter under test; it gets a fresh Agent and one run.
+    prompt: the only thing said to it.
+    tools: the toolbox for this exchange — empty for the plain one.
     """
-    asyncio.run(exchanges(model))
+    agent = Agent(model, tools)
+    deltas: list[Part] = []
+    agent.events.listen(lambda event: deltas.append(event.data), "model.delta")
+    return (await agent.run(prompt)).messages, deltas
+
+
+def adds_up(number: int, said: list[Message], deltas: list[Part]) -> None:
+    """What was streamed has to add up to what landed in the notebook.
+
+    A Model that streams nothing rings no deltas and is excused; every
+    ProviderModel rings one per Part, so its stream is graded in order.
+
+    number: which exchange to blame when the two do not match.
+    said: the notebook; its assistant text is what the deltas must add to.
+    deltas: every Part the run rang on model.delta, in order.
+    """
+    streamed = "".join(p.data for p in deltas if p.type == "text")
+    folded = "".join(m.text for m in said if m.role == "assistant")
+    if streamed and streamed != folded:
+        raise wrong(number, "the text deltas to add up, in order, to the reply — "
+                    f"streamed {streamed!r}, folded {folded!r}", said)
+    if any(p.type == "meta" for p in deltas) and not any(m.meta for m in said):
+        raise wrong(number, "the meta parts merged into message.meta", said)
+
+
+def wrong(number: int, expected: str, messages: list[Message]) -> ContractError:
+    """Which exchange broke, what it needed, and what came back instead."""
+    seen = ", ".join(m.role + ("+tool_calls" if m.tool_calls else "") for m in messages)
+    return ContractError(f"exchange {number}: expected {expected}; saw [{seen}]")

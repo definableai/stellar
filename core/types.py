@@ -7,8 +7,12 @@ The floor of the stack: nothing here imports the rest of core, and every
 other module — loop, hooks, adapters, drivers — speaks in these three.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
+
+__all__ = ["Message", "Part", "ToolCall"]
 
 Role = Literal["system", "user", "assistant", "tool"]   # who a Message is from
 

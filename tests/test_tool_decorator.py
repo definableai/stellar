@@ -27,6 +27,12 @@ def kinds(a: str, b: int, c: float, d: bool, e: list, f: dict[str, int],
 
 
 @tool
+def quoted(a: "int", b: "list[str]") -> "str":
+    """Hints written as strings — what the future-import leaves in every module."""
+    return f"{a}{b}"
+
+
+@tool
 def counter(run) -> int:
     """Count the notebook."""
     return len(run.messages)
@@ -74,6 +80,13 @@ def test_every_hint_has_a_type() -> None:
         "h": {},                                     # no hint, no promise
     }
     assert kinds.parameters["required"] == list("abcdefgh")
+
+
+def test_string_hints_are_read_as_hints() -> None:
+    assert quoted.parameters["properties"] == {      # a module that says
+        "a": {"type": "integer"},                    # from __future__ import
+        "b": {"type": "array"},                      # annotations has only these
+    }
 
 
 def test_the_run_is_injected_only_when_declared() -> None:
@@ -130,6 +143,7 @@ if __name__ == "__main__":
     for test in (
         test_schema_comes_from_the_signature,
         test_every_hint_has_a_type,
+        test_string_hints_are_read_as_hints,
         test_the_run_is_injected_only_when_declared,
         test_only_the_first_parameter_answers_to_run,
         test_sync_and_async_functions_both_work,

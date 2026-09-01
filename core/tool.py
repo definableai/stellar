@@ -4,6 +4,8 @@
 schema? Write a Tool subclass — that is what the class is for.
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, get_origin
@@ -16,6 +18,8 @@ if TYPE_CHECKING:                       # names for the checker, no runtime edge
     from core.agent import Run
     from core.types import Part
 
+__all__ = ["tool"]
+
 TYPES = {                               # a hint the schema knows, or nothing
     str: "string",
     int: "integer",
@@ -24,25 +28,6 @@ TYPES = {                               # a hint the schema knows, or nothing
     list: "array",
     dict: "object",
 }
-
-
-def takes_run(fn: Callable[..., Any]) -> bool:
-    """True when the first parameter is spelled run: the loop fills that one in."""
-    return next(iter(inspect.signature(fn).parameters), "") == "run"
-
-
-def schema(fn: Callable[..., Any]) -> dict[str, Any]:
-    """The signature as a schema. No hint means anything; no default means required."""
-    properties, required = {}, []
-    skip = "run" if takes_run(fn) else None
-    for name, p in inspect.signature(fn).parameters.items():
-        if name == skip:
-            continue
-        kind = TYPES.get(get_origin(p.annotation) or p.annotation)
-        properties[name] = {"type": kind} if kind else {}
-        if p.default is p.empty:
-            required.append(name)
-    return {"type": "object", "properties": properties, "required": required}
 
 
 def tool(fn: Callable[..., Any]) -> Tool:
@@ -56,6 +41,8 @@ def tool(fn: Callable[..., Any]) -> Tool:
     Gives back an instance, ready for Agent(model, [that]). Raises
     ContractError on *args/**kwargs — an unreadable signature is no schema —
     and on anything without a __name__: the function's name is the tool's.
+
+    fn: called as it is, never bound — the wrapper's self goes unused.
     """
     name = getattr(fn, "__name__", "")
     if not name:
@@ -65,25 +52,25 @@ def tool(fn: Callable[..., Any]) -> Tool:
         raise wrong("tool", f"@tool cannot read *args/**kwargs on {name}")
     wants = takes_run(fn)
 
-    def call(run: "Run", args: dict[str, Any]) -> Any:
+    def call(run: Run, args: dict[str, Any]) -> Any:
         return fn(run, **args) if wants else fn(**args)
 
     execute: Callable[..., Any]         # one of three, picked by fn's kind
     if inspect.isasyncgenfunction(fn):
         # run is positional-only (/) so an arg may be named run too
-        async def streams(self: Tool, run: "Run", /,
-                          **args: Any) -> "AsyncIterator[Part]":
+        async def streams(self: Tool, run: Run, /,
+                          **args: Any) -> AsyncIterator[Part]:
             """Pass the wrapped generator's Parts through, one at a time."""
             async for part in call(run, args):
                 yield part
         execute = streams
     elif inspect.iscoroutinefunction(fn):
-        async def awaits(self: Tool, run: "Run", /, **args: Any) -> Any:
+        async def awaits(self: Tool, run: Run, /, **args: Any) -> Any:
             """Await the wrapped coroutine."""
             return await call(run, args)
         execute = awaits
     else:
-        async def bridges(self: Tool, run: "Run", /, **args: Any) -> Any:
+        async def bridges(self: Tool, run: Run, /, **args: Any) -> Any:
             """Run the wrapped sync function in a thread, so the loop breathes."""
             return await asyncio.to_thread(call, run, args)
         execute = bridges
@@ -94,3 +81,28 @@ def tool(fn: Callable[..., Any]) -> Tool:
         "parameters": schema(fn),
         "execute": execute,
     })()
+
+
+def takes_run(fn: Callable[..., Any]) -> bool:
+    """True when the first parameter is spelled run: the loop fills that one in.
+
+    fn: only its parameter names are read; the annotations stay untouched.
+    """
+    return next(iter(inspect.signature(fn).parameters), "") == "run"
+
+
+def schema(fn: Callable[..., Any]) -> dict[str, Any]:
+    """The signature as a schema. No hint means anything; no default means required.
+
+    fn: read with eval_str, so a module's future-import strings resolve too.
+    """
+    properties, required = {}, []
+    skip = "run" if takes_run(fn) else None
+    for name, p in inspect.signature(fn, eval_str=True).parameters.items():
+        if name == skip:
+            continue
+        kind = TYPES.get(get_origin(p.annotation) or p.annotation)
+        properties[name] = {"type": kind} if kind else {}
+        if p.default is p.empty:
+            required.append(name)
+    return {"type": "object", "properties": properties, "required": required}

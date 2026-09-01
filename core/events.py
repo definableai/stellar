@@ -8,6 +8,8 @@ Names are free-form, but the loop emits the eight stage names, stamped with
 the run's id; drivers/ turns this bus into SSE or WebSocket frames.
 """
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 import logging
@@ -17,6 +19,8 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable
 
 from core.contracts import ContractError
+
+__all__ = ["Event", "Events"]
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +37,6 @@ class Event:
     ts: float = field(default_factory=time.time)
 
 
-def _hears(name: str, prefix: str) -> bool:
-    """A prefix stops at a dot: "tool" hears "tool.pre", never "toolbox.x"."""
-    return not prefix or name == prefix or name.startswith(prefix + ".")
-
-
 class Events:
     """Emit into it, listen to it, stream it. Emitting never blocks."""
 
@@ -49,7 +48,13 @@ class Events:
 
     def emit(self, name: str, data: Any = None, source: str | None = None,
              run_id: str | None = None) -> Event:
-        """Stamp it, keep it, tell everyone. A listener's sins stay its own."""
+        """Stamp it, keep it, tell everyone. A listener's sins stay its own.
+
+        name: dotted event name — the loop uses the eight, you use anything.
+        data: whatever should ride along; stored as-is.
+        source: who is speaking — "loop", a tool's name, or yours.
+        run_id: pin the event to one run, or None for bus-wide.
+        """
         event = Event(self.seq, name, data, source, run_id, time.time())
         self.seq += 1
         self.log.append(event)
@@ -67,6 +72,8 @@ class Events:
 
         prefix "" hears everything, "tool" hears tool.*; run_id pins one run.
         An async def is refused: emit() never awaits.
+
+        fn: any sync callable of one Event; what it returns is dropped.
         """
         if inspect.iscoroutinefunction(fn):
             raise ContractError(
@@ -76,7 +83,10 @@ class Events:
         return fn
 
     def detach(self, fn: Callable[[Event], Any]) -> None:
-        """Stop telling fn anything. Never was listening? Then nothing happens."""
+        """Stop telling fn anything. Never was listening? Then nothing happens.
+
+        fn: matched by equality, and unfiled from every prefix and run it had.
+        """
         self.listeners = [heard for heard in self.listeners if heard[0] != fn]
 
     async def stream(self, run_id: str | None = None, prefix: str = "",
@@ -87,6 +97,10 @@ class Events:
         on before the log is read, so an event landing mid-replay waits in the
         queue instead of falling between the two — and it hears the whole run,
         so a run_id stream ends on that run's run.post, prefix or no prefix.
+
+        run_id: None watches the whole bus; an id watches that one run only.
+        prefix: "" hears everything, "tool" hears tool.* — replay and live.
+        since: the first seq worth replaying; 0 is the whole log.
         """
         queue: asyncio.Queue = asyncio.Queue()    # ponytail: unbounded, a slow
         push = queue.put_nowait                   # consumer is memory
@@ -105,3 +119,8 @@ class Events:
                     return                        # one run, one stream
         finally:
             self.detach(push)
+
+
+def _hears(name: str, prefix: str) -> bool:
+    """A prefix stops at a dot: "tool" hears "tool.pre", never "toolbox.x"."""
+    return not prefix or name == prefix or name.startswith(prefix + ".")

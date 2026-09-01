@@ -4,6 +4,8 @@ The front door: agent.run(prompt) is the whole API. This file wires the
 backpack together and hands it to core/loop.py, which never imports back.
 """
 
+from __future__ import annotations
+
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -13,6 +15,8 @@ from core.contracts import ContractError, Hooks, Model, Tool, wrong
 from core.events import Event, Events
 from core.loop import check, run as loop
 from core.types import Message
+
+__all__ = ["Agent", "Run"]
 
 
 @dataclass
@@ -47,12 +51,16 @@ class Agent:
 
     async def run(self, prompt: str | Message | None = None, *,
                   messages: list[Message] | None = None,
-                  run_id: str | None = None) -> "Run":
+                  run_id: str | None = None) -> Run:
         """Ask, act, repeat. The only method; the work is in core/loop.py.
 
         A str prompt becomes a user message, a Message is taken as it is,
         and messages= opens the notebook — with run_id, that is a resume.
         Gives back the Run: its notebook, its step count, its id.
+
+        prompt: appended after messages=; None only if messages= says enough.
+        messages: the notebook to open on, copied — your list is left alone.
+        run_id: reuse one to resume that run; None mints a fresh hex id.
         """
         said = list(messages or [])
         if prompt is not None:
@@ -83,6 +91,10 @@ class Run:
         """Say one thing on the agent's bus, stamped with this run's id.
 
         Never blocks and never raises; the Event it hands back is already logged.
+
+        name: dotted event name — the loop uses the eight, you use anything.
+        data: whatever should ride along; stored as-is.
+        source: who is speaking — "loop", a tool's name, or yours.
         """
         return self.agent.events.emit(name, data, source, run_id=self.id)
 
