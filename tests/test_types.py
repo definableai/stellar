@@ -130,11 +130,12 @@ def test_hook_methods_are_the_events() -> None:
 
 
 def test_skeletons() -> None:
-    assert set(SKELETONS) == {"model", "provider", "tool", "hook"}
+    assert set(SKELETONS) == {"model", "provider", "tool", "hook", "stage"}
     assert "Model" in SKELETONS["model"]
     assert "ProviderModel" in SKELETONS["provider"]
     assert "Tool" in SKELETONS["tool"]
     assert "Hook" in SKELETONS["hook"]
+    assert "@hook" in SKELETONS["stage"]
     assert "async def" in SKELETONS["model"]
     assert "async def" in SKELETONS["tool"]
 
