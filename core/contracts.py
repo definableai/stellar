@@ -11,7 +11,9 @@ this file knows what an Agent is.
 """
 
 import inspect
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Sequence, cast
+from typing import (
+    TYPE_CHECKING, Any, AsyncIterator, Callable, Literal, Sequence, cast, overload,
+)
 
 from core.types import Message, Part, ToolCall
 
@@ -103,7 +105,7 @@ class ProviderModel(Model):
                 raise wrong("provider", f"{type(self).__name__}.send "
                             f"yielded {type(part).__name__}, expected Part")
             # hook before fold
-            [part] = await fire(run, "model.delta", part)  # type: ignore[misc]
+            [part] = await fire(run, "model.delta", part)   # hook before fold
             fold(answer, part)
             run.emit("model.delta", part, source="loop")
         return answer
@@ -203,6 +205,13 @@ class Hooks:
             filed[:] = [card for card in filed if card[0] is not fn]
         return self
 
+    @overload
+    async def fire(self, stage: Literal["tool.pre"], run: "Run",
+                   *payload: Any) -> tuple[Any, ...] | str | Message: ...
+    @overload
+    async def fire(self, stage: str, run: "Run",
+                   *payload: Any) -> tuple[Any, ...]: ...
+
     async def fire(self, stage: str, run: "Run",
                    *payload: Any) -> tuple[Any, ...] | str | Message:
         """Ring one stage here. Every hook hears it, in attach order.
@@ -231,15 +240,23 @@ class Hooks:
         return payload
 
 
+@overload
+async def fire(run: "Run", stage: Literal["tool.pre"],
+               *payload: Any) -> tuple[Any, ...] | str | Message: ...
+@overload
+async def fire(run: "Run", stage: str, *payload: Any) -> tuple[Any, ...]: ...
+
+
 async def fire(run: "Run", stage: str,
                *payload: Any) -> tuple[Any, ...] | str | Message:
     """Ring one stage: the agent's cards first, then this run's own.
 
-    Hands back the payload as a tuple, threaded through every hook — except
-    at tool.pre, where a str or a Message means the tool is skipped and that
-    is its result.
+    Hands back the payload as a tuple — only a tool.pre bell can answer
+    with a str or a Message instead: the tool is skipped, that is its
+    result, and the run's own cards never hear it.
     """
-    out = await run.agent.hooks.fire(stage, run, *payload)
+    out: tuple[Any, ...] | str | Message = (
+        await run.agent.hooks.fire(stage, run, *payload))
     if not isinstance(out, tuple):
         return out                    # tool.pre said skip; the run's cards miss it
     return await run.hooks.fire(stage, run, *out)

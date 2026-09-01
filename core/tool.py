@@ -4,10 +4,6 @@
 schema? Write a Tool subclass — that is what the class is for.
 """
 
-# mypy: disable-error-code="misc"
-# the three execute variants differ on purpose — one streams, two return —
-# and conditionally defined functions may not, as far as the checker knows.
-
 import asyncio
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, get_origin
@@ -68,21 +64,25 @@ def tool(fn: Callable[..., Any]) -> Tool:
     def call(run: "Run", args: dict[str, Any]) -> Any:
         return fn(run, **args) if wants else fn(**args)
 
+    execute: Callable[..., Any]         # one of three, picked by fn's kind
     if inspect.isasyncgenfunction(fn):
         # run is positional-only (/) so an arg may be named run too
-        async def execute(self: Tool, run: "Run", /,
+        async def streams(self: Tool, run: "Run", /,
                           **args: Any) -> "AsyncIterator[Part]":
             """Pass the wrapped generator's Parts through, one at a time."""
             async for part in call(run, args):
                 yield part
+        execute = streams
     elif inspect.iscoroutinefunction(fn):
-        async def execute(self: Tool, run: "Run", /, **args: Any) -> Any:
+        async def awaits(self: Tool, run: "Run", /, **args: Any) -> Any:
             """Await the wrapped coroutine."""
             return await call(run, args)
+        execute = awaits
     else:
-        async def execute(self: Tool, run: "Run", /, **args: Any) -> Any:
+        async def bridges(self: Tool, run: "Run", /, **args: Any) -> Any:
             """Run the wrapped sync function in a thread, so the loop breathes."""
             return await asyncio.to_thread(call, run, args)
+        execute = bridges
 
     return type(fn.__name__, (Tool,), {
         "name": fn.__name__,

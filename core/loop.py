@@ -7,15 +7,10 @@ so agent.py can import this file and this file never has to import back.
 Agent.run() calls run(); Agent.__post_init__ and every step call check().
 """
 
-# mypy: disable-error-code="misc"
-# fire() hands back a tuple at every stage but tool.pre, where a hook may
-# skip the tool with a str or Message. The unpacks below know their stage;
-# the checker does not.
-
 import inspect
 import json
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from core.contracts import ContractError, Model, Stop, Tool, fire, fold, wrong
 from core.types import Message, ToolCall
@@ -94,7 +89,9 @@ async def use(run: "Run", tool: Tool, call: ToolCall) -> Message | Any:
     A streaming tool gives back the folded Message; any other tool gives back
     whatever it returned, and coerce() shapes that downstream.
     """
-    out = tool.execute(run, **call.args)
+    # Any on purpose: execute is a coroutine OR an async generator, and no
+    # single declared type can say so — the isasyncgen sniff is the truth.
+    out: Any = tool.execute(run, **call.args)
     if not inspect.isasyncgen(out):
         return await out
     result = Message("tool", tool_call_id=call.id)
@@ -141,7 +138,8 @@ async def run(run: "Run") -> "Run":
                     result = out                 # a str or Message: denied
                 run.emit("tool.pre", call, source="loop")
                 if result is None:
-                    tool = run.agent.tools.get(call.name)  # type: ignore[union-attr]
+                    toolbox = cast(Mapping[str, Tool], run.agent.tools)
+                    tool = toolbox.get(call.name)   # check() proved the mapping
                     if tool is None:
                         result = f"error: unknown tool: {call.name}"
                     else:
@@ -151,10 +149,10 @@ async def run(run: "Run") -> "Run":
                             raise                # stop means stop; a broken
                         except Exception as ex:  # contract stays loud
                             result = f"error: {type(ex).__name__}: {ex}"
-                result = coerce(result, call)
-                [call, result] = await fire(run, "tool.post", call, result)
-                run.emit("tool.post", result, source="loop")
-                run.messages.append(result)   # type: ignore[arg-type]  # coerced
+                reply = coerce(result, call)
+                [call, reply] = await fire(run, "tool.post", call, reply)
+                run.emit("tool.post", reply, source="loop")
+                run.messages.append(reply)
     except Stop:
         pass
     finally:
