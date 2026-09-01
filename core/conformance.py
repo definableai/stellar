@@ -7,7 +7,7 @@ in that order, so a canned adapter can script its answers against them.
 import asyncio
 
 from core.agent import Agent
-from core.contracts import ContractError
+from core.contracts import ContractError, Model, Tool
 from core.tool import tool
 from core.types import Message, Part
 
@@ -21,13 +21,14 @@ def echo(text: str) -> str:
     return text
 
 
-def wrong(number: int, expected: str, messages) -> ContractError:
+def wrong(number: int, expected: str, messages: list[Message]) -> ContractError:
     """Which exchange broke, what it needed, and what came back instead."""
     seen = ", ".join(m.role + ("+tool_calls" if m.tool_calls else "") for m in messages)
     return ContractError(f"exchange {number}: expected {expected}; saw [{seen}]")
 
 
-async def talk(model, prompt: str, *tools) -> tuple[list[Message], list[Part]]:
+async def talk(model: Model, prompt: str,
+               *tools: Tool) -> tuple[list[Message], list[Part]]:
     """One throwaway agent, one run: the notebook it filled, the deltas it rang."""
     agent = Agent(model, tools)
     deltas: list[Part] = []
@@ -50,8 +51,12 @@ def adds_up(number: int, said: list[Message], deltas: list[Part]) -> None:
         raise wrong(number, "the meta parts merged into message.meta", said)
 
 
-async def exchanges(model) -> None:
-    """Talk to the model three times and read what lands in the notebook."""
+async def exchanges(model: Model) -> None:
+    """Talk to the model three times and read what lands in the notebook.
+
+    Raises ContractError on the first thing that does not add up. Async, so a
+    running loop can await it; check_model() is the sync door.
+    """
     said, deltas = await talk(model, PLAIN)
     if not said or said[-1].role != "assistant" or not said[-1].text:
         raise wrong(1, "an assistant message with text", said)
@@ -86,7 +91,7 @@ async def exchanges(model) -> None:
     adds_up(2, said, deltas)
 
 
-def check_model(model) -> None:
+def check_model(model: Model) -> None:
     """Grade an adapter; raise if it fails. Call this from sync code only.
 
     This grades the reply side — the Parts send yields, the deltas they ring

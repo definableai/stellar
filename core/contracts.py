@@ -4,13 +4,21 @@ Everything is async. A Model or a Tool takes one argument, the run; a hook
 takes the payload of its stage, and the run behind it if it asks. There are
 no sync twins and no bridges: sync code is one asyncio.to_thread line the
 implementer writes inside the async method.
+
+The eight stage names live here, and so does fold() — the Part protocol
+every streaming adapter obeys. core/loop.py rings the stages; nothing in
+this file knows what an Agent is.
 """
 
 import inspect
-from typing import Any, AsyncIterator, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Sequence, cast
 
 from core.types import Message, Part, ToolCall
 
+if TYPE_CHECKING:                  # the checker's eyes only: agent.py imports
+    from core.agent import Run     # this file, so the runtime graph stays one-way
+
+# The eight bells, in ring order. A hook name and an event name are one word.
 STAGES = ("run.pre", "model.pre", "model.delta", "model.post",
           "tool.pre", "tool.delta", "tool.post", "run.post")
 
@@ -58,7 +66,8 @@ def fold(message: Message, part: Part) -> None:
 class Model:
     """The brain. Override invoke — async — and hand back a Message."""
 
-    async def invoke(self, run) -> Message:
+    async def invoke(self, run: "Run") -> Message:
+        """One turn: read run.messages, answer with one assistant Message."""
         raise NotImplementedError("invoke")
 
 
@@ -78,19 +87,23 @@ class ProviderModel(Model):
     so streaming UIs are written once and work with every adapter.
     """
 
-    def encode(self, run) -> Any:
+    def encode(self, run: "Run") -> Any:
+        """The request body, built from the run. Pure: send() takes it from here."""
         raise _todo("encode")
 
-    def send(self, run, body) -> AsyncIterator[Part]:
+    def send(self, run: "Run", body: Any) -> AsyncIterator[Part]:
+        """Yield the reply as Parts. An async generator; the network lives here."""
         raise _todo("send")
 
-    async def invoke(self, run) -> Message:
+    async def invoke(self, run: "Run") -> Message:
+        """encode, send, fold — rings model.delta per Part, hands back the Message."""
         answer = Message("assistant")
         async for part in self.send(run, self.encode(run)):
             if not isinstance(part, Part):
                 raise wrong("provider", f"{type(self).__name__}.send "
                             f"yielded {type(part).__name__}, expected Part")
-            [part] = await fire(run, "model.delta", part)   # hook before fold
+            # hook before fold
+            [part] = await fire(run, "model.delta", part)  # type: ignore[misc]
             fold(answer, part)
             run.emit("model.delta", part, source="loop")
         return answer
@@ -110,6 +123,7 @@ class Tool:
     # the real shape is (self, run, **args); typed loose so an override
     # may name the args its schema promises without an override complaint
     async def execute(self, *args: Any, **kwargs: Any) -> Any:
+        """Do the thing. execute(run, **args) in, anything out — coerce shapes it."""
         raise NotImplementedError("execute")
 
 
@@ -118,12 +132,12 @@ def wrong(kind: str, problem: str) -> ContractError:
     return ContractError(f"{problem}\n\n{SKELETONS[kind]}")
 
 
-def _who(fn) -> str:
+def _who(fn: Callable[..., Any]) -> str:
     """What to call a hook in a complaint."""
     return getattr(fn, "__name__", type(fn).__name__)
 
 
-def _named(stages, who: str) -> tuple[str, ...]:
+def _named(stages: Sequence[str], who: str) -> tuple[str, ...]:
     """The stage names, checked. Nobody gets to listen for nothing."""
     if not stages:
         raise wrong("hook", f"{who} listens for nothing; name a stage: "
@@ -135,7 +149,7 @@ def _named(stages, who: str) -> tuple[str, ...]:
     return tuple(stages)
 
 
-def _wants_run(fn, stage: str) -> bool:
+def _wants_run(fn: Callable[..., Any], stage: str) -> bool:
     """True when there is room for run after the payload. Sniffed once, at attach."""
     takes = [p for p in inspect.signature(fn).parameters.values()
              if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
@@ -147,11 +161,15 @@ def _wants_run(fn, stage: str) -> bool:
     return len(takes) == hands + 1
 
 
-def hook(*stages: str):
-    """Tag a function with the stages it listens for. It stays a function."""
+def hook(*stages: str) -> Callable[[Any], Any]:
+    """Tag a function with the stages it listens for. It stays a function.
+
+    Raises ContractError right here if a stage is misspelled. attach() reads
+    the tag, so agent.hooks.attach(fn) then needs no stage names.
+    """
     _named(stages, "@hook")
 
-    def tag(fn):
+    def tag(fn: Any) -> Any:   # Any: the tag writes .stages onto the function
         fn.stages = stages
         return fn
 
@@ -162,10 +180,15 @@ class Hooks:
     """The rule cards, filed by stage. Attach order is call order."""
 
     def __init__(self) -> None:
+        # a filed card is (fn, wants the run after its payload) — sniffed at attach
         self.fns: dict[str, list[tuple[Any, bool]]] = {s: [] for s in STAGES}
 
-    def attach(self, fn, *stages: str) -> "Hooks":
-        """File one function: the stages named here, else the ones @hook tagged."""
+    def attach(self, fn: Callable[..., Any], *stages: str) -> "Hooks":
+        """File one function: the stages named here, else the ones @hook tagged.
+
+        Raises ContractError now — not mid-run — if fn is not async, names no
+        stage, or does not fit one. Hands back self, so attaches chain.
+        """
         wanted = _named(stages or getattr(fn, "stages", ()), _who(fn))
         if not inspect.iscoroutinefunction(fn):
             raise wrong("hook", f"{_who(fn)} must be async — write async def; "
@@ -174,18 +197,22 @@ class Hooks:
             self.fns[stage].append((fn, with_run))   # sniffed all, then filed all
         return self
 
-    def detach(self, fn) -> "Hooks":
+    def detach(self, fn: Callable[..., Any]) -> "Hooks":
         """Unfile it, from every stage it listened to."""
         for filed in self.fns.values():
             filed[:] = [card for card in filed if card[0] is not fn]
         return self
 
-    async def fire(self, stage: str, run, *payload) -> Any:
+    async def fire(self, stage: str, run: "Run",
+                   *payload: Any) -> tuple[Any, ...] | str | Message:
         """Ring one stage here. Every hook hears it, in attach order.
 
         What a hook returns is what the next one hears; None leaves the
         payload alone. At tool.pre a str or Message is the tool's result,
         and the hooks behind it never hear the bell.
+
+        So: the payload back as a tuple, or — tool.pre only — that str or
+        Message. Raises ContractError if a hook returns the wrong shape.
         """
         want = PAYLOAD[stage][-1]
         for fn, with_run in list(self.fns[stage]):   # a card added mid-ring waits
@@ -204,7 +231,8 @@ class Hooks:
         return payload
 
 
-async def fire(run, stage: str, *payload) -> Any:
+async def fire(run: "Run", stage: str,
+               *payload: Any) -> tuple[Any, ...] | str | Message:
     """Ring one stage: the agent's cards first, then this run's own.
 
     Hands back the payload as a tuple, threaded through every hook — except

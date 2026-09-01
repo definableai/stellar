@@ -1,9 +1,16 @@
-"""FakeModel: a model that reads its answers off a list you wrote."""
+"""FakeModel: a model that reads its answers off a list you wrote.
 
-from typing import cast
+The one Model core ships: no network, no key, so tests and examples run
+anywhere. Every adapter in models/ is graded against the same loop it rides.
+"""
+
+from typing import TYPE_CHECKING, Any, AsyncIterator, cast
 
 from core.contracts import ContractError, ProviderModel
 from core.types import Message, Part
+
+if TYPE_CHECKING:                  # the checker's eyes only: no runtime edge
+    from core.agent import Run
 
 
 class FakeModel(ProviderModel):
@@ -17,10 +24,16 @@ class FakeModel(ProviderModel):
     def __init__(self, script: list[Message | str]) -> None:
         self.script = list(script)
 
-    def encode(self, run) -> None:
+    def encode(self, run: "Run") -> None:
+        """Nothing to build: the answers are already written."""
         return None
 
-    async def send(self, run, body):
+    async def send(self, run: "Run", body: Any) -> AsyncIterator[Part]:
+        """The next scripted reply, taken apart into Parts.
+
+        Raises ContractError when the script runs out — a run that asked for
+        one more turn than you wrote.
+        """
         if not self.script:
             raise ContractError(
                 f"FakeModel script exhausted after reply {run.step - 1}"

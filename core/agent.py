@@ -1,4 +1,8 @@
-"""Two nouns: the Agent you build once, and the Run it starts each time."""
+"""Two nouns: the Agent you build once, and the Run it starts each time.
+
+The front door: agent.run(prompt) is the whole API. This file wires the
+backpack together and hands it to core/loop.py, which never imports back.
+"""
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -7,7 +11,7 @@ from uuid import uuid4
 
 from core.contracts import ContractError, Hooks, Model, Tool, wrong
 from core.events import Event, Events
-from core.loop import check, run
+from core.loop import check, run as loop
 from core.types import Message
 
 
@@ -27,9 +31,10 @@ class Agent:
     hooks: Hooks = field(default_factory=Hooks)          # control plane
     events: Events = field(default_factory=Events)       # data plane
     # the spare pocket. Namespaced keys: extra["budget.tokens"].
-    extra: dict = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Key the toolbox by tool name, then check the wiring — build fails loud."""
         if not isinstance(self.tools, Mapping):
             filed: dict = {}                 # a nameless one files under None
             for tool in self.tools:          # and check() says so in a moment
@@ -55,7 +60,7 @@ class Agent:
                         else Message("user", prompt))
         if not said:
             raise ContractError("run needs a prompt or messages")
-        return await run(Run(self, run_id or uuid4().hex, said))  # the loop's run
+        return await loop(Run(self, run_id or uuid4().hex, said))  # the loop's run
 
 
 @dataclass
@@ -70,15 +75,22 @@ class Run:
     id: str
     messages: list[Message]
     step: int = 0
-    hooks: Hooks = field(default_factory=Hooks)
-    extra: dict = field(default_factory=dict)
+    hooks: Hooks = field(default_factory=Hooks)   # this run's own lane
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def emit(self, name: str, data: Any = None,
              source: str | None = None) -> Event:
-        """Say one thing on the agent's bus, stamped with this run's id."""
+        """Say one thing on the agent's bus, stamped with this run's id.
+
+        Never blocks and never raises; the Event it hands back is already logged.
+        """
         return self.agent.events.emit(name, data, source, run_id=self.id)
 
-    def __getstate__(self) -> dict:
-        """The checkpoint: everything except the wiring."""
+    def __getstate__(self) -> dict[str, Any]:
+        """The checkpoint: everything except the wiring.
+
+        The agent, its hooks and its bus are dropped — pickle keeps the
+        notebook, and agent.run(messages=…, run_id=…) rebuilds the rest.
+        """
         return {"id": self.id, "messages": self.messages, "step": self.step,
                 "extra": self.extra}

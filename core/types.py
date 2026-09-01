@@ -2,12 +2,15 @@
 
 Plain dataclasses. dataclasses.asdict checkpoints one; loading it back is
 yours, including the ToolCalls and Parts nested in a Message.
+
+The floor of the stack: nothing here imports the rest of core, and every
+other module — loop, hooks, adapters, drivers — speaks in these three.
 """
 
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 
-Role = Literal["system", "user", "assistant", "tool"]
+Role = Literal["system", "user", "assistant", "tool"]   # who a Message is from
 
 
 @dataclass

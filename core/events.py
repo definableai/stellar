@@ -3,6 +3,9 @@
 emit() is sync and never fails — a listener that raises is logged, and the
 next one still hears the event. Async consumers take stream() instead: the
 log replayed from wherever they left off, then live, no gap and no doubles.
+
+Names are free-form, but the loop emits the eight stage names, stamped with
+the run's id; drivers/ turns this bus into SSE or WebSocket frames.
 """
 
 import asyncio
@@ -41,7 +44,8 @@ class Events:
     def __init__(self) -> None:
         self.seq = 0
         self.log: list[Event] = []       # ponytail: unbounded, cap it later
-        self.listeners: list[tuple[Callable, str, str | None]] = []
+        # one listener is (fn, prefix it hears, the one run_id it wants or None)
+        self.listeners: list[tuple[Callable[[Event], Any], str, str | None]] = []
 
     def emit(self, name: str, data: Any = None, source: str | None = None,
              run_id: str | None = None) -> Event:
@@ -57,9 +61,13 @@ class Events:
                     logger.exception("listener %r broke on %s", fn, name)
         return event
 
-    def listen(self, fn: Callable, prefix: str = "",
-               run_id: str | None = None) -> Callable:
-        """Hear every matching event, synchronously. Hands fn back, so it decorates."""
+    def listen(self, fn: Callable[[Event], Any], prefix: str = "",
+               run_id: str | None = None) -> Callable[[Event], Any]:
+        """Hear every matching event, synchronously. Hands fn back, so it decorates.
+
+        prefix "" hears everything, "tool" hears tool.*; run_id pins one run.
+        An async def is refused: emit() never awaits.
+        """
         if inspect.iscoroutinefunction(fn):
             raise ContractError(
                 "listeners are sync — emit() never awaits. Write def, not "
@@ -67,7 +75,7 @@ class Events:
         self.listeners.append((fn, prefix, run_id))
         return fn
 
-    def detach(self, fn: Callable) -> None:
+    def detach(self, fn: Callable[[Event], Any]) -> None:
         """Stop telling fn anything. Never was listening? Then nothing happens."""
         self.listeners = [heard for heard in self.listeners if heard[0] != fn]
 

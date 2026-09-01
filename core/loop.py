@@ -1,19 +1,30 @@
 """The loop: ask the model, run what it asked for, ask again.
 
-Nothing here imports the Agent class. These functions take any object with
-the right attributes, so agent.py can import this file and this file never
-has to import back.
+Nothing here imports the Agent class at runtime — only under TYPE_CHECKING,
+for the checker. These functions take any object with the right attributes,
+so agent.py can import this file and this file never has to import back.
+
+Agent.run() calls run(); Agent.__post_init__ and every step call check().
 """
+
+# mypy: disable-error-code="misc"
+# fire() hands back a tuple at every stage but tool.pre, where a hook may
+# skip the tool with a str or Message. The unpacks below know their stage;
+# the checker does not.
 
 import inspect
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Any
 
 from core.contracts import ContractError, Model, Stop, Tool, fire, fold, wrong
 from core.types import Message, ToolCall
 
+if TYPE_CHECKING:                       # names for the checker, no runtime edge
+    from core.agent import Agent, Run
 
-def _own(obj, base, name):
+
+def _own(obj: Any, base: type, name: str) -> Callable[..., Any] | None:
     """The method obj's own class writes itself, or None.
 
     Subclasses pass. So do look-alikes that never heard of the base class.
@@ -23,13 +34,17 @@ def _own(obj, base, name):
     return None if fn is None or fn is getattr(base, name, None) else fn
 
 
-def _sync(fn) -> bool:
+def _sync(fn: Callable[..., Any]) -> bool:
     """True when the method was not written async — the loop cannot run it."""
     return not (inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn))
 
 
-def check(agent) -> None:
-    """Read the wiring and say what a dev got wrong, before it runs."""
+def check(agent: "Agent") -> None:
+    """Read the wiring and say what a dev got wrong, before it runs.
+
+    Raises ContractError, with the code to type instead. Runs at construction
+    and again at the top of every step, so a hot swap is checked too.
+    """
     invoke = _own(agent.model, Model, "invoke")
     if invoke is None:
         raise wrong("model", f"{type(agent.model).__name__} is not a Model: "
@@ -58,8 +73,12 @@ def check(agent) -> None:
                         "code is one asyncio.to_thread line inside it")
 
 
-def coerce(result, call: ToolCall) -> Message:
-    """Whatever the tool handed back, make it one tool message."""
+def coerce(result: Any, call: ToolCall) -> Message:
+    """Whatever the tool handed back, make it one tool message.
+
+    A Message is re-roled and stamped with the call id; a str is the content;
+    anything else is json.dumps'd, str() for whatever will not serialise.
+    """
     if isinstance(result, Message):
         result.role = "tool"
         result.tool_call_id = result.tool_call_id or call.id
@@ -69,8 +88,12 @@ def coerce(result, call: ToolCall) -> Message:
     return Message("tool", result, tool_call_id=call.id)
 
 
-async def use(run, tool, call: ToolCall):
-    """Run one tool. An async generator streams: each Part rings tool.delta."""
+async def use(run: "Run", tool: Tool, call: ToolCall) -> Message | Any:
+    """Run one tool. An async generator streams: each Part rings tool.delta.
+
+    A streaming tool gives back the folded Message; any other tool gives back
+    whatever it returned, and coerce() shapes that downstream.
+    """
     out = tool.execute(run, **call.args)
     if not inspect.isasyncgen(out):
         return await out
@@ -82,8 +105,12 @@ async def use(run, tool, call: ToolCall):
     return result
 
 
-async def run(run):
-    """Ask, act, repeat. Ends when the model stops asking for tools."""
+async def run(run: "Run") -> "Run":
+    """Ask, act, repeat. Ends when the model stops asking for tools.
+
+    Stop — from any hook or tool — ends it cleanly; run.post fires either way.
+    Hands back the same Run, its notebook filled in.
+    """
     try:
         [run.messages[-1]] = await fire(run, "run.pre", run.messages[-1])
         run.emit("run.pre", run.messages[-1], source="loop")
@@ -114,7 +141,7 @@ async def run(run):
                     result = out                 # a str or Message: denied
                 run.emit("tool.pre", call, source="loop")
                 if result is None:
-                    tool = run.agent.tools.get(call.name)
+                    tool = run.agent.tools.get(call.name)  # type: ignore[union-attr]
                     if tool is None:
                         result = f"error: unknown tool: {call.name}"
                     else:
@@ -127,7 +154,7 @@ async def run(run):
                 result = coerce(result, call)
                 [call, result] = await fire(run, "tool.post", call, result)
                 run.emit("tool.post", result, source="loop")
-                run.messages.append(result)
+                run.messages.append(result)   # type: ignore[arg-type]  # coerced
     except Stop:
         pass
     finally:
