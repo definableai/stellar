@@ -1,15 +1,19 @@
 """Steps: how many turns the agent gets with the model."""
 
-from core import Stop  # ponytail: 06 rewrites these as @hook functions
+from core import Stop, hook
 
 
-class Steps:
-    """A ration of model calls. Steps(3) buys exactly three replies."""
+def Steps(n: int):
+    """A ration of model calls. Steps(3) buys exactly three replies.
 
-    def __init__(self, n: int) -> None:
-        self.n = n
+    The run counts for us, so the card keeps nothing of its own: attach one
+    to the agent and every run gets its own ration.
+    """
 
-    def model_pre(self, agent) -> None:
+    @hook("model.pre")
+    async def ration(messages, run) -> None:
         """The step number went up before this bell, so it counts this turn."""
-        if agent.step > self.n:
+        if run.step > n:
             raise Stop
+
+    return ration

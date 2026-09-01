@@ -1,61 +1,34 @@
-"""Log: every bell the agent rings, handed to one emit callable.
+"""Log: every event on the bus, as one line a person can read.
 
-emit(event_name, payload) — the same signature drivers.events.EventStream
-has, so `Log(stream.emit)` is the whole wiring. Any callable of that shape
-does; it may be sync or async. Payloads are JSON-safe.
+A listener, not a hook — it changes nothing, so it rides the data plane:
+
+    agent.events.listen(Log())                        # everything, to print
+    agent.events.listen(Log(lines.append), "tool")    # only the tool bells
+    agent.events.listen(Log(), run_id=run.id)         # one conversation of many
+
+Listeners are sync; a consumer that has to await takes events.stream().
 """
 
-import inspect
-
-# ponytail: 06 rewrites these as @hook functions
+from core import Message, Part, ToolCall
 
 
-def delta(agent) -> dict:
-    """One streamed Part, JSON-safe: its type, and its words if it has any."""
-    d = agent.delta
-    return {"type": d.type, "text": d.data if d.type == "text" else None}
+def says(data) -> str:
+    """One payload in a few words: what somebody watching would want to read."""
+    if isinstance(data, Message):
+        return " ".join(filter(None, [data.text, *map(says, data.tool_calls)]))
+    if isinstance(data, ToolCall):
+        return f"{data.name}({data.args})"
+    if isinstance(data, Part):
+        return data.data if data.type == "text" else f"<{data.type}>"
+    if isinstance(data, list):
+        return f"{len(data)} message" + "s" * (len(data) != 1)
+    return "" if data is None else str(data)
 
 
-class Log:
-    """Eight methods, eight event names, one listener."""
+def Log(write=print):
+    """Hands every event it hears to one callable, `write(line)`."""
 
-    def __init__(self, emit) -> None:
-        self.emit = emit
+    def say(event) -> None:
+        write(f"{event.name}: {says(event.data)}")
 
-    async def say(self, name: str, payload: dict) -> None:
-        answer = self.emit(name, payload)
-        if inspect.isawaitable(answer):
-            await answer
-
-    async def run_pre(self, agent) -> None:
-        await self.say("run_pre", {"step": agent.step,
-                                   "messages": len(agent.messages)})
-
-    async def model_pre(self, agent) -> None:
-        await self.say("model_pre", {"step": agent.step})
-
-    async def model_delta(self, agent) -> None:
-        await self.say("model_delta", delta(agent))
-
-    async def model_post(self, agent) -> None:
-        await self.say("model_post", {
-            "content": agent.response.text,          # non-text parts stay home
-            "tool_calls": [{"id": c.id, "name": c.name, "args": c.args}
-                           for c in agent.response.tool_calls],
-            "usage": agent.response.meta.get("usage"),
-        })
-
-    async def tool_pre(self, agent) -> None:
-        await self.say("tool_pre", {"id": agent.call.id, "name": agent.call.name,
-                                    "args": agent.call.args})
-
-    async def tool_delta(self, agent) -> None:
-        await self.say("tool_delta", delta(agent))
-
-    async def tool_post(self, agent) -> None:
-        await self.say("tool_post", {"id": agent.result.tool_call_id,
-                                     "content": agent.result.text})
-
-    async def run_post(self, agent) -> None:
-        await self.say("run_post", {"step": agent.step,
-                                    "messages": len(agent.messages)})
+    return say

@@ -9,58 +9,69 @@ transports — is a small file outside `core/` that you can read, copy and chang
 ## The robot with one backpack
 
 An agent is a robot with one backpack. Inside: a brain (`model`), a toolbox
-(`tools`), a stack of rule cards (`hooks`), a notebook (`messages`) and one
-spare pocket (`extra`).
+(`tools`), a stack of rule cards (`hooks`), a radio (`events`) and one spare
+pocket (`extra`).
 
-The robot reads its rule cards before and after it thinks, and before and after
-every tool it picks up. Everything that happens goes in the notebook. When it
-stops asking for tools, it is done.
+One errand is one `Run`: its own notebook (`messages`), its own step count, its
+own id, its own spare pocket, and its own rule cards if it wants any. The robot
+reads the cards before and after it thinks, and before and after every tool it
+picks up. Everything that happens goes out over the radio. When the model stops
+asking for tools, the errand is done.
 
 ```
-run_pre
-  ┌ model_pre → the model answers, a model_delta per streamed Part → model_post
+run.pre
+  ┌ model.pre → the model answers, a model.delta per streamed Part → model.post
   │   the answer goes in the notebook; for each tool it asked for:
-  │     tool_pre → the tool runs, a tool_delta per yielded Part → tool_post
+  │     tool.pre → the tool runs, a tool.delta per yielded Part → tool.post
   │     → the result goes in the notebook
   └ again, as long as the last answer asked for tools
-run_post
+run.post
 ```
 
-**One `Agent` is one conversation — never share a live robot.** The brain, the
-toolbox and the rule cards can be shared with other robots; the notebook, the
-spare pocket and everything in flight are its own. Two runs on one `Agent` at
-the same time will interleave their notebooks and trample `response`, `call`,
-`result` and `delta`. Build a robot per conversation; it is one line.
+**One `Agent`, as many `Run`s as you like.** The agent is the wiring, built
+once and shared; the run is the conversation, and nothing of it leaks into
+another. A hundred users is one line:
+
+```python
+runs = await asyncio.gather(*(agent.run(prompt) for prompt in prompts))
+```
 
 Any part can be swapped by assignment, even mid-run: `check()` reads the whole
 backpack again at the top of every step, so a bad swap is caught before it runs.
+`agent.hooks.attach(card)` mid-flight reaches every run already in the air, at
+its next stage; `run.hooks` is the lane nobody else can see.
 
-## The nine nouns
+## The twelve nouns
 
 | noun | kind | the contract |
 | --- | --- | --- |
 | `Part` | data | one piece of a message: `type` names it, `data` holds it. Three types are reserved words core folds itself — `text`, `tool_call`, `meta`; everything else passes through untouched. |
 | `ToolCall` | data | the model asking for one tool: `id`, `name`, `args`. |
 | `Message` | data | one line in the notebook: `role`, `content`, `tool_calls`, `tool_call_id`, `meta`. `content` is always `list[Part]` — a str coerces at construction, and `.text` joins the text parts back. |
-| `Model` | contract | the brain. Write an async `invoke`; hand back a `Message`. |
-| `Tool` | contract | one thing the agent can do. Write an async `execute` — an async generator streams. |
-| `Hook` | contract | a rule card. Write the moments you care about; the rest do nothing. |
-| `Agent` | the bag | all of the above plus `messages`, `step` and `extra`. One method: `run()`. |
+| `Model` | contract | the brain. Write an async `invoke(run)`; hand back a `Message`. |
+| `Tool` | contract | one thing the agent can do. Write an async `execute(run, **args)` — an async generator streams. |
+| `Hooks` | registry | the rule cards, filed by stage: `attach`, `detach`, `fire`. The agent has one, every run has one. |
+| `Event` | data | one thing that happened: `seq`, `name`, `data`, `source`, `run_id`, `ts`. |
+| `Events` | the radio | the bus: `emit`, `listen`, `detach`, `stream`. |
+| `Agent` | the bag | `model`, `tools`, `hooks`, `events`, `extra`. One method: `run()`. |
+| `Run` | the errand | one conversation: `id`, `messages`, `step`, `hooks`, `extra`, and `emit()`. |
 | `ContractError` | signal | you wired it wrong. The message carries the code to type instead. |
 | `Stop` | signal | end the run cleanly. Raise it from any hook or tool. |
 
-Everything is async and every method takes one argument, the agent. There are
-no sync twins and no bridges: sync code is one `asyncio.to_thread` line the
-implementer writes inside the async method.
+Everything is async, and everything core calls takes the run: `invoke(run)`,
+`execute(run, …)`. A hook takes the payload of its stage, and the run behind it
+if it asks for one; an event listener takes the event. There are no sync twins
+and no bridges: sync code is one `asyncio.to_thread` line the implementer writes
+inside the async method.
 
 `from core import …` also gives you the things that are not new nouns:
-`ProviderModel` and `FakeModel` (both are Models), the `@tool` and `on()`
-shortcuts, `check_model`, and the loop's own functions `run`, `fire` and
-`check`.
+`ProviderModel` and `FakeModel` (both are Models), the `@tool` and `@hook`
+decorators, `STAGES`, and the loop's own `run` and `check`. `check_model` lives
+in `core.conformance`.
 
 ## Quickstart
 
-Build the wiring once. Build an `Agent` per conversation.
+Build the agent once. Call `run()` per conversation.
 
 ```python
 import asyncio
@@ -76,15 +87,17 @@ def shout(word: str) -> str:
     return word.upper()
 
 
-wiring = {"model": Anthropic(), "tools": [shout], "hooks": [Steps(8)]}
+agent = Agent(Anthropic(), [shout])
+agent.hooks.attach(Steps(8))                       # a runaway cap, on every run
 
 
 async def main() -> None:
-    agent = Agent(**wiring)
-    answer = await agent.run("shout hello")
-    print(answer.text)                             # what the model said last
+    run = await agent.run("shout hello")
+    print(run.messages[-1].text)                   # what the model said last
 
-    await agent.run("again, louder")               # same robot, same notebook
+    again = await agent.run("again, louder",       # same conversation, carried on
+                            messages=run.messages, run_id=run.id)
+    print(again.messages[-1].text)
 
 
 asyncio.run(main())
@@ -92,10 +105,13 @@ asyncio.run(main())
 
 `Anthropic()` reads `ANTHROPIC_API_KEY` from the environment unless you pass
 `api_key=`. `run()` takes a str (wrapped into a user message), a `Message`
-(appended as-is — images and all), or nothing (runs on the messages already
-there — that is the resume-from-checkpoint path). It gives back the last
-message, so `answer = await Agent(model).run("hi")` works in one line when
-you have nothing to keep.
+(appended as it is — images and all), or `messages=` (the notebook to start
+from; the list you hand over is copied, never touched). With nothing at all it
+raises `ContractError` — a run with nothing to say is a typo. `run_id=` names
+the run, which is how a stream finds it and how a resume keeps its identity.
+
+What comes back is the `Run`: `run.messages` is the whole conversation,
+`run.messages[-1].text` is the answer, `run.step` is how many turns it took.
 
 ## Models
 
@@ -106,12 +122,12 @@ A sync SDK is one `to_thread` line away:
 
 ```python
 class MyModel(Model):
-    async def invoke(self, agent) -> Message:
-        said = await asyncio.to_thread(my_sdk.complete, agent.messages)
+    async def invoke(self, run) -> Message:
+        said = await asyncio.to_thread(my_sdk.complete, run.messages)
         return Message("assistant", said)
 ```
 
-**No base class.** Any object whose own class defines an async `invoke(agent)`
+**No base class.** Any object whose own class defines an async `invoke(run)`
 passes `check()` and runs — nothing checks your ancestry. A sync `invoke` is
 refused by `check()` up front, because the loop could never await it.
 
@@ -119,10 +135,10 @@ refused by `check()` up front, because the loop could never await it.
 
 ```python
 class MyProvider(ProviderModel):
-    def encode(self, agent) -> dict:        # pure: notebook + toolbox -> request body
+    def encode(self, run) -> dict:          # pure: notebook + toolbox -> request body
         ...
 
-    async def send(self, agent, body):      # the network call; retries live here
+    async def send(self, run, body):        # the network call; retries live here
         ...
         yield Part("text", "…")             # yield the reply as Parts
 ```
@@ -133,7 +149,7 @@ stream just yields the Parts of its one response — the shipped adapters do
 exactly that.
 
 `send` speaks the Part protocol, and core folds the stream into one assistant
-`Message` (firing `model_delta` per Part along the way):
+`Message`, firing `model.delta` per Part along the way:
 
 - `Part("text", str)` is a delta — consecutive text parts concatenate into one.
 - `Part("tool_call", ToolCall(…))` arrives whole — buffer partial JSON in the
@@ -149,7 +165,7 @@ is shared: `Part("image", {"url": …})` or
 
 Put what the reply cost in a meta Part, as
 `{"usage": {"input_tokens": …, "output_tokens": …}}`. That is the convention
-`Budget` and `Log` read; an adapter that leaves it out just counts as free.
+`Budget` reads; an adapter that leaves it out just counts as free.
 
 ### Test with a canned POST, then grade it
 
@@ -158,6 +174,9 @@ still travels the adapter's own parsing and the real fold path. No network,
 no key:
 
 ```python
+from core.conformance import check_model
+
+
 class Canned(Anthropic):
     def __init__(self, bodies) -> None:
         super().__init__(api_key="test")
@@ -176,11 +195,12 @@ reply, a reply asking for the `echo` tool, and a final reply after the tool
 result — so a three-entry script lines up with it.
 
 It grades the reply side: do the Parts `send` yields fold into a `Message`,
-do tool calls arrive as whole `ToolCall`s with a dict of args, does the round
-trip close. It cannot see whether `encode` built a body your provider would
-accept — assert that yourself against `model.encode(agent)`.
-`tests/test_anthropic.py` and `tests/test_openai.py` do both halves.
-`check_model` calls `asyncio.run` inside, so call it from sync code only.
+do the deltas add up to what landed, do tool calls arrive as whole `ToolCall`s
+with a dict of args, does the round trip close. It cannot see whether `encode`
+built a body your provider would accept — assert that yourself against
+`model.encode(run)`. `tests/test_anthropic.py` and `tests/test_openai.py` do
+both halves. `check_model` calls `asyncio.run` inside, so call it from sync
+code only.
 
 `FakeModel` is a `ProviderModel` whose `send` yields the Parts of a scripted
 reply — tests ride the same fold and delta path with no network at all.
@@ -212,16 +232,16 @@ description or schema, write a `Tool` subclass; that is what the class is for.
 It refuses `*args`/`**kwargs` and says so.
 
 A sync function runs in a thread, an async one is awaited, and an async
-generator streams — every `Part` it yields rings `tool_delta`.
+generator streams — every `Part` it yields rings `tool.delta`.
 
-A first parameter spelled exactly `agent` is filled in by the loop and kept out
+A first parameter spelled exactly `run` is filled in by the loop and kept out
 of the schema, so the model never sees it:
 
 ```python
 @tool
-def notebook(agent) -> int:
+def notebook(run) -> int:
     """How many lines the notebook holds."""
-    return len(agent.messages)
+    return len(run.messages)
 ```
 
 ### A class
@@ -232,13 +252,13 @@ class Shout(Tool):
     description = "Shout a word."
     parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
 
-    async def execute(self, agent, word) -> str:
+    async def execute(self, run, word) -> str:
         return word.upper()
 ```
 
 `execute` is async; wrap sync work in one `asyncio.to_thread` line. A class is
 the answer whenever the tool holds something. Write `execute` as an async
-generator and the tool streams: each yielded `Part` rings `tool_delta` and
+generator and the tool streams: each yielded `Part` rings `tool.delta` and
 folds into the tool message, same protocol as a streaming model.
 
 ### What comes back
@@ -253,47 +273,72 @@ for a tool that is not in the toolbox and it sees
 `error: unknown tool: ghost`. Run-time mistakes are answers, not crashes. The
 one exception is `Stop`, which always ends the run.
 
-Tools live in a list, like hooks — `Agent(model, [shout])`, and
-`agent.tools.append(shout)` mid-run. The name lives in one place, `tool.name`;
-`check()` refuses two tools that answer to the same one, on every step.
+`agent.tools` is a mapping of name to tool. Hand the constructor an iterable and
+it keys one for you — `Agent(model, [shout])` — or hand it the mapping. Two
+tools answering to one name is a `ContractError`, and a tool filed mid-run under
+a key that is not its name is caught at the top of the next step, like every
+other bad swap.
 
-## Hooks
+## Hooks — the control plane
 
-A hook is a class with any of eight methods. The eight names are the eight
-moments, and nothing else is a moment.
+A hook is an async function tagged with the stages it listens for. It fires
+inline, and what it returns replaces the payload.
 
-| method | fires | what it may touch |
+```python
+@hook("tool.pre")
+async def no_rm(call: ToolCall):
+    if call.name == "rm":
+        return "denied"                 # the tool is skipped; this is its result
+
+
+agent.hooks.attach(no_rm)               # every run
+run.hooks.attach(no_rm)                 # only this one
+```
+
+The eight stages are the eight moments, and nothing else is a moment.
+
+| stage | the payload it hands over | what a return replaces |
 | --- | --- | --- |
-| `run_pre` | once, before the first turn | `agent.messages` — the place to put a system message |
-| `model_pre` | before every model call | `agent.messages`; `agent.step` is already up |
-| `model_delta` | per Part a model streams | `agent.delta` — the Part, already folded into `agent.response` |
-| `model_post` | after every model answer | `agent.response` — replace it and your version is what gets written down |
-| `tool_pre` | before every tool | `agent.call`; fill `agent.result` and the tool never runs |
-| `tool_delta` | per Part a tool yields | `agent.delta` — the Part, already folded into `agent.result` |
-| `tool_post` | after every tool | `agent.result`, always a tool `Message` by now |
-| `run_post` | once, at the very end | anything; this is teardown |
+| `run.pre` | `Message` — the last message, once, before the first turn | that message |
+| `model.pre` | `list[Message]` — the notebook, before every model call | rebinds `run.messages`, permanently |
+| `model.delta` | `Part` — one streamed piece, before it is folded | the Part, and the new one is folded |
+| `model.post` | `Message` — the reply, after every model call | the reply that gets written down |
+| `tool.pre` | `ToolCall` — before every tool | a `ToolCall` runs instead; a `str` or `Message` skips the tool and *is* its result |
+| `tool.delta` | `Part` — one yielded piece, before it is folded | the Part, and the new one is folded |
+| `tool.post` | `ToolCall, Message` — the call and its result | the result |
+| `run.post` | `Message` — the last message, once, at the very end | nothing; this is teardown |
 
-Each may be sync or async. Hooks fire in list order, and a hook may append
-another hook mid-run — the new one starts listening at the next moment. A
-`Hook` subclass that overrides none of the eight is a typo, and `check()`
-raises instead of letting it sit there doing nothing. For one moment and one
-line, `on("run_post", fn)` builds the hook for you.
+Return `None` and the payload is left alone. Return the wrong type and it is a
+`ContractError` naming your function, the stage and what to return instead. A
+hook may take one argument more than its stage hands over, and that one is the
+run:
 
-The deltas are how a streaming UI is written once and works with every
-adapter: read `agent.delta` for the piece, `agent.response.text` (or
-`agent.result.text`) for everything so far. A model that answers in one Part
-still rings the bell — the granularity is coarser, the semantics identical.
-Replace `agent.response` at `model_post`, not during deltas.
+```python
+@hook("model.pre")
+async def trim(messages, run) -> list[Message]:
+    return messages[-20:] if run.step > 3 else messages
+```
+
+The arity is sniffed once, at attach — a hook that does not fit the stage is
+refused there, not at the bell. `@hook` only tags; `attach` files, and a stage
+named at attach beats the tag: `agent.hooks.attach(watch, "run.post")` works on
+an untagged function. Hooks must be async; a sync one is refused with the
+`to_thread` line to write instead.
+
+Attach order is call order, the agent's cards ring before the run's, and a card
+attached during a bell starts listening at the next one. At `tool.pre`, the
+first hook that answers with a result ends the ring — the cards behind it never
+hear that bell.
 
 ### Stopping
 
 `raise Stop` from any hook or any tool ends the run cleanly: no traceback
-reaches the caller, and the agent comes back holding everything written down so
-far.
+reaches the caller, and you get the `Run` back holding everything written down
+so far.
 
-`run_post` always fires — after a clean finish, after a `Stop`, and after a
-crash. It is a `finally`, so a `Stop` raised inside `run_post` is ignored (too
-late to stop anything), and any other exception from `run_post` propagates the
+`run.post` always fires — after a clean finish, after a `Stop`, and after a
+crash. It is a `finally`, so a `Stop` raised inside `run.post` is ignored (too
+late to stop anything), and any other exception from `run.post` propagates the
 ordinary way, with whatever was already in flight attached as `__context__`.
 
 Everything else propagates: a model that raises, a hook that raises, a
@@ -302,23 +347,70 @@ own exception, which becomes a result the model reads.
 
 ### Denying a tool
 
-Fill `agent.result` in `tool_pre`. The loop finds a result already there, skips
-the tool, and writes your answer down as the tool's result for the model to
-read. That is the whole deny path — no third signal, no boolean to return.
+Return a `str` or a `Message` from a `tool.pre` hook. The loop skips the tool
+and writes your answer down as its result for the model to read. That is the
+whole deny path — no third signal, no boolean to return.
 
-### The four shipped hooks
+## Events — the data plane
 
-| hook | what it does |
-| --- | --- |
-| `Steps(n)` | n model calls, then `Stop`. `Steps(3)` buys exactly three replies. |
-| `Budget(max_tokens)` | adds `input_tokens + output_tokens` from every reply's `meta["usage"]` into `extra["budget.tokens"]`. Past the limit it keeps the reply you already paid for, then stops. A reply with no usage costs nothing. |
-| `Permission(deny, allow, ask)` | the guard at the tool gate. `deny` wins; then an `allow` list settles it alone; only then does `ask=True` put the question to a human. Each of `deny`/`allow` is a set of names or a predicate `(agent, call) -> bool`. |
-| `Log(emit)` | hands all eight moments to one callable, `emit(name, payload)`, with JSON-safe payloads. `emit` may be sync or async. |
+Everything that happens is also an `Event` on the agent's bus: numbered per bus,
+stamped with the run it belongs to, kept in `agent.events.log`.
 
-`Permission(ask=True)` asks through `agent.extra["ui.ask"]`, an
-`async (question, options=None) -> str` that you provide. Anything but
-`"allow"` denies, and no channel at all denies too — a guard with no voice says
-no.
+```python
+agent.events.listen(print)                          # everything
+agent.events.listen(watch, "tool")                  # tool.pre, tool.delta, tool.post
+agent.events.listen(watch, run_id=run.id)           # one conversation
+```
+
+A prefix stops at a dot: `"tool"` hears `tool.pre`, never `toolbox.x`.
+Listeners are sync and `emit()` never awaits — a listener that raises is logged
+to `core.events` and swallowed, and the next one still hears the event. That is
+the difference between the planes: a hook can change the run or stop it, a
+listener can only watch.
+
+The loop emits every stage *after* its hooks have run, so a listener sees what
+the cards agreed on — `source="loop"`, or the tool's own name on `tool.delta`.
+Anything can emit anything: `run.emit("cache.hit", key)` stamps it with the
+run's id and it travels with the rest.
+
+For an async consumer, take the stream:
+
+```python
+async for event in agent.events.stream(run_id=rid, since=cursor):
+    ...
+```
+
+`stream()` replays the log from `since` (inclusive), then goes live — no gap,
+no doubles, in seq order. Given a `run_id` it ends on that run's `run.post`,
+prefix or no prefix, so a reader never hangs on a finished run. The event log
+and the stream queues are unbounded: one bus per agent, one process. Cap them
+when that stops being true.
+
+## The four shipped cards
+
+| card | plane | what it does |
+| --- | --- | --- |
+| `Steps(n)` | hook, `model.pre` | n model calls per run, then `Stop`. `Steps(3)` buys exactly three replies. |
+| `Budget(max_tokens)` | hook, `model.post` | adds `input_tokens + output_tokens` from every reply's `meta["usage"]` into `run.extra["budget.tokens"]`. Past the limit it keeps the reply you already paid for, then stops. A reply with no usage costs nothing. |
+| `Permission(deny, allow, ask)` | hook, `tool.pre` | the guard at the tool gate. `deny` wins; then an `allow` list settles it alone; only then does `ask=True` put the question to a human. Each of `deny`/`allow` is a set of names or a predicate `(run, call) -> bool`. |
+| `Log(write=print)` | listener | one readable line per event: its name, and what it carried. |
+
+```python
+agent.hooks.attach(Steps(8))
+agent.hooks.attach(Permission(deny={"rm"}, ask=True))
+agent.events.listen(Log())
+```
+
+Each card is a factory: it hands back the function, and the function is what you
+attach. Nothing is kept in the card — `Steps` counts on `run.step`, `Budget`
+totals into `run.extra` — so one card on the agent gives every run its own
+ration, its own purse, its own answer.
+
+`Permission(ask=True)` asks through `extra["ui.ask"]`, an
+`async (question, options=None) -> str` that you provide. It looks in the run's
+pocket first and the agent's after, so one channel can serve every conversation
+or each one can bring its own. Anything but `"allow"` denies, and no channel at
+all denies too — a guard with no voice says no.
 
 ## Patterns
 
@@ -333,28 +425,36 @@ class Research(Tool):
     description = "Ask a helper agent one question."
     parameters = {"type": "object", "properties": {"question": {"type": "string"}}}
 
-    async def execute(self, agent, question) -> str:
-        answer = await Agent(agent.model).run(question)
-        return answer.text
+    async def execute(self, run, question) -> str:
+        helper = await Agent(run.agent.model).run(question)
+        return helper.messages[-1].text
 ```
 
-The child gets its own notebook and its own spare pocket, so nothing comes back
-except the sentence you return. Hand it its own tools and hooks when it should
-be allowed less than its parent.
+The child gets its own notebook, its own bus and its own spare pocket, so
+nothing comes back except the sentence you return. Hand it its own tools and
+hooks when it should be allowed less than its parent.
 
 ### Checkpoint and resume
 
-A checkpoint is `messages`, `step` and `extra`. Nothing else — the wiring is
-code, and you build it again:
+A checkpoint is the `Run` — `id`, `messages`, `step`, `extra`, and nothing
+else. `__getstate__` drops the agent and the hooks, because the wiring is code
+you build again:
 
 ```python
-agent = Agent(**wiring, messages=saved, step=step, extra=extra)
+frozen = pickle.dumps(run)                          # four fields, no wiring
+...
+saved = pickle.loads(frozen)
+run = await agent.run("and now?", messages=saved.messages, run_id=saved.id)
 ```
 
-Keep the notebook as objects and there is nothing to do. To put it on disk,
-`dataclasses.asdict` each `Message`. Reading it back, rebuild the nouns inside
-it yourself — `content` is always a list of parts, so there is exactly one
-shape to revive:
+The revived object is a checkpoint, not a live run: hand its parts back to
+`agent.run` and you get a fresh `Run` under the same id. `extra` starts empty
+there — if a card kept a total in it, seed it back yourself (a `run.pre` hook is
+one line).
+
+To put a checkpoint somewhere that is not a pickle, `dataclasses.asdict` each
+`Message`. Reading it back, rebuild the nouns inside it yourself — `content` is
+always a list of parts, so there is exactly one shape to revive:
 
 ```python
 def revive(d: dict) -> Message:
@@ -370,41 +470,45 @@ Never put a callable in `extra` that has to survive a checkpoint —
 
 ### Events over the wire
 
-`Log` turns the eight moments into calls on one `emit`. `EventStream.emit` has
-exactly that shape, so wiring them together is one line, and the transports turn
-the stream into frames:
+The bus already keeps one run's events in order and ends the stream on
+`run.post`. The transports only frame them:
 
 ```python
-stream = EventStream()
-agent = Agent(model, tools, [*hooks, Log(stream.emit)])
-asyncio.create_task(agent.run(ask))         # hold the task; that part is yours
-return StreamingResponse(sse(stream.subscribe()), media_type="text/event-stream")
+rid = uuid4().hex
+asyncio.create_task(agent.run(ask, run_id=rid))   # hold the task; that part is yours
+return StreamingResponse(sse(agent.events.stream(run_id=rid)),
+                         media_type="text/event-stream")
 ```
 
-One stream is one run: the `run_post` event closes it, and every subscriber runs
-out of frames. A subscriber that arrives late gets the buffered replay first (up
-to 1000 events), then whatever happens next. `emit` never blocks — a subscriber
-too slow to keep up loses its own oldest event, never the run. `sse()` ends with
-a `done` frame; `ws_frames()` gives one JSON object per frame.
+`sse()` writes `id: <seq>` and one JSON `data:` line per event — the whole
+record, nested `Message`s and `Part`s and all. The seq is the cursor: a browser
+that drops sends its last id back as `Last-Event-ID`, and
+`stream(run_id=rid, since=int(last) + 1)` hands over exactly what the drop cost.
+`ws_frames()` gives the same records, one JSON object per frame.
+
+The replay is why the race does not matter: a reader that opens the stream after
+the run started — or after it finished — still gets the whole run, in order.
 
 stellar ships no server. These are strings; where they go is yours.
 
 ## Layout
 
 ```
-core/             the nine nouns and the loop — stdlib only, under 2000 lines
+core/             the twelve nouns and the loop — stdlib only, under 2000 lines
   types.py          Part, ToolCall, Message
-  contracts.py      Model, ProviderModel, Tool, Hook, fire, fold, the skeletons
-  agent.py          Agent — one method, run()
+  contracts.py      Model, ProviderModel, Tool, Hooks, @hook, fold, the skeletons
+  agent.py          Agent and Run
   loop.py           run, check, coerce
-  tool.py           @tool, on()
+  events.py         Event, Events
+  tool.py           @tool
   fake.py           FakeModel
   conformance.py    check_model
   __init__.py       the barrel: all of it, in one import
 models/           anthropic.py, openai.py — the only place httpx is allowed
 hooks/            steps.py, budget.py, permission.py, logging.py
-drivers/          events.py (StepEvent, EventStream), transport.py (sse, ws_frames)
+drivers/          transport.py — sse() and ws_frames() over events.stream()
 tests/            plain python files, assert-based, no pytest
+main.py           the front door: one agent, one tool, one card, one radio
 ```
 
 Imports are flat and one-way: `from core import Agent`,
@@ -435,5 +539,5 @@ what passed.
 
 Two more belong to whoever reviews the change, because no test can see them:
 
-- Nine nouns. A tenth noun in `core/` is a conversation, not a merge.
+- Twelve nouns. A thirteenth noun in `core/` is a conversation, not a merge.
 - `Agent` has one method, `run()`. There is never a second one.
