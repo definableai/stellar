@@ -15,8 +15,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 
 from core import (  # noqa: E402
-    Agent, Message, Part, Run, ToolCall, check_model, tool,
+    Agent, Message, Part, Run, ToolCall, tool,
 )
+from core.conformance import check_model  # noqa: E402
 from models.anthropic import Anthropic  # noqa: E402
 
 BODIES = [

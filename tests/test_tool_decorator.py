@@ -27,9 +27,15 @@ def kinds(a: str, b: int, c: float, d: bool, e: list, f: dict[str, int],
 
 
 @tool
-def counter(agent) -> int:
+def counter(run) -> int:
     """Count the notebook."""
-    return len(agent.messages)
+    return len(run.messages)
+
+
+@tool
+def later(when: str, run: bool = False) -> str:
+    """A run that is not the Run: only the first parameter is the loop's."""
+    return f"{when}:{run}"
 
 
 @tool
@@ -77,6 +83,14 @@ def test_the_run_is_injected_only_when_declared() -> None:
     assert asyncio.run(shout.execute(run, word="hi")) == "HI "    # not passed on
 
 
+def test_only_the_first_parameter_answers_to_run() -> None:
+    assert later.parameters["properties"] == {       # second in line, so it is
+        "when": {"type": "string"},                  # an argument like any other
+        "run": {"type": "boolean"},
+    }
+    assert asyncio.run(later.execute(None, when="now", run=True)) == "now:True"
+
+
 def test_sync_and_async_functions_both_work() -> None:
     assert asyncio.run(slowly.execute(None, word="hi")) == "HI"
     assert slowly.parameters == {
@@ -90,13 +104,24 @@ def test_sync_and_async_functions_both_work() -> None:
 def test_a_decorated_tool_runs_end_to_end() -> None:
     asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
     said = asyncio.run(Agent(FakeModel([asked, "done"]), [shout]).run("go")).messages
-    assert said[2].text == "HI "
+    assert said[2].text == "HI "                     # no run reached it, none asked
+    assert said[2].tool_call_id == "c1"
+
+
+def test_the_run_reaches_a_tool_that_asked_for_it() -> None:
+    asked = Message("assistant", "", [ToolCall("c1", "counter", {})])
+    said = asyncio.run(Agent(FakeModel([asked, "done"]), [counter]).run("go")).messages
+    assert said[2].text == "2"                       # the notebook, live: ask + reply
     assert said[2].tool_call_id == "c1"
 
 
 def test_an_async_generator_streams_end_to_end() -> None:
     asked = Message("assistant", "", [ToolCall("c1", "told", {"word": "hi"})])
-    said = asyncio.run(Agent(FakeModel([asked, "done"]), [told]).run("go")).messages
+    agent = Agent(FakeModel([asked, "done"]), [told])
+    heard: list = []
+    agent.events.listen(lambda e: heard.append((e.source, e.data.data)), "tool.delta")
+    said = asyncio.run(agent.run("go")).messages
+    assert heard == [("told", "H"), ("told", "I")]   # every letter rang, by name
     assert said[2].text == "HI"                      # letters folded into one
     assert said[2].tool_call_id == "c1"
 
@@ -106,8 +131,10 @@ if __name__ == "__main__":
         test_schema_comes_from_the_signature,
         test_every_hint_has_a_type,
         test_the_run_is_injected_only_when_declared,
+        test_only_the_first_parameter_answers_to_run,
         test_sync_and_async_functions_both_work,
         test_a_decorated_tool_runs_end_to_end,
+        test_the_run_reaches_a_tool_that_asked_for_it,
         test_an_async_generator_streams_end_to_end,
     ):
         test()

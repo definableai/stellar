@@ -12,8 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from core import (  # noqa: E402
-    Agent, ContractError, Message, Part, Run, ToolCall, check_model, tool,
+    Agent, ContractError, Message, Part, Run, ToolCall, tool,
 )
+from core.conformance import check_model  # noqa: E402
 from models.openai import OpenAI  # noqa: E402
 
 PLAIN = {
