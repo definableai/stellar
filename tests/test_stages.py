@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.contracts import ContractError, Hooks, fire, hook  # noqa: E402
+from core.contracts import ContractError, Hooks, hook  # noqa: E402
 from core.types import Message, Part, ToolCall  # noqa: E402
 
 
@@ -19,7 +19,7 @@ class Run:
 
     def __init__(self) -> None:
         self.agent = SimpleNamespace(hooks=Hooks())
-        self.hooks = Hooks()
+        self.hooks = Hooks(parent=self.agent.hooks)   # as Run.__post_init__ wires it
 
     def emit(self, name, data=None, source=None) -> None:
         """The data plane. Nothing in here listens."""
@@ -221,7 +221,8 @@ def test_tool_pre_replaces_the_call_or_answers_for_it() -> None:
     run = Run()
     run.agent.hooks.attach(rename).attach(deny)
     run.hooks.attach(never)
-    assert asyncio.run(fire(run, "tool.pre", ToolCall("c1", "rm"))) == "denied"
+    out = asyncio.run(run.hooks.fire("tool.pre", run, ToolCall("c1", "rm")))
+    assert out == "denied"
     assert heard == ["shout"]        # deny saw the rename; the run's card never rang
 
 
@@ -232,7 +233,7 @@ def test_tool_pre_refuses_anything_else() -> None:
 
     run = Run()
     run.hooks.attach(bag)
-    refuses(lambda: asyncio.run(fire(run, "tool.pre", ToolCall("c1", "rm"))),
+    refuses(lambda: asyncio.run(run.hooks.fire("tool.pre", run, ToolCall("c1", "rm"))),
             "returned dict", "ToolCall, str or Message")
 
 
@@ -247,7 +248,7 @@ def test_the_agent_rings_before_the_run() -> None:
     run = Run()
     run.agent.hooks.attach(shared)
     run.hooks.attach(shared)
-    (out,) = asyncio.run(fire(run, "run.pre", Message("user", "hi")))
+    (out,) = asyncio.run(run.hooks.fire("run.pre", run, Message("user", "hi")))
     assert heard == ["hi", "hi!"] and out.text == "hi!!"   # threaded through both
 
 
@@ -265,7 +266,7 @@ def test_a_denial_by_the_agent_skips_the_runs_cards() -> None:
     run = Run()
     run.agent.hooks.attach(deny)
     run.hooks.attach(never)
-    out = asyncio.run(fire(run, "tool.pre", ToolCall("c1", "rm", {})))
+    out = asyncio.run(run.hooks.fire("tool.pre", run, ToolCall("c1", "rm", {})))
     assert out == "denied" and heard == []      # the run's cards missed the bell
 
 

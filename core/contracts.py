@@ -25,7 +25,7 @@ if TYPE_CHECKING:                  # the checker's eyes only: agent.py imports
 
 __all__ = [
     "PAYLOAD", "SKELETONS", "STAGES", "ContractError", "Hooks", "Model",
-    "ProviderModel", "Stop", "Tool", "fire", "fold", "hook",
+    "ProviderModel", "Stop", "Tool", "fold", "hook",
 ]
 
 # The eight bells, in ring order. A hook name and an event name are one word.
@@ -95,7 +95,7 @@ class ProviderModel(Model):
             if not isinstance(part, Part):
                 raise wrong("provider", f"{type(self).__name__}.send "
                             f"yielded {type(part).__name__}, expected Part")
-            [part] = await fire(run, "model.delta", part)   # hook before fold
+            [part] = await run.hooks.fire("model.delta", run, part)  # then fold
             fold(answer, part)
             run.emit("model.delta", part, source="loop")
         return answer
@@ -126,9 +126,20 @@ class Tool:
 
 
 class Hooks:
-    """The rule cards, filed by stage. Attach order is call order."""
+    """The rule cards, filed by stage. Attach order is call order.
 
-    def __init__(self) -> None:
+    A registry may chain to a parent whose cards ring first — a Run's hooks
+    parent onto its Agent's, so one bell reaches both. The parent binds when
+    the Run is born: swap cards with attach and detach, not by reassigning
+    agent.hooks mid-flight.
+    """
+
+    def __init__(
+        self,
+        parent: Annotated[Hooks | None, "rings first; a tool.pre skip from it "
+                          "means this registry's cards never hear the bell"] = None,
+    ) -> None:
+        self.parent = parent
         # a filed card is (fn, wants the run after its payload) — sniffed at attach
         self.fns: dict[str, list[tuple[Any, bool]]] = {s: [] for s in STAGES}
 
@@ -180,7 +191,7 @@ class Hooks:
         *payload: Annotated[
             Any, "the stage's arguments — PAYLOAD says the shape it wants"],
     ) -> tuple[Any, ...] | str | Message:
-        """Ring one stage here. Every hook hears it, in attach order.
+        """Ring one stage: the parent's cards first, then these, in attach order.
 
         What a hook returns is what the next one hears; None leaves the
         payload alone. At tool.pre a str or Message is the tool's result,
@@ -189,6 +200,12 @@ class Hooks:
         So: the payload back as a tuple, or — tool.pre only — that str or
         Message. Raises ContractError if a hook returns the wrong shape.
         """
+        if self.parent is not None:
+            up: tuple[Any, ...] | str | Message = (
+                await self.parent.fire(stage, run, *payload))
+            if not isinstance(up, tuple):
+                return up             # the parent said skip; our cards miss it
+            payload = up
         want = PAYLOAD[stage][-1]
         for fn, with_run in list(self.fns[stage]):   # a card added mid-ring waits
             out = await (fn(*payload, run) if with_run else fn(*payload))
@@ -260,31 +277,6 @@ def hook(
         return fn
 
     return tag
-
-
-@overload
-async def fire(run: Run, stage: Literal["tool.pre"],
-               *payload: Any) -> tuple[Any, ...] | str | Message: ...
-@overload
-async def fire(run: Run, stage: str, *payload: Any) -> tuple[Any, ...]: ...
-
-
-async def fire(
-    run: Annotated[Run, "whose own cards ring second, and what a hook may be handed"],
-    stage: Annotated[str, "one of the eight names"],
-    *payload: Annotated[Any, "the stage's arguments, in PAYLOAD order"],
-) -> tuple[Any, ...] | str | Message:
-    """Ring one stage: the agent's cards first, then this run's own.
-
-    Hands back the payload as a tuple — only a tool.pre bell can answer
-    with a str or a Message instead: the tool is skipped, that is its
-    result, and the run's own cards never hear it.
-    """
-    out: tuple[Any, ...] | str | Message = (
-        await run.agent.hooks.fire(stage, run, *payload))
-    if not isinstance(out, tuple):
-        return out                    # tool.pre said skip; the run's cards miss it
-    return await run.hooks.fire(stage, run, *out)
 
 
 def _todo(name: str) -> NotImplementedError:

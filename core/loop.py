@@ -14,7 +14,7 @@ import json
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
-from core.contracts import ContractError, Model, Stop, Tool, fire, fold, wrong
+from core.contracts import ContractError, Model, Stop, Tool, fold, wrong
 from core.types import Message, ToolCall
 
 if TYPE_CHECKING:                       # names for the checker, no runtime edge
@@ -96,7 +96,7 @@ async def use(
         return await out
     result = Message("tool", tool_call_id=call.id)
     async for part in out:
-        [part] = await fire(run, "tool.delta", part)      # hook before fold
+        [part] = await run.hooks.fire("tool.delta", run, part)   # then fold
         fold(result, part)
         run.emit("tool.delta", part, source=call.name)
     return result
@@ -112,12 +112,12 @@ async def run(
     Hands back the same Run, its notebook filled in.
     """
     try:
-        [run.messages[-1]] = await fire(run, "run.pre", run.messages[-1])
+        [run.messages[-1]] = await run.hooks.fire("run.pre", run, run.messages[-1])
         run.emit("run.pre", run.messages[-1], source="loop")
         while True:
             check(run.agent)                     # the wiring may have changed
             run.step += 1
-            [said] = await fire(run, "model.pre", run.messages)
+            [said] = await run.hooks.fire("model.pre", run, run.messages)
             run.messages = list(said)            # a replacement is permanent
             run.emit("model.pre", list(said), source="loop")  # a copy: the log
                                                  # must not grow with the run
@@ -128,13 +128,13 @@ async def run(
                     problem=f"{type(run.agent.model).__name__}.invoke returned "
                     f"{type(answer).__name__}, expected Message",
                 )
-            [answer] = await fire(run, "model.post", answer)
+            [answer] = await run.hooks.fire("model.post", run, answer)
             run.emit("model.post", answer, source="loop")
             run.messages.append(answer)
             if not answer.tool_calls:
                 break
             for call in answer.tool_calls:
-                out = await fire(run, "tool.pre", call)
+                out = await run.hooks.fire("tool.pre", run, call)
                 if isinstance(out, tuple):
                     call, result = out[0], None
                 else:
@@ -153,7 +153,7 @@ async def run(
                         except Exception as ex:  # contract stays loud
                             result = f"error: {type(ex).__name__}: {ex}"
                 reply = coerce(result, call)
-                [call, reply] = await fire(run, "tool.post", call, reply)
+                [call, reply] = await run.hooks.fire("tool.post", run, call, reply)
                 run.emit("tool.post", reply, source="loop")
                 run.messages.append(reply)
     except Stop:
@@ -161,7 +161,7 @@ async def run(
     finally:
         last = run.messages[-1] if run.messages else Message("assistant")
         try:
-            await fire(run, "run.post", last)    # teardown, no matter what
+            await run.hooks.fire("run.post", run, last)   # teardown, no matter what
         except Stop:
             pass                                 # too late to stop; ignore
         finally:

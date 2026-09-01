@@ -93,10 +93,16 @@ class Run:
     messages: Annotated[list[Message], "the notebook, in order; the loop appends to it"]
     step: Annotated[
         int, "model turns taken — the loop counts up before each invoke"] = 0
-    hooks: Annotated[Hooks, "this run's own lane"] = field(default_factory=Hooks)
+    hooks: Annotated[
+        Hooks, "this run's own lane, chained onto the agent's cards"] = field(
+        default_factory=Hooks)
     extra: Annotated[
         dict[str, Any],
         "the spare pocket for this run alone"] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Chain this run's cards onto the agent's, so one bell reaches both."""
+        self.hooks.parent = self.hooks.parent or self.agent.hooks
 
     def emit(
         self,
