@@ -13,6 +13,15 @@ from core.types import Message, Part, ToolCall
 EVENTS = ("run_pre", "model_pre", "model_delta", "model_post",
           "tool_pre", "tool_delta", "tool_post", "run_post")
 
+STAGES = ("run.pre", "model.pre", "model.delta", "model.post",
+          "tool.pre", "tool.delta", "tool.post", "run.post")
+
+PAYLOAD: dict[str, tuple[type, ...]] = {   # what each stage hands its hooks
+    "run.pre": (Message,), "model.pre": (list,), "model.delta": (Part,),
+    "model.post": (Message,), "tool.pre": (ToolCall,), "tool.delta": (Part,),
+    "tool.post": (ToolCall, Message), "run.post": (Message,),
+}
+
 
 class ContractError(Exception):
     """You implemented it wrong. The message says what to type instead."""
@@ -156,6 +165,103 @@ class Hook:
         """The run is over. This always happens."""
 
 
+def _who(fn) -> str:
+    """What to call a hook in a complaint."""
+    return getattr(fn, "__name__", type(fn).__name__)
+
+
+def _named(stages, who: str) -> tuple[str, ...]:
+    """The stage names, checked. Nobody gets to listen for nothing."""
+    if not stages:
+        raise wrong("stage", f"{who} listens for nothing; name a stage: "
+                    + ", ".join(STAGES))
+    for stage in stages:
+        if stage not in STAGES:
+            raise wrong("stage", f"{stage!r} is not a stage; pick one of: "
+                        + ", ".join(STAGES))
+    return tuple(stages)
+
+
+def _wants_run(fn, stage: str) -> bool:
+    """True when there is room for run after the payload. Sniffed once, at attach."""
+    takes = [p for p in inspect.signature(fn).parameters.values()
+             if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    hands = len(PAYLOAD[stage])
+    if len(takes) not in (hands, hands + 1):
+        raise wrong("stage", f"{_who(fn)} does not fit {stage}, which hands over "
+                    + ", ".join(t.__name__ for t in PAYLOAD[stage])
+                    + " — take those, and run after them if you want it")
+    return len(takes) == hands + 1
+
+
+def hook(*stages: str):
+    """Tag a function with the stages it listens for. It stays a function."""
+    _named(stages, "@hook")
+
+    def tag(fn):
+        fn.stages = stages
+        return fn
+
+    return tag
+
+
+class Hooks:
+    """The rule cards, filed by stage. Attach order is call order."""
+
+    def __init__(self) -> None:
+        self.fns: dict[str, list[tuple[Any, bool]]] = {s: [] for s in STAGES}
+
+    def attach(self, fn, *stages: str) -> "Hooks":
+        """File one function: the stages named here, else the ones @hook tagged."""
+        wanted = _named(stages or getattr(fn, "stages", ()), _who(fn))
+        if not inspect.iscoroutinefunction(fn):
+            raise wrong("stage", f"{_who(fn)} must be async — write async def; "
+                        "sync work is one asyncio.to_thread line inside it")
+        for stage, with_run in [(s, _wants_run(fn, s)) for s in wanted]:
+            self.fns[stage].append((fn, with_run))   # sniffed all, then filed all
+        return self
+
+    def detach(self, fn) -> "Hooks":
+        """Unfile it, from every stage it listened to."""
+        for filed in self.fns.values():
+            filed[:] = [card for card in filed if card[0] is not fn]
+        return self
+
+    async def fire(self, stage: str, run, *payload) -> Any:
+        """Ring one stage here. Every hook hears it, in attach order.
+
+        What a hook returns is what the next one hears; None leaves the
+        payload alone. At tool.pre a str or Message is the tool's result,
+        and the hooks behind it never hear the bell.
+        """
+        want = PAYLOAD[stage][-1]
+        for fn, with_run in list(self.fns[stage]):   # a card added mid-ring waits
+            out = await (fn(*payload, run) if with_run else fn(*payload))
+            if out is None:
+                continue
+            if stage == "tool.pre" and isinstance(out, (str, Message)):
+                return out                  # the tool is skipped; this is its result
+            if not isinstance(out, want):
+                takes = ("ToolCall, str or Message" if stage == "tool.pre"
+                         else want.__name__)
+                raise wrong("stage", f"{_who(fn)} at {stage} returned "
+                            f"{type(out).__name__}; return {takes}, or None to "
+                            "leave it alone")
+            payload = payload[:-1] + (out,)
+        return payload
+
+
+async def ring(run, stage: str, *payload) -> Any:
+    """Both registries: the agent's cards first, then this run's own.
+
+    Becomes fire when the old bells retire (task 03).
+    """
+    out = await run.agent.hooks.fire(stage, run, *payload)
+    if not isinstance(out, tuple):
+        return out                    # tool.pre said skip; the run's cards miss it
+    return await run.hooks.fire(stage, run, *out)
+
+
 SKELETONS: dict[str, str] = {
     "model": """class MyModel(Model):
     async def invoke(self, agent) -> Message:
@@ -185,5 +291,12 @@ SKELETONS: dict[str, str] = {
     "hook": """class MyHook(Hook):
     def run_pre(self, agent) -> None:
         print("starting with", len(agent.messages), "messages")
+""",
+    "stage": """@hook("tool.pre")
+async def no_rm(call: ToolCall):        # add a trailing `run` arg if you need it
+    if call.name == "rm":
+        return "denied"                 # the tool is skipped; this is its result
+
+agent.hooks.attach(no_rm)               # untagged? attach(no_rm, "tool.pre")
 """,
 }
