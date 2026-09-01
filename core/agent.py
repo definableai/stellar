@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Annotated, Any
 from uuid import uuid4
 
 from core.contracts import ContractError, Hooks, Model, Tool, wrong
@@ -29,13 +29,16 @@ class Agent:
     A hundred users is asyncio.gather(*(agent.run(p) for p in prompts)).
     """
 
-    model: Model
-    # hand it either; after __post_init__ it is always the mapping
-    tools: Iterable[Tool] | Mapping[str, Tool] = ()
-    hooks: Hooks = field(default_factory=Hooks)          # control plane
-    events: Events = field(default_factory=Events)       # data plane
-    # the spare pocket. Namespaced keys: extra["budget.tokens"].
-    extra: dict[str, Any] = field(default_factory=dict)
+    model: Annotated[Model, "the brain; every run of this agent asks this one"]
+    tools: Annotated[
+        Iterable[Tool] | Mapping[str, Tool],
+        "hand it either; after __post_init__ it is always the mapping"] = ()
+    hooks: Annotated[Hooks, "control plane"] = field(default_factory=Hooks)
+    events: Annotated[Events, "data plane"] = field(default_factory=Events)
+    extra: Annotated[
+        dict[str, Any],
+        "the spare pocket. Namespaced keys: extra['budget.tokens']",
+    ] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Key the toolbox by tool name, then check the wiring — build fails loud."""
@@ -49,18 +52,24 @@ class Agent:
             self.tools = filed
         check(self)
 
-    async def run(self, prompt: str | Message | None = None, *,
-                  messages: list[Message] | None = None,
-                  run_id: str | None = None) -> Run:
+    async def run(
+        self,
+        prompt: Annotated[
+            str | Message | None,
+            "appended after messages=; None only if messages= says enough"] = None,
+        *,
+        messages: Annotated[
+            list[Message] | None,
+            "the notebook to open on, copied — your list is left alone"] = None,
+        run_id: Annotated[
+            str | None,
+            "reuse one to resume that run; None mints a fresh hex id"] = None,
+    ) -> Run:
         """Ask, act, repeat. The only method; the work is in core/loop.py.
 
         A str prompt becomes a user message, a Message is taken as it is,
         and messages= opens the notebook — with run_id, that is a resume.
         Gives back the Run: its notebook, its step count, its id.
-
-        prompt: appended after messages=; None only if messages= says enough.
-        messages: the notebook to open on, copied — your list is left alone.
-        run_id: reuse one to resume that run; None mints a fresh hex id.
         """
         said = list(messages or [])
         if prompt is not None:
@@ -79,22 +88,27 @@ class Run:
     survives a restart and agent.run(messages=…, run_id=…) picks it back up.
     """
 
-    agent: Agent
-    id: str
-    messages: list[Message]
-    step: int = 0
-    hooks: Hooks = field(default_factory=Hooks)   # this run's own lane
-    extra: dict[str, Any] = field(default_factory=dict)
+    agent: Annotated[Agent, "the backpack behind this run; dropped from the checkpoint"]
+    id: Annotated[str, "hex, minted per run — or the one you handed in to resume"]
+    messages: Annotated[list[Message], "the notebook, in order; the loop appends to it"]
+    step: Annotated[
+        int, "model turns taken — the loop counts up before each invoke"] = 0
+    hooks: Annotated[Hooks, "this run's own lane"] = field(default_factory=Hooks)
+    extra: Annotated[
+        dict[str, Any],
+        "the spare pocket for this run alone"] = field(default_factory=dict)
 
-    def emit(self, name: str, data: Any = None,
-             source: str | None = None) -> Event:
+    def emit(
+        self,
+        name: Annotated[
+            str, "dotted event name — the loop uses the eight, you use anything"],
+        data: Annotated[Any, "whatever should ride along; stored as-is"] = None,
+        source: Annotated[
+            str | None, "who is speaking — 'loop', a tool's name, or yours"] = None,
+    ) -> Event:
         """Say one thing on the agent's bus, stamped with this run's id.
 
         Never blocks and never raises; the Event it hands back is already logged.
-
-        name: dotted event name — the loop uses the eight, you use anything.
-        data: whatever should ride along; stored as-is.
-        source: who is speaking — "loop", a tool's name, or yours.
         """
         return self.agent.events.emit(name, data, source, run_id=self.id)
 

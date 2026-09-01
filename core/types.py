@@ -10,7 +10,7 @@ other module — loop, hooks, adapters, drivers — speaks in these three.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
 __all__ = ["Message", "Part", "ToolCall"]
 
@@ -27,17 +27,19 @@ class Part:
     Every other type is adapter-defined and passes through untouched.
     """
 
-    type: str
-    data: Any = None
+    type: Annotated[str, "which piece this is — the word fold() and adapters read"]
+    data: Annotated[Any, "the payload; its shape is whatever `type` promises"] = None
 
 
 @dataclass
 class ToolCall:
     """The model asking for one tool to run."""
 
-    id: str
-    name: str
-    args: dict[str, Any] = field(default_factory=dict)
+    id: Annotated[str, "the provider's id for this ask; the tool message answers it"]
+    name: Annotated[str, "which tool to run — the key it is filed under"]
+    args: Annotated[
+        dict[str, Any],
+        "the call's keyword arguments, already parsed"] = field(default_factory=dict)
 
 
 @dataclass
@@ -49,12 +51,16 @@ class Message:
     the text parts back — the branch nobody has to write anymore.
     """
 
-    role: Role
-    content: str | list[Part] = ""
-    tool_calls: list[ToolCall] = field(default_factory=list)   # assistant only
-    tool_call_id: str | None = None                            # tool role only
-    meta: dict[str, Any] = field(default_factory=dict)         # provider junk;
-    # adapters put usage here as {"input_tokens": …, "output_tokens": …}
+    role: Annotated[Role, "who the line is from — system, user, assistant or tool"]
+    content: Annotated[
+        str | list[Part], "the parts; a str becomes one text part at construction"] = ""
+    tool_calls: Annotated[
+        list[ToolCall], "assistant only"] = field(default_factory=list)
+    tool_call_id: Annotated[str | None, "tool role only"] = None
+    meta: Annotated[
+        dict[str, Any],
+        "provider junk; adapters put usage as {'input_tokens': …, 'output_tokens': …}",
+    ] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if isinstance(self.content, str):

@@ -16,7 +16,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable
+from typing import Annotated, Any, AsyncIterator, Callable
 
 from core.contracts import ContractError
 
@@ -29,12 +29,13 @@ logger = logging.getLogger(__name__)
 class Event:
     """One thing that happened: numbered, named, stamped."""
 
-    seq: int                             # per-bus, monotonic, starts at 0
-    name: str
-    data: Any = None
-    source: str | None = None            # who said it: "loop", a tool name, you
-    run_id: str | None = None
-    ts: float = field(default_factory=time.time)
+    seq: Annotated[int, "per-bus, monotonic, starts at 0"]
+    name: Annotated[str, "the dotted name — the loop's eight, or anything you emit"]
+    data: Annotated[Any, "whatever rode along; stored as-is"] = None
+    source: Annotated[str | None, "who said it: 'loop', a tool name, you"] = None
+    run_id: Annotated[str | None, "the run it belongs to, or None for bus-wide"] = None
+    ts: Annotated[
+        float, "when it was stamped, as time.time()"] = field(default_factory=time.time)
 
 
 class Events:
@@ -46,15 +47,17 @@ class Events:
         # one listener is (fn, prefix it hears, the one run_id it wants or None)
         self.listeners: list[tuple[Callable[[Event], Any], str, str | None]] = []
 
-    def emit(self, name: str, data: Any = None, source: str | None = None,
-             run_id: str | None = None) -> Event:
-        """Stamp it, keep it, tell everyone. A listener's sins stay its own.
-
-        name: dotted event name — the loop uses the eight, you use anything.
-        data: whatever should ride along; stored as-is.
-        source: who is speaking — "loop", a tool's name, or yours.
-        run_id: pin the event to one run, or None for bus-wide.
-        """
+    def emit(
+        self,
+        name: Annotated[
+            str, "dotted event name — the loop uses the eight, you use anything"],
+        data: Annotated[Any, "whatever should ride along; stored as-is"] = None,
+        source: Annotated[
+            str | None, "who is speaking — 'loop', a tool's name, or yours"] = None,
+        run_id: Annotated[
+            str | None, "pin the event to one run, or None for bus-wide"] = None,
+    ) -> Event:
+        """Stamp it, keep it, tell everyone. A listener's sins stay its own."""
         event = Event(self.seq, name, data, source, run_id, time.time())
         self.seq += 1
         self.log.append(event)
@@ -66,14 +69,19 @@ class Events:
                     logger.exception("listener %r broke on %s", fn, name)
         return event
 
-    def listen(self, fn: Callable[[Event], Any], prefix: str = "",
-               run_id: str | None = None) -> Callable[[Event], Any]:
+    def listen(
+        self,
+        fn: Annotated[
+            Callable[[Event], Any],
+            "any sync callable of one Event; what it returns is dropped"],
+        prefix: Annotated[str, "'' hears everything, 'tool' hears tool.*"] = "",
+        run_id: Annotated[
+            str | None, "the one run it wants, or None to hear the whole bus"] = None,
+    ) -> Callable[[Event], Any]:
         """Hear every matching event, synchronously. Hands fn back, so it decorates.
 
         prefix "" hears everything, "tool" hears tool.*; run_id pins one run.
         An async def is refused: emit() never awaits.
-
-        fn: any sync callable of one Event; what it returns is dropped.
         """
         if inspect.iscoroutinefunction(fn):
             raise ContractError(
@@ -82,25 +90,30 @@ class Events:
         self.listeners.append((fn, prefix, run_id))
         return fn
 
-    def detach(self, fn: Callable[[Event], Any]) -> None:
-        """Stop telling fn anything. Never was listening? Then nothing happens.
-
-        fn: matched by equality, and unfiled from every prefix and run it had.
-        """
+    def detach(
+        self,
+        fn: Annotated[
+            Callable[[Event], Any],
+            "matched by equality, and unfiled from every prefix and run it had"],
+    ) -> None:
+        """Stop telling fn anything. Never was listening? Then nothing happens."""
         self.listeners = [heard for heard in self.listeners if heard[0] != fn]
 
-    async def stream(self, run_id: str | None = None, prefix: str = "",
-                     since: int = 0) -> AsyncIterator[Event]:
+    async def stream(
+        self,
+        run_id: Annotated[
+            str | None,
+            "None watches the whole bus; an id watches that one run only"] = None,
+        prefix: Annotated[
+            str, "'' hears everything, 'tool' hears tool.* — replay and live"] = "",
+        since: Annotated[int, "the first seq worth replaying; 0 is the whole log"] = 0,
+    ) -> AsyncIterator[Event]:
         """The log from `since`, then live — no gap, no doubles, in seq order.
 
         `since` trims the replay, never the live tail. The live listener goes
         on before the log is read, so an event landing mid-replay waits in the
         queue instead of falling between the two — and it hears the whole run,
         so a run_id stream ends on that run's run.post, prefix or no prefix.
-
-        run_id: None watches the whole bus; an id watches that one run only.
-        prefix: "" hears everything, "tool" hears tool.* — replay and live.
-        since: the first seq worth replaying; 0 is the whole log.
         """
         queue: asyncio.Queue = asyncio.Queue()    # ponytail: unbounded, a slow
         push = queue.put_nowait                   # consumer is memory

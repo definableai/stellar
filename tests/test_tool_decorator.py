@@ -6,6 +6,7 @@ Run: uv run python tests/test_tool_decorator.py
 import asyncio
 import sys
 from pathlib import Path
+from typing import Annotated
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -30,6 +31,12 @@ def kinds(a: str, b: int, c: float, d: bool, e: list, f: dict[str, int],
 def quoted(a: "int", b: "list[str]") -> "str":
     """Hints written as strings — what the future-import leaves in every module."""
     return f"{a}{b}"
+
+
+@tool
+def noted(word: Annotated[str, "the word to shout"], times: int = 1) -> str:
+    """A note on a parameter — the model reads it, the plain one has none."""
+    return (word.upper() + " ") * times
 
 
 @tool
@@ -89,6 +96,14 @@ def test_string_hints_are_read_as_hints() -> None:
     }
 
 
+def test_an_annotated_note_becomes_the_description() -> None:
+    assert noted.parameters["properties"] == {
+        "word": {"type": "string", "description": "the word to shout"},
+        "times": {"type": "integer"},                # no note, no description
+    }
+    assert noted.parameters["required"] == ["word"]
+
+
 def test_the_run_is_injected_only_when_declared() -> None:
     run = Run(Agent(FakeModel([])), "r1", [Message("user", "hi")])
     assert counter.parameters["properties"] == {}    # the model never sees it
@@ -144,6 +159,7 @@ if __name__ == "__main__":
         test_schema_comes_from_the_signature,
         test_every_hint_has_a_type,
         test_string_hints_are_read_as_hints,
+        test_an_annotated_note_becomes_the_description,
         test_the_run_is_injected_only_when_declared,
         test_only_the_first_parameter_answers_to_run,
         test_sync_and_async_functions_both_work,

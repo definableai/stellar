@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import inspect
 from typing import (
-    TYPE_CHECKING, Any, AsyncIterator, Callable, Literal, Sequence, cast, overload,
+    TYPE_CHECKING, Annotated, Any, AsyncIterator, Callable, Literal, Sequence, cast,
+    overload,
 )
 
 from core.types import Message, Part, ToolCall
@@ -49,11 +50,12 @@ class Stop(Exception):
 class Model:
     """The brain. Override invoke — async — and hand back a Message."""
 
-    async def invoke(self, run: Run) -> Message:
-        """One turn: read run.messages, answer with one assistant Message.
-
-        run: run.messages is the notebook; run.agent holds tools and hooks.
-        """
+    async def invoke(
+        self,
+        run: Annotated[
+            Run, "run.messages is the notebook; run.agent holds tools and hooks"],
+    ) -> Message:
+        """One turn: read run.messages, answer with one assistant Message."""
         raise NotImplementedError("invoke")
 
 
@@ -66,26 +68,28 @@ class ProviderModel(Model):
     so streaming UIs are written once and work with every adapter.
     """
 
-    def encode(self, run: Run) -> Any:
-        """The request body, built from the run. Pure: send() takes it from here.
-
-        run: every message, plus run.agent.tools — all a body needs.
-        """
+    def encode(
+        self,
+        run: Annotated[Run, "every message, plus run.agent.tools — all a body needs"],
+    ) -> Any:
+        """The request body, built from the run. Pure: send() takes it from here."""
         raise _todo("encode")
 
-    def send(self, run: Run, body: Any) -> AsyncIterator[Part]:
-        """Yield the reply as Parts. An async generator; the network lives here.
-
-        run: whatever the body left out — run.id, run.extra, the backpack.
-        body: exactly what encode() built; send() never rebuilds it.
-        """
+    def send(
+        self,
+        run: Annotated[
+            Run, "whatever the body left out — run.id, run.extra, the backpack"],
+        body: Annotated[Any, "exactly what encode() built; send() never rebuilds it"],
+    ) -> AsyncIterator[Part]:
+        """Yield the reply as Parts. An async generator; the network lives here."""
         raise _todo("send")
 
-    async def invoke(self, run: Run) -> Message:
-        """encode, send, fold — rings model.delta per Part, hands back the Message.
-
-        run: passed straight to encode and send; its bus carries the deltas.
-        """
+    async def invoke(
+        self,
+        run: Annotated[
+            Run, "passed straight to encode and send; its bus carries the deltas"],
+    ) -> Message:
+        """encode, send, fold — rings model.delta per Part, hands back the Message."""
         answer = Message("assistant")
         async for part in self.send(run, self.encode(run)):
             if not isinstance(part, Part):
@@ -110,12 +114,14 @@ class Tool:
 
     # the real shape is (self, run, **args); typed loose so an override
     # may name the args its schema promises without an override complaint
-    async def execute(self, *args: Any, **kwargs: Any) -> Any:
-        """Do the thing. execute(run, **args) in, anything out — coerce shapes it.
-
-        run: the first argument, always — the loop fills that one in.
-        **args: the parameters your schema promised, by name, off the call.
-        """
+    async def execute(
+        self,
+        *args: Annotated[
+            Any, "the first argument, always — the loop fills that one in"],
+        **kwargs: Annotated[
+            Any, "the parameters your schema promised, by name, off the call"],
+    ) -> Any:
+        """Do the thing. execute(run, **args) in, anything out — coerce shapes it."""
         raise NotImplementedError("execute")
 
 
@@ -126,14 +132,18 @@ class Hooks:
         # a filed card is (fn, wants the run after its payload) — sniffed at attach
         self.fns: dict[str, list[tuple[Any, bool]]] = {s: [] for s in STAGES}
 
-    def attach(self, fn: Callable[..., Any], *stages: str) -> Hooks:
+    def attach(
+        self,
+        fn: Annotated[
+            Callable[..., Any],
+            "filed as-is and left a function; one may sit on several stages"],
+        *stages: Annotated[
+            str, "the bells to file it under — one or more of the eight names"],
+    ) -> Hooks:
         """File one function: the stages named here, else the ones @hook tagged.
 
         Raises ContractError now — not mid-run — if fn is not async, names no
         stage, or does not fit one. Hands back self, so attaches chain.
-
-        fn: filed as-is and left a function; one may sit on several stages.
-        stages: the bells to file it under — one or more of the eight names.
         """
         wanted = _named(stages or getattr(fn, "stages", ()), _who(fn))
         if not inspect.iscoroutinefunction(fn):
@@ -143,11 +153,13 @@ class Hooks:
             self.fns[stage].append((fn, with_run))   # sniffed all, then filed all
         return self
 
-    def detach(self, fn: Callable[..., Any]) -> Hooks:
-        """Unfile it, from every stage it listened to.
-
-        fn: matched by identity — the same object that was attached.
-        """
+    def detach(
+        self,
+        fn: Annotated[
+            Callable[..., Any],
+            "matched by identity — the same object that was attached"],
+    ) -> Hooks:
+        """Unfile it, from every stage it listened to."""
         for filed in self.fns.values():
             filed[:] = [card for card in filed if card[0] is not fn]
         return self
@@ -159,8 +171,15 @@ class Hooks:
     async def fire(self, stage: str, run: Run,
                    *payload: Any) -> tuple[Any, ...]: ...
 
-    async def fire(self, stage: str, run: Run,
-                   *payload: Any) -> tuple[Any, ...] | str | Message:
+    async def fire(
+        self,
+        stage: Annotated[
+            str, "one of the eight names; its cards are the ones that ring"],
+        run: Annotated[
+            Run, "handed over only to a hook that left room for it after payload"],
+        *payload: Annotated[
+            Any, "the stage's arguments — PAYLOAD says the shape it wants"],
+    ) -> tuple[Any, ...] | str | Message:
         """Ring one stage here. Every hook hears it, in attach order.
 
         What a hook returns is what the next one hears; None leaves the
@@ -169,10 +188,6 @@ class Hooks:
 
         So: the payload back as a tuple, or — tool.pre only — that str or
         Message. Raises ContractError if a hook returns the wrong shape.
-
-        stage: one of the eight names; its cards are the ones that ring.
-        run: handed over only to a hook that left room for it after payload.
-        payload: the stage's arguments — PAYLOAD says the shape it wants.
         """
         want = PAYLOAD[stage][-1]
         for fn, with_run in list(self.fns[stage]):   # a card added mid-ring waits
@@ -191,7 +206,10 @@ class Hooks:
         return payload
 
 
-def fold(message: Message, part: Part) -> None:
+def fold(
+    message: Annotated[Message, "folded into in place — nothing is handed back"],
+    part: Annotated[Part, "one piece off the stream; its type picks the rule above"],
+) -> None:
     """One streamed Part into the growing Message. The Part protocol:
 
     "text" is a delta — consecutive text parts concatenate into one.
@@ -199,9 +217,6 @@ def fold(message: Message, part: Part) -> None:
     is buffered wherever it came from, never here. "meta" is a dict merged
     into message.meta, later keys winning. Every other type lands in
     content untouched.
-
-    message: folded into in place — nothing is handed back.
-    part: one piece off the stream; its type picks the rule above.
     """
     held = cast(list[Part], message.content)   # always parts after construction
     if part.type == "text":
@@ -220,22 +235,23 @@ def fold(message: Message, part: Part) -> None:
         held.append(part)
 
 
-def wrong(kind: str, problem: str) -> ContractError:
-    """The complaint, then the code to type instead.
-
-    kind: which skeleton to print — "model", "provider", "tool" or "hook".
-    problem: the sentence naming what is wrong, in the caller's own words.
-    """
+def wrong(
+    kind: Annotated[
+        str, "which skeleton to print — 'model', 'provider', 'tool' or 'hook'"],
+    problem: Annotated[
+        str, "the sentence naming what is wrong, in the caller's own words"],
+) -> ContractError:
+    """The complaint, then the code to type instead."""
     return ContractError(f"{problem}\n\n{SKELETONS[kind]}")
 
 
-def hook(*stages: str) -> Callable[[Any], Any]:
+def hook(
+    *stages: Annotated[str, "the bells to listen for — one or more of the eight names"],
+) -> Callable[[Any], Any]:
     """Tag a function with the stages it listens for. It stays a function.
 
     Raises ContractError right here if a stage is misspelled. attach() reads
     the tag, so agent.hooks.attach(fn) then needs no stage names.
-
-    stages: the bells to listen for — one or more of the eight names.
     """
     _named(stages, "@hook")
 
@@ -253,17 +269,16 @@ async def fire(run: Run, stage: Literal["tool.pre"],
 async def fire(run: Run, stage: str, *payload: Any) -> tuple[Any, ...]: ...
 
 
-async def fire(run: Run, stage: str,
-               *payload: Any) -> tuple[Any, ...] | str | Message:
+async def fire(
+    run: Annotated[Run, "whose own cards ring second, and what a hook may be handed"],
+    stage: Annotated[str, "one of the eight names"],
+    *payload: Annotated[Any, "the stage's arguments, in PAYLOAD order"],
+) -> tuple[Any, ...] | str | Message:
     """Ring one stage: the agent's cards first, then this run's own.
 
     Hands back the payload as a tuple — only a tool.pre bell can answer
     with a str or a Message instead: the tool is skipped, that is its
     result, and the run's own cards never hear it.
-
-    run: whose own cards ring second, and what a hook may be handed.
-    stage: one of the eight names.
-    payload: the stage's arguments, in PAYLOAD order.
     """
     out: tuple[Any, ...] | str | Message = (
         await run.agent.hooks.fire(stage, run, *payload))
@@ -284,11 +299,11 @@ def _who(fn: Callable[..., Any]) -> str:
     return getattr(fn, "__name__", type(fn).__name__)
 
 
-def _named(stages: Sequence[str], who: str) -> tuple[str, ...]:
-    """The stage names, checked. Nobody gets to listen for nothing.
-
-    who: the name to blame in the complaint — "@hook", or the function's.
-    """
+def _named(
+    stages: Sequence[str],
+    who: Annotated[str, "the name to blame in the complaint — '@hook', or the fn's"],
+) -> tuple[str, ...]:
+    """The stage names, checked. Nobody gets to listen for nothing."""
     if not stages:
         raise wrong("hook", f"{who} listens for nothing; name a stage: "
                     + ", ".join(STAGES))

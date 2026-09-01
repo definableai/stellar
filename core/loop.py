@@ -12,7 +12,7 @@ from __future__ import annotations
 import inspect
 import json
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 from core.contracts import ContractError, Model, Stop, Tool, fire, fold, wrong
 from core.types import Message, ToolCall
@@ -23,13 +23,14 @@ if TYPE_CHECKING:                       # names for the checker, no runtime edge
 __all__ = ["check", "coerce", "run", "use"]
 
 
-def check(agent: Agent) -> None:
+def check(
+    agent: Annotated[
+        Agent, "the whole backpack — its model, and every tool in its toolbox"],
+) -> None:
     """Read the wiring and say what a dev got wrong, before it runs.
 
     Raises ContractError, with the code to type instead. Runs at construction
     and again at the top of every step, so a hot swap is checked too.
-
-    agent: the whole backpack — its model, and every tool in its toolbox.
     """
     invoke = _own(agent.model, Model, "invoke")
     if invoke is None:
@@ -59,14 +60,14 @@ def check(agent: Agent) -> None:
                         "code is one asyncio.to_thread line inside it")
 
 
-def coerce(result: Any, call: ToolCall) -> Message:
+def coerce(
+    result: Annotated[Any, "anything at all, including None — a tool owes no type"],
+    call: Annotated[ToolCall, "the ask being answered; only its id is read"],
+) -> Message:
     """Whatever the tool handed back, make it one tool message.
 
     A Message is re-roled and stamped with the call id; a str is the content;
     anything else is json.dumps'd, str() for whatever will not serialise.
-
-    result: anything at all, including None — a tool owes no type.
-    call: the ask being answered; only its id is read.
     """
     if isinstance(result, Message):
         result.role = "tool"
@@ -77,15 +78,16 @@ def coerce(result: Any, call: ToolCall) -> Message:
     return Message("tool", result, tool_call_id=call.id)
 
 
-async def use(run: Run, tool: Tool, call: ToolCall) -> Message | Any:
+async def use(
+    run: Annotated[Run, "the tool's first argument, and whose hooks hear tool.delta"],
+    tool: Annotated[
+        Tool, "the one to run — check() already proved its execute is async"],
+    call: Annotated[ToolCall, "the ask; call.args become the tool's keyword arguments"],
+) -> Message | Any:
     """Run one tool. An async generator streams: each Part rings tool.delta.
 
     A streaming tool gives back the folded Message; any other tool gives back
     whatever it returned, and coerce() shapes that downstream.
-
-    run: the tool's first argument, and whose hooks hear tool.delta.
-    tool: the one to run — check() already proved its execute is async.
-    call: the ask; call.args become the tool's keyword arguments.
     """
     # Any on purpose: execute is a coroutine OR an async generator, and no
     # single declared type can say so — the isasyncgen sniff is the truth.
@@ -100,13 +102,14 @@ async def use(run: Run, tool: Tool, call: ToolCall) -> Message | Any:
     return result
 
 
-async def run(run: Run) -> Run:
+async def run(
+    run: Annotated[
+        Run, "arrives with at least one message — run.pre rings on the last one"],
+) -> Run:
     """Ask, act, repeat. Ends when the model stops asking for tools.
 
     Stop — from any hook or tool — ends it cleanly; run.post fires either way.
     Hands back the same Run, its notebook filled in.
-
-    run: arrives with at least one message — run.pre rings on the last one.
     """
     try:
         [run.messages[-1]] = await fire(run, "run.pre", run.messages[-1])

@@ -6,7 +6,7 @@ anywhere. Every adapter in models/ is graded against the same loop it rides.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, AsyncIterator, cast
+from typing import TYPE_CHECKING, Annotated, Any, AsyncIterator, cast
 
 from core.contracts import ContractError, ProviderModel
 from core.types import Message, Part
@@ -25,24 +25,32 @@ class FakeModel(ProviderModel):
     real adapter uses — with no network.
     """
 
-    def __init__(self, script: list[Message | str]) -> None:
-        self.script = list(script)     # copied: your list is left alone
+    def __init__(
+        self,
+        script: Annotated[
+            list[Message | str],
+            "the replies to hand back; copied — your list is left alone"],
+    ) -> None:
+        """Take the script it reads from: one entry per turn, in order."""
+        self.script = list(script)
 
-    def encode(self, run: Run) -> None:
-        """Nothing to build: the answers are already written.
-
-        run: unread — the script owes nothing to the conversation.
-        """
+    def encode(
+        self,
+        run: Annotated[Run, "unread — the script owes nothing to the conversation"],
+    ) -> None:
+        """Nothing to build: the answers are already written."""
         return None
 
-    async def send(self, run: Run, body: Any) -> AsyncIterator[Part]:
+    async def send(
+        self,
+        run: Annotated[
+            Run, "only run.step is read, and only to name the reply that ran out"],
+        body: Annotated[Any, "always None; encode() builds nothing to send"],
+    ) -> AsyncIterator[Part]:
         """The next scripted reply, taken apart into Parts.
 
         Raises ContractError when the script runs out — a run that asked for
         one more turn than you wrote.
-
-        run: only run.step is read, and only to name the reply that ran out.
-        body: always None; encode() builds nothing to send.
         """
         if not self.script:
             raise ContractError(

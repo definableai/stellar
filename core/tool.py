@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, get_origin
+from typing import TYPE_CHECKING, Annotated, Any, Callable, get_args, get_origin
 
 from core.contracts import Tool, wrong
 
@@ -30,7 +30,11 @@ TYPES = {                               # a hint the schema knows, or nothing
 }
 
 
-def tool(fn: Callable[..., Any]) -> Tool:
+def tool(
+    fn: Annotated[
+        Callable[..., Any],
+        "called as it is, never bound — the wrapper's self goes unused"],
+) -> Tool:
     """A plain function becomes a Tool: its name, its docstring, its signature.
 
     A sync function runs in a thread, an async one is awaited, and an async
@@ -41,8 +45,6 @@ def tool(fn: Callable[..., Any]) -> Tool:
     Gives back an instance, ready for Agent(model, [that]). Raises
     ContractError on *args/**kwargs — an unreadable signature is no schema —
     and on anything without a __name__: the function's name is the tool's.
-
-    fn: called as it is, never bound — the wrapper's self goes unused.
     """
     name = getattr(fn, "__name__", "")
     if not name:
@@ -83,26 +85,35 @@ def tool(fn: Callable[..., Any]) -> Tool:
     })()
 
 
-def takes_run(fn: Callable[..., Any]) -> bool:
-    """True when the first parameter is spelled run: the loop fills that one in.
-
-    fn: only its parameter names are read; the annotations stay untouched.
-    """
+def takes_run(
+    fn: Annotated[
+        Callable[..., Any],
+        "only its parameter names are read; the annotations stay untouched"],
+) -> bool:
+    """True when the first parameter is spelled run: the loop fills that one in."""
     return next(iter(inspect.signature(fn).parameters), "") == "run"
 
 
-def schema(fn: Callable[..., Any]) -> dict[str, Any]:
+def schema(
+    fn: Annotated[
+        Callable[..., Any],
+        "read with eval_str, so a module's future-import strings resolve too"],
+) -> dict[str, Any]:
     """The signature as a schema. No hint means anything; no default means required.
 
-    fn: read with eval_str, so a module's future-import strings resolve too.
+    An Annotated note becomes the property's description — the model reads it.
     """
     properties, required = {}, []
     skip = "run" if takes_run(fn) else None
     for name, p in inspect.signature(fn, eval_str=True).parameters.items():
         if name == skip:
             continue
-        kind = TYPES.get(get_origin(p.annotation) or p.annotation)
+        ann = p.annotation
+        hint, *notes = get_args(ann) if get_origin(ann) is Annotated else (ann,)
+        kind = TYPES.get(get_origin(hint) or hint)
         properties[name] = {"type": kind} if kind else {}
+        if notes and isinstance(notes[0], str):   # the note the model reads
+            properties[name]["description"] = notes[0]
         if p.default is p.empty:
             required.append(name)
     return {"type": "object", "properties": properties, "required": required}
