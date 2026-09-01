@@ -10,20 +10,20 @@ class FakeModel(ProviderModel):
     """Hands back the next entry each time. A str becomes an assistant line.
 
     A ProviderModel on purpose: each scripted reply is taken apart and
-    streamed as Parts, so tests ride the same fold and model_delta path a
+    streamed as Parts, so tests ride the same fold and model.delta path a
     real adapter uses — with no network.
     """
 
     def __init__(self, script: list[Message | str]) -> None:
         self.script = list(script)
 
-    def encode(self, agent) -> None:
+    def encode(self, run) -> None:
         return None
 
-    async def send(self, agent, body):
+    async def send(self, run, body):
         if not self.script:
             raise ContractError(
-                f"FakeModel script exhausted after reply {agent.step - 1}"
+                f"FakeModel script exhausted after reply {run.step - 1}"
             )
         answer = self.script.pop(0)
         if isinstance(answer, str):

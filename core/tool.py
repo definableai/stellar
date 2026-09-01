@@ -1,4 +1,4 @@
-"""Two shortcuts: a function becomes a Tool, a function becomes a Hook.
+"""One shortcut: a plain function becomes a Tool.
 
 @tool takes no arguments, on purpose. Want a different name, description or
 schema? Write a Tool subclass — that is what the class is for.
@@ -8,7 +8,7 @@ import asyncio
 import inspect
 from typing import get_origin
 
-from core.contracts import EVENTS, Hook, Tool, wrong
+from core.contracts import Tool, wrong
 
 TYPES = {
     str: "string",
@@ -43,7 +43,7 @@ def tool(fn) -> Tool:
     """A plain function becomes a Tool: its name, its docstring, its signature.
 
     A sync function runs in a thread, an async one is awaited, and an async
-    generator streams — every Part it yields rings tool_delta.
+    generator streams — every Part it yields rings tool.delta.
     """
     if any(p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
            for p in inspect.signature(fn).parameters.values()):
@@ -70,12 +70,3 @@ def tool(fn) -> Tool:
         "parameters": schema(fn),
         "execute": execute,
     })()
-
-
-def on(event: str, fn) -> Hook:
-    """A plain function becomes a Hook that listens for one event."""
-    if event not in EVENTS:
-        raise wrong(
-            "hook", f"{event!r} is not an event; pick one of: " + ", ".join(EVENTS)
-        )
-    return type(f"On_{event}", (Hook,), {event: lambda self, agent: fn(agent)})()

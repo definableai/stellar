@@ -10,10 +10,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    ContractError, Hook, Message, Model, Part, ProviderModel, Stop, Tool,
-    ToolCall,
+    ContractError, Message, Model, Part, ProviderModel, Stop, Tool, ToolCall,
 )
-from core.contracts import EVENTS, SKELETONS, fold  # noqa: E402
+from core.contracts import PAYLOAD, SKELETONS, STAGES, fold  # noqa: E402
 
 
 def test_part() -> None:
@@ -122,20 +121,19 @@ def test_the_contracts_are_async_only() -> None:
             raise AssertionError(f"{name} should have raised")
 
 
-def test_hook_methods_are_the_events() -> None:
-    hook = Hook()
-    assert len(EVENTS) == 8
-    for name in EVENTS:
-        assert getattr(hook, name)(None) is None
+def test_every_stage_hands_over_something() -> None:
+    assert len(STAGES) == 8
+    assert set(PAYLOAD) == set(STAGES)
+    assert all(stage.count(".") == 1 for stage in STAGES)
+    assert PAYLOAD["tool.post"] == (ToolCall, Message)   # the only pair
 
 
 def test_skeletons() -> None:
-    assert set(SKELETONS) == {"model", "provider", "tool", "hook", "stage"}
+    assert set(SKELETONS) == {"model", "provider", "tool", "hook"}
     assert "Model" in SKELETONS["model"]
     assert "ProviderModel" in SKELETONS["provider"]
     assert "Tool" in SKELETONS["tool"]
-    assert "Hook" in SKELETONS["hook"]
-    assert "@hook" in SKELETONS["stage"]
+    assert "@hook" in SKELETONS["hook"]
     assert "async def" in SKELETONS["model"]
     assert "async def" in SKELETONS["tool"]
 
@@ -159,7 +157,7 @@ if __name__ == "__main__":
         test_fold_merges_meta_later_keys_winning,
         test_fold_never_mutates_the_part_it_was_handed,
         test_the_contracts_are_async_only,
-        test_hook_methods_are_the_events,
+        test_every_stage_hands_over_something,
         test_skeletons,
         test_signals_are_exceptions,
     ):

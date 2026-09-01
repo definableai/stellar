@@ -1,6 +1,6 @@
 """Permission: the guard at the tool gate, answering before a tool runs."""
 
-from core import Hook
+# ponytail: 06 rewrites these as @hook functions
 
 
 def matches(rule, agent, call) -> bool:
@@ -19,7 +19,7 @@ async def asked(agent, call) -> str | None:
     return None if said == "allow" else f"denied: {call.name}"
 
 
-class Permission(Hook):
+class Permission:
     """deny wins; an allow list then settles it alone; only then is a human asked."""
 
     def __init__(self, deny=None, allow=None, ask: bool = False) -> None:

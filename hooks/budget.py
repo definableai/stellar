@@ -1,11 +1,11 @@
 """Budget: how many tokens the run may spend."""
 
-from core import Hook, Stop
+from core import Stop  # ponytail: 06 rewrites these as @hook functions
 
 KINDS = ("input_tokens", "output_tokens")
 
 
-class Budget(Hook):
+class Budget:
     """Adds up what every reply cost; ends the run once the total goes past max."""
 
     def __init__(self, max_tokens: int) -> None:

@@ -7,8 +7,9 @@ has to import back.
 
 import inspect
 import json
+from collections.abc import Mapping
 
-from core.contracts import EVENTS, Hook, Model, Stop, Tool, fire, fold, wrong
+from core.contracts import ContractError, Model, Stop, Tool, fire, fold, wrong
 from core.types import Message, ToolCall
 
 
@@ -37,11 +38,16 @@ def check(agent) -> None:
     if _sync(invoke):
         raise wrong("model", f"{type(agent.model).__name__}.invoke must be "
                     "async — sync code is one asyncio.to_thread line inside it")
-    seen = set()
-    for tool in agent.tools:
+    if not isinstance(agent.tools, Mapping):
+        raise wrong("tool", "agent.tools is a mapping of name to tool; the "
+                    "constructor keys an iterable for you, so hand it one")
+    for filed, tool in agent.tools.items():
         name = getattr(tool, "name", None)
         if not name:
             raise wrong("tool", f"{type(tool).__name__} needs a name")
+        if filed != name:
+            raise wrong("tool", f"tool {name!r} is filed under {filed!r}; "
+                        "the key is the name")
         if not isinstance(getattr(tool, "parameters", None), dict):
             raise wrong("tool", f"tool {name!r} needs parameters to be a dict")
         execute = _own(tool, Tool, "execute")
@@ -50,16 +56,6 @@ def check(agent) -> None:
         if _sync(execute):
             raise wrong("tool", f"tool {name!r}.execute must be async — sync "
                         "code is one asyncio.to_thread line inside it")
-        if name in seen:
-            raise wrong("tool", f"two tools answer to {name!r}")
-        seen.add(name)
-    for hook in agent.hooks:
-        if not any(_own(hook, Hook, event) for event in EVENTS):
-            raise wrong(
-                "hook",
-                f"{type(hook).__name__} listens for nothing; write one of: "
-                + ", ".join(EVENTS),
-            )
 
 
 def coerce(result, call: ToolCall) -> Message:
@@ -73,66 +69,73 @@ def coerce(result, call: ToolCall) -> Message:
     return Message("tool", result, tool_call_id=call.id)
 
 
-async def _use(agent, tool, call) -> None:
-    """Run one tool. An async generator streams: each Part rings tool_delta."""
-    out = tool.execute(agent, **call.args)
+async def use(run, tool, call: ToolCall):
+    """Run one tool. An async generator streams: each Part rings tool.delta."""
+    out = tool.execute(run, **call.args)
     if not inspect.isasyncgen(out):
-        agent.result = await out
-        return
-    agent.result = Message("tool", tool_call_id=call.id)
-    try:
-        async for part in out:
-            fold(agent.result, part)
-            agent.delta = part
-            await fire(agent, "tool_delta")
-    finally:
-        agent.delta = None
+        return await out
+    result = Message("tool", tool_call_id=call.id)
+    async for part in out:
+        [part] = await fire(run, "tool.delta", part)      # hook before fold
+        fold(result, part)
+        run.emit("tool.delta", part, source=call.name)
+    return result
 
 
-async def run(agent):
+async def run(run):
     """Ask, act, repeat. Ends when the model stops asking for tools."""
     try:
-        await fire(agent, event="run_pre")
+        [run.messages[-1]] = await fire(run, "run.pre", run.messages[-1])
+        run.emit("run.pre", run.messages[-1], source="loop")
         while True:
-            check(agent)                     # the wiring may have changed
-            agent.step += 1
-            await fire(agent, event="model_pre")
-            answer = await agent.model.invoke(agent)
+            check(run.agent)                     # the wiring may have changed
+            run.step += 1
+            [said] = await fire(run, "model.pre", run.messages)
+            run.messages = list(said)            # a replacement is permanent
+            run.emit("model.pre", list(said), source="loop")  # a copy: the log
+                                                 # must not grow with the run
+            answer = await run.agent.model.invoke(run)
             if not isinstance(answer, Message):
                 raise wrong(
                     kind="model",
-                    problem=f"{type(agent.model).__name__}.invoke returned "
+                    problem=f"{type(run.agent.model).__name__}.invoke returned "
                     f"{type(answer).__name__}, expected Message",
                 )
-            agent.response = answer
-            await fire(agent, event="model_post")
-            agent.messages.append(agent.response)   # a hook may have swapped it
-            calls = agent.response.tool_calls
-            if not calls:
+            [answer] = await fire(run, "model.post", answer)
+            run.emit("model.post", answer, source="loop")
+            run.messages.append(answer)
+            if not answer.tool_calls:
                 break
-            for call in calls:
-                agent.call, agent.result = call, None
-                await fire(agent, event="tool_pre")       # a filled result means denied
-                if agent.result is None:
-                    tool = next((t for t in agent.tools if t.name == call.name), None)
+            for call in answer.tool_calls:
+                out = await fire(run, "tool.pre", call)
+                if isinstance(out, tuple):
+                    call, result = out[0], None
+                else:
+                    result = out                 # a str or Message: denied
+                run.emit("tool.pre", call, source="loop")
+                if result is None:
+                    tool = run.agent.tools.get(call.name)
                     if tool is None:
-                        agent.result = f"error: unknown tool: {call.name}"
+                        result = f"error: unknown tool: {call.name}"
                     else:
                         try:
-                            await _use(agent, tool, call)
-                        except Stop:
-                            raise                   # Stop always means stop
-                        except Exception as ex:
-                            agent.result = f"error: {type(ex).__name__}: {ex}"
-                agent.result = coerce(agent.result, call)
-                await fire(agent, event="tool_post")      # this always sees a message
-                agent.messages.append(agent.result)
-                agent.call = agent.result = None
+                            result = await use(run, tool, call)
+                        except (Stop, ContractError):
+                            raise                # stop means stop; a broken
+                        except Exception as ex:  # contract stays loud
+                            result = f"error: {type(ex).__name__}: {ex}"
+                result = coerce(result, call)
+                [call, result] = await fire(run, "tool.post", call, result)
+                run.emit("tool.post", result, source="loop")
+                run.messages.append(result)
     except Stop:
         pass
     finally:
+        last = run.messages[-1] if run.messages else Message("assistant")
         try:
-            await fire(agent, event="run_post")           # teardown, no matter what
+            await fire(run, "run.post", last)    # teardown, no matter what
         except Stop:
-            pass                                    # too late to stop; ignore
-    return agent
+            pass                                 # too late to stop; ignore
+        finally:
+            run.emit("run.post", last, source="loop")   # streams end on this
+    return run

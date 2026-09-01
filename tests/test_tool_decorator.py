@@ -1,4 +1,4 @@
-"""@tool and on(): a plain function becomes a Tool, or a Hook.
+"""@tool: a plain function becomes a Tool.
 
 Run: uv run python tests/test_tool_decorator.py
 """
@@ -10,9 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    Agent, ContractError, FakeModel, Message, Part, ToolCall, check, on, tool,
+    Agent, FakeModel, Message, Part, Run, ToolCall, check, tool,
 )
-from core.contracts import EVENTS  # noqa: E402
 
 
 @tool
@@ -71,11 +70,11 @@ def test_every_hint_has_a_type() -> None:
     assert kinds.parameters["required"] == list("abcdefgh")
 
 
-def test_the_agent_is_injected_only_when_declared() -> None:
-    agent = Agent(FakeModel([]), messages=[Message("user", "hi")])
+def test_the_run_is_injected_only_when_declared() -> None:
+    run = Run(Agent(FakeModel([])), "r1", [Message("user", "hi")])
     assert counter.parameters["properties"] == {}    # the model never sees it
-    assert asyncio.run(counter.execute(agent)) == 1
-    assert asyncio.run(shout.execute(agent, word="hi")) == "HI "    # not passed on
+    assert asyncio.run(counter.execute(run)) == 1
+    assert asyncio.run(shout.execute(run, word="hi")) == "HI "    # not passed on
 
 
 def test_sync_and_async_functions_both_work() -> None:
@@ -90,56 +89,26 @@ def test_sync_and_async_functions_both_work() -> None:
 
 def test_a_decorated_tool_runs_end_to_end() -> None:
     asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
-    agent = Agent(FakeModel([asked, "done"]), [shout])
-    asyncio.run(agent.run())
-    assert agent.messages[1].text == "HI "
-    assert agent.messages[1].tool_call_id == "c1"
+    said = asyncio.run(Agent(FakeModel([asked, "done"]), [shout]).run("go")).messages
+    assert said[2].text == "HI "
+    assert said[2].tool_call_id == "c1"
 
 
 def test_an_async_generator_streams_end_to_end() -> None:
     asked = Message("assistant", "", [ToolCall("c1", "told", {"word": "hi"})])
-    agent = Agent(FakeModel([asked, "done"]), [told])
-    asyncio.run(agent.run())
-    assert agent.messages[1].text == "HI"            # letters folded into one
-    assert agent.messages[1].tool_call_id == "c1"
-
-
-def test_on_rejects_a_typo() -> None:
-    try:
-        on("run_pre_", lambda agent: None)
-    except ContractError as e:
-        for event in EVENTS:
-            assert event in str(e), f"{event} is missing from the message"
-    else:
-        raise AssertionError("a misspelt event name is a typo, not a new event")
-
-
-def test_on_builds_a_hook_that_passes_check_and_fires() -> None:
-    log = []
-
-    async def later(agent) -> None:
-        log.append("run_post")
-
-    agent = Agent(
-        FakeModel(["hi"]),
-        hooks=[on("run_pre", lambda agent: log.append("run_pre")),
-               on("run_post", later)],
-    )
-    check(agent)                                     # __post_init__ said so too
-    asyncio.run(agent.run())
-    assert log == ["run_pre", "run_post"]
+    said = asyncio.run(Agent(FakeModel([asked, "done"]), [told]).run("go")).messages
+    assert said[2].text == "HI"                      # letters folded into one
+    assert said[2].tool_call_id == "c1"
 
 
 if __name__ == "__main__":
     for test in (
         test_schema_comes_from_the_signature,
         test_every_hint_has_a_type,
-        test_the_agent_is_injected_only_when_declared,
+        test_the_run_is_injected_only_when_declared,
         test_sync_and_async_functions_both_work,
         test_a_decorated_tool_runs_end_to_end,
         test_an_async_generator_streams_end_to_end,
-        test_on_rejects_a_typo,
-        test_on_builds_a_hook_that_passes_check_and_fires,
     ):
         test()
         print(f"  ok {test.__name__}")

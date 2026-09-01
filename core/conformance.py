@@ -28,20 +28,16 @@ def wrong(number: int, expected: str, messages) -> ContractError:
 
 async def exchanges(model) -> None:
     """Talk to the model three times and read what lands in the notebook."""
-    agent = Agent(model)
-    await agent.run(PLAIN)
-    said = agent.messages
+    said = (await Agent(model).run(PLAIN)).messages
     if not said or said[-1].role != "assistant" or not said[-1].content:
         raise wrong(1, "an assistant message with content", said)
 
-    agent = Agent(model, [echo])
-    await agent.run(ROUND)
-    said = agent.messages
+    said = (await Agent(model, [echo]).run(ROUND)).messages
     asked = next((i for i, m in enumerate(said) if m.tool_calls), None)
     if asked is None:
         raise wrong(2, "an assistant message carrying tool_calls — does send "
                        "yield them as tool_call Parts, and does encode put "
-                       "agent.tools in the body?",
+                       "run.agent.tools in the body?",
                     said)
     call = said[asked].tool_calls[0]
     if not isinstance(call.args, dict):

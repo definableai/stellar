@@ -1,9 +1,9 @@
 """Steps: how many turns the agent gets with the model."""
 
-from core import Hook, Stop
+from core import Stop  # ponytail: 06 rewrites these as @hook functions
 
 
-class Steps(Hook):
+class Steps:
     """A ration of model calls. Steps(3) buys exactly three replies."""
 
     def __init__(self, n: int) -> None:

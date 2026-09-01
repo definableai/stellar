@@ -1,17 +1,15 @@
-"""What you implement: Model, Tool, Hook — plus the two control signals.
+"""What you implement: Model, Tool, hooks — plus the two control signals.
 
-Everything is async and every method takes one argument, the agent. There
-are no sync twins and no bridges: sync code is one asyncio.to_thread line
-the implementer writes inside the async method.
+Everything is async. A Model or a Tool takes one argument, the run; a hook
+takes the payload of its stage, and the run behind it if it asks. There are
+no sync twins and no bridges: sync code is one asyncio.to_thread line the
+implementer writes inside the async method.
 """
 
 import inspect
-from typing import Any, AsyncIterator, Awaitable, cast
+from typing import Any, AsyncIterator, cast
 
 from core.types import Message, Part, ToolCall
-
-EVENTS = ("run_pre", "model_pre", "model_delta", "model_post",
-          "tool_pre", "tool_delta", "tool_post", "run_post")
 
 STAGES = ("run.pre", "model.pre", "model.delta", "model.post",
           "tool.pre", "tool.delta", "tool.post", "run.post")
@@ -29,15 +27,6 @@ class ContractError(Exception):
 
 class Stop(Exception):
     """End the run cleanly. Raise it from any hook or tool."""
-
-
-async def fire(agent, event: str) -> None:
-    """Ring one bell. Every hook hears it, in list order."""
-    for hook in list(agent.hooks):           # a hook may add hooks mid-ring
-        listen = getattr(hook, event, None)
-        answer = listen(agent) if listen else None
-        if inspect.isawaitable(answer):
-            await answer
 
 
 def fold(message: Message, part: Part) -> None:
@@ -69,7 +58,7 @@ def fold(message: Message, part: Part) -> None:
 class Model:
     """The brain. Override invoke — async — and hand back a Message."""
 
-    async def invoke(self, agent) -> Message:
+    async def invoke(self, run) -> Message:
         raise NotImplementedError("invoke")
 
 
@@ -85,35 +74,32 @@ class ProviderModel(Model):
 
     encode is pure translation. send owns the network — retries live there —
     and yields Parts; a provider that does not stream yields them off one
-    response. invoke folds them into the reply and rings model_delta per
-    Part, so streaming UIs are written once and work with every adapter.
+    response. invoke rings model.delta per Part and folds what comes back,
+    so streaming UIs are written once and work with every adapter.
     """
 
-    def encode(self, agent) -> Any:
+    def encode(self, run) -> Any:
         raise _todo("encode")
 
-    def send(self, agent, body) -> AsyncIterator[Part]:
+    def send(self, run, body) -> AsyncIterator[Part]:
         raise _todo("send")
 
-    async def invoke(self, agent) -> Message:
-        answer = agent.response = Message("assistant")
-        try:
-            async for part in self.send(agent, self.encode(agent)):
-                if not isinstance(part, Part):
-                    raise wrong("provider", f"{type(self).__name__}.send "
-                                f"yielded {type(part).__name__}, expected Part")
-                fold(answer, part)
-                agent.delta = part
-                await fire(agent, "model_delta")
-        finally:
-            agent.delta = None
+    async def invoke(self, run) -> Message:
+        answer = Message("assistant")
+        async for part in self.send(run, self.encode(run)):
+            if not isinstance(part, Part):
+                raise wrong("provider", f"{type(self).__name__}.send "
+                            f"yielded {type(part).__name__}, expected Part")
+            [part] = await fire(run, "model.delta", part)   # hook before fold
+            fold(answer, part)
+            run.emit("model.delta", part, source="loop")
         return answer
 
 
 class Tool:
     """One thing the agent can do. Override execute — async.
 
-    An async generator works too: each Part it yields rings tool_delta and
+    An async generator works too: each Part it yields rings tool.delta and
     folds into the tool message, same protocol as a streaming model.
     """
 
@@ -121,7 +107,7 @@ class Tool:
     description: str = ""
     parameters: dict[str, Any] = {"type": "object", "properties": {}}  # read-only
 
-    # the real shape is (self, agent, **args); typed loose so an override
+    # the real shape is (self, run, **args); typed loose so an override
     # may name the args its schema promises without an override complaint
     async def execute(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError("execute")
@@ -132,39 +118,6 @@ def wrong(kind: str, problem: str) -> ContractError:
     return ContractError(f"{problem}\n\n{SKELETONS[kind]}")
 
 
-class Hook:
-    """Rule cards. Override the moments you care about; the rest do nothing.
-
-    The eight method names are the eight event names. Each may be sync or
-    async. At a delta the Part is agent.delta, already folded into
-    agent.response (model) or agent.result (tool).
-    """
-
-    def run_pre(self, agent) -> Awaitable[None] | None:
-        """The run is about to start."""
-
-    def model_pre(self, agent) -> Awaitable[None] | None:
-        """The model is about to be asked."""
-
-    def model_delta(self, agent) -> Awaitable[None] | None:
-        """The model streamed one Part — agent.delta."""
-
-    def model_post(self, agent) -> Awaitable[None] | None:
-        """The model just answered."""
-
-    def tool_pre(self, agent) -> Awaitable[None] | None:
-        """A tool is about to run."""
-
-    def tool_delta(self, agent) -> Awaitable[None] | None:
-        """A tool yielded one Part — agent.delta."""
-
-    def tool_post(self, agent) -> Awaitable[None] | None:
-        """A tool just finished."""
-
-    def run_post(self, agent) -> Awaitable[None] | None:
-        """The run is over. This always happens."""
-
-
 def _who(fn) -> str:
     """What to call a hook in a complaint."""
     return getattr(fn, "__name__", type(fn).__name__)
@@ -173,11 +126,11 @@ def _who(fn) -> str:
 def _named(stages, who: str) -> tuple[str, ...]:
     """The stage names, checked. Nobody gets to listen for nothing."""
     if not stages:
-        raise wrong("stage", f"{who} listens for nothing; name a stage: "
+        raise wrong("hook", f"{who} listens for nothing; name a stage: "
                     + ", ".join(STAGES))
     for stage in stages:
         if stage not in STAGES:
-            raise wrong("stage", f"{stage!r} is not a stage; pick one of: "
+            raise wrong("hook", f"{stage!r} is not a stage; pick one of: "
                         + ", ".join(STAGES))
     return tuple(stages)
 
@@ -188,7 +141,7 @@ def _wants_run(fn, stage: str) -> bool:
              if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
     hands = len(PAYLOAD[stage])
     if len(takes) not in (hands, hands + 1):
-        raise wrong("stage", f"{_who(fn)} does not fit {stage}, which hands over "
+        raise wrong("hook", f"{_who(fn)} does not fit {stage}, which hands over "
                     + ", ".join(t.__name__ for t in PAYLOAD[stage])
                     + " — take those, and run after them if you want it")
     return len(takes) == hands + 1
@@ -215,7 +168,7 @@ class Hooks:
         """File one function: the stages named here, else the ones @hook tagged."""
         wanted = _named(stages or getattr(fn, "stages", ()), _who(fn))
         if not inspect.iscoroutinefunction(fn):
-            raise wrong("stage", f"{_who(fn)} must be async — write async def; "
+            raise wrong("hook", f"{_who(fn)} must be async — write async def; "
                         "sync work is one asyncio.to_thread line inside it")
         for stage, with_run in [(s, _wants_run(fn, s)) for s in wanted]:
             self.fns[stage].append((fn, with_run))   # sniffed all, then filed all
@@ -244,17 +197,19 @@ class Hooks:
             if not isinstance(out, want):
                 takes = ("ToolCall, str or Message" if stage == "tool.pre"
                          else want.__name__)
-                raise wrong("stage", f"{_who(fn)} at {stage} returned "
+                raise wrong("hook", f"{_who(fn)} at {stage} returned "
                             f"{type(out).__name__}; return {takes}, or None to "
                             "leave it alone")
             payload = payload[:-1] + (out,)
         return payload
 
 
-async def ring(run, stage: str, *payload) -> Any:
-    """Both registries: the agent's cards first, then this run's own.
+async def fire(run, stage: str, *payload) -> Any:
+    """Ring one stage: the agent's cards first, then this run's own.
 
-    Becomes fire when the old bells retire (task 03).
+    Hands back the payload as a tuple, threaded through every hook — except
+    at tool.pre, where a str or a Message means the tool is skipped and that
+    is its result.
     """
     out = await run.agent.hooks.fire(stage, run, *payload)
     if not isinstance(out, tuple):
@@ -264,16 +219,16 @@ async def ring(run, stage: str, *payload) -> Any:
 
 SKELETONS: dict[str, str] = {
     "model": """class MyModel(Model):
-    async def invoke(self, agent) -> Message:
-        said = await asyncio.to_thread(my_sdk.complete, agent.messages)
+    async def invoke(self, run) -> Message:
+        said = await asyncio.to_thread(my_sdk.complete, run.messages)
         return Message("assistant", said)
 """,
     "provider": """class MyProvider(ProviderModel):
-    def encode(self, agent) -> dict:           # pure: every message — including
+    def encode(self, run) -> dict:             # pure: every message — including
         ...                                    # tool_calls and tool_call_id — plus
-                                               # agent.tools, as one request body
+                                               # run.agent.tools, as one request body
 
-    async def send(self, agent, body):         # the network call; retries live
+    async def send(self, run, body):           # the network call; retries live
         ...                                    # here. Yield Parts: "text" deltas,
         yield Part("text", "…")                # whole "tool_call" ToolCalls,
                                                # one "meta" dict
@@ -283,16 +238,12 @@ SKELETONS: dict[str, str] = {
     description = "Shout a word."
     parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
 
-    async def execute(self, agent, word):
+    async def execute(self, run, word):
         return word.upper()
 
 # or decorate a plain function with @tool — sync, async, or async generator
 """,
-    "hook": """class MyHook(Hook):
-    def run_pre(self, agent) -> None:
-        print("starting with", len(agent.messages), "messages")
-""",
-    "stage": """@hook("tool.pre")
+    "hook": """@hook("tool.pre")
 async def no_rm(call: ToolCall):        # add a trailing `run` arg if you need it
     if call.name == "rm":
         return "denied"                 # the tool is skipped; this is its result

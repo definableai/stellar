@@ -1,43 +1,84 @@
-"""The agent: one bag holding everything, and one method to run it."""
+"""Two nouns: the Agent you build once, and the Run it starts each time."""
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from typing import Any
+from uuid import uuid4
 
-from core.contracts import Hook, Model, Tool
+from core.contracts import ContractError, Hooks, Model, Tool, wrong
+from core.events import Event, Events
 from core.loop import check, run
-from core.types import Message, Part, ToolCall
+from core.types import Message
 
 
 @dataclass
 class Agent:
-    """A robot with one backpack. Swap any part by assignment, even mid-run."""
+    """A robot with one backpack, shared by every run it starts.
 
-    # harness — what it brought.
+    Swap any part by assignment: check() reads the whole backpack again at
+    the top of every step. agent.hooks.attach mid-flight reaches every run
+    already in the air, at its next stage; run.hooks is the isolated lane.
+    A hundred users is asyncio.gather(*(agent.run(p) for p in prompts)).
+    """
+
     model: Model
-    tools: list[Tool] = field(default_factory=list)
-    hooks: list[Hook] = field(default_factory=list)
-    # memory — what happened. This is what you checkpoint.
-    messages: list[Message] = field(default_factory=list)
-    step: int = 0
-    # in flight — hooks read these and may replace them.
-    response: Message | None = None
-    call: ToolCall | None = None
-    result: Message | None = None
-    delta: Part | None = None            # the Part a delta bell is about
+    # hand it either; after __post_init__ it is always the mapping
+    tools: Iterable[Tool] | Mapping[str, Tool] = ()
+    hooks: Hooks = field(default_factory=Hooks)          # control plane
+    events: Events = field(default_factory=Events)       # data plane
     # the spare pocket. Namespaced keys: extra["budget.tokens"].
     extra: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.tools, Mapping):
+            filed: dict = {}                 # a nameless one files under None
+            for tool in self.tools:          # and check() says so in a moment
+                name = getattr(tool, "name", None)
+                if name in filed:
+                    raise wrong("tool", f"two tools answer to {name!r}")
+                filed[name] = tool
+            self.tools = filed
         check(self)
 
-    async def run(self, input: str | Message | None = None) -> Message | None:
+    async def run(self, prompt: str | Message | None = None, *,
+                  messages: list[Message] | None = None,
+                  run_id: str | None = None) -> "Run":
         """Ask, act, repeat. The only method; the work is in core/loop.py.
 
-        A str becomes a user message; a Message is appended as-is; None runs
-        on the messages already there. Gives back the last message.
+        A str prompt becomes a user message, a Message is taken as it is,
+        and messages= opens the notebook — with run_id, that is a resume.
+        Gives back the Run: its notebook, its step count, its id.
         """
-        if isinstance(input, str):
-            input = Message("user", input)
-        if input is not None:
-            self.messages.append(input)
-        await run(self)                      # the loop's run, not this one
-        return self.messages[-1] if self.messages else None
+        said = list(messages or [])
+        if prompt is not None:
+            said.append(prompt if isinstance(prompt, Message)
+                        else Message("user", prompt))
+        if not said:
+            raise ContractError("run needs a prompt or messages")
+        return await run(Run(self, run_id or uuid4().hex, said))  # the loop's run
+
+
+@dataclass
+class Run:
+    """One conversation: its own notebook, its own hooks, its own id.
+
+    What pickles is the checkpoint — id, messages, step, extra — so a Run
+    survives a restart and agent.run(messages=…, run_id=…) picks it back up.
+    """
+
+    agent: Agent
+    id: str
+    messages: list[Message]
+    step: int = 0
+    hooks: Hooks = field(default_factory=Hooks)
+    extra: dict = field(default_factory=dict)
+
+    def emit(self, name: str, data: Any = None,
+             source: str | None = None) -> Event:
+        """Say one thing on the agent's bus, stamped with this run's id."""
+        return self.agent.events.emit(name, data, source, run_id=self.id)
+
+    def __getstate__(self) -> dict:
+        """The checkpoint: everything except the wiring."""
+        return {"id": self.id, "messages": self.messages, "step": self.step,
+                "extra": self.extra}

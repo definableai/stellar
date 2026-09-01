@@ -7,7 +7,7 @@ does; it may be sync or async. Payloads are JSON-safe.
 
 import inspect
 
-from core import Hook
+# ponytail: 06 rewrites these as @hook functions
 
 
 def delta(agent) -> dict:
@@ -16,7 +16,7 @@ def delta(agent) -> dict:
     return {"type": d.type, "text": d.data if d.type == "text" else None}
 
 
-class Log(Hook):
+class Log:
     """Eight methods, eight event names, one listener."""
 
     def __init__(self, emit) -> None:
