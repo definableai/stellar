@@ -14,7 +14,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 
-from core import Agent, Message, Part, ToolCall, check_model, tool  # noqa: E402
+from core import (  # noqa: E402
+    Agent, Message, Part, Run, ToolCall, check_model, tool,
+)
 from models.anthropic import Anthropic  # noqa: E402
 
 BODIES = [
@@ -93,10 +95,15 @@ class Canned(Anthropic):
         return self.bodies[len(self.sent) - 1]
 
 
+def encoded(model, messages, tools=()) -> dict:
+    """One request body, off a Run built by hand: encode needs no loop."""
+    return model.encode(Run(Agent(model, tools), "rid", list(messages)))
+
+
 def decoded(body: dict) -> Message:
     """One canned reply through the real send-and-fold path."""
     model = Canned([body])
-    return asyncio.run(model.invoke(Agent(model)))
+    return asyncio.run(model.invoke(Run(Agent(model), "rid", [])))
 
 
 def test_canned_replies_pass_check_model() -> None:
@@ -111,11 +118,10 @@ def test_canned_replies_pass_check_model() -> None:
 
 
 def test_system_messages_go_to_the_top() -> None:
-    agent = Agent(Anthropic(api_key="x", max_tokens=64, stop_sequences=["END"]),
-                  messages=[Message("system", "Be brief."),
-                            Message("user", "hi"),
-                            Message("system", "Be kind too.")])
-    body = agent.model.encode(agent)
+    body = encoded(Anthropic(api_key="x", max_tokens=64, stop_sequences=["END"]),
+                   [Message("system", "Be brief."),
+                    Message("user", "hi"),
+                    Message("system", "Be kind too.")])
     assert body["system"] == "Be brief.\n\nBe kind too."
     assert body["messages"] == [
         {"role": "user", "content": [{"type": "text", "text": "hi"}]}
@@ -125,10 +131,9 @@ def test_system_messages_go_to_the_top() -> None:
 
 
 def test_tool_results_in_a_row_become_one_turn() -> None:
-    agent = Agent(
+    body = encoded(
         Anthropic(api_key="x"),
-        [echo],
-        messages=[
+        [
             Message("user", "echo a and b"),
             Message("assistant", "", [ToolCall("t1", "echo", {"text": "a"}),
                                       ToolCall("t2", "echo", {"text": "b"})]),
@@ -136,8 +141,8 @@ def test_tool_results_in_a_row_become_one_turn() -> None:
             Message("tool", "b", tool_call_id="t2"),
             Message("user", "thanks"),
         ],
+        [echo],
     )
-    body = agent.model.encode(agent)
     assert [t["role"] for t in body["messages"]] == [
         "user", "assistant", "user", "user"
     ]
@@ -159,12 +164,12 @@ def test_tool_results_in_a_row_become_one_turn() -> None:
 
 
 def test_parts_become_content_blocks() -> None:
-    agent = Agent(Anthropic(api_key="x"), messages=[Message("user", [
+    body = encoded(Anthropic(api_key="x"), [Message("user", [
         Part("text", "what is this?"),
         Part("image", {"media_type": "image/png", "data": "aGk="}),
         Part("image", {"url": "https://example.com/cat.png"}),
     ])])
-    assert agent.model.encode(agent)["messages"][0]["content"] == [
+    assert body["messages"][0]["content"] == [
         {"type": "text", "text": "what is this?"},
         {"type": "image", "source": {"type": "base64", "media_type": "image/png",
                                      "data": "aGk="}},
@@ -199,9 +204,8 @@ def test_a_block_we_do_not_know_passes_through_untouched() -> None:
         Part("thinking", MIXED["content"][0]),
         Part("text", "half one half two"),           # halves folded into one
     ]
-    model = Anthropic(api_key="x")
-    agent = Agent(model, messages=[Message("user", "hi"), answer])
-    assert model.encode(agent)["messages"][1]["content"] == [
+    body = encoded(Anthropic(api_key="x"), [Message("user", "hi"), answer])
+    assert body["messages"][1]["content"] == [
         MIXED["content"][0],
         {"type": "text", "text": "half one half two"},
     ]

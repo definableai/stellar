@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from core import (  # noqa: E402
-    Agent, ContractError, Message, Part, ToolCall, check_model, tool,
+    Agent, ContractError, Message, Part, Run, ToolCall, check_model, tool,
 )
 from models.openai import OpenAI  # noqa: E402
 
@@ -61,10 +61,15 @@ class Canned(OpenAI):
         return self.script.pop(0)
 
 
+def encoded(model, messages, tools=()) -> dict:
+    """One request body, off a Run built by hand: encode needs no loop."""
+    return model.encode(Run(Agent(model, tools), "rid", list(messages)))
+
+
 def decoded(body: dict) -> Message:
     """One canned reply through the real send-and-fold path."""
     model = Canned([body])
-    return asyncio.run(model.invoke(Agent(model)))
+    return asyncio.run(model.invoke(Run(Agent(model), "rid", [])))
 
 
 def test_three_canned_replies_pass_the_check() -> None:
@@ -74,9 +79,9 @@ def test_three_canned_replies_pass_the_check() -> None:
 
 
 def test_the_body_carries_the_notebook_and_the_toolbox() -> None:
-    agent = Agent(OpenAI(temperature=0), [echo],
-                  messages=[Message("system", "be brief"), Message("user", "hi")])
-    body = agent.model.encode(agent)
+    body = encoded(OpenAI(temperature=0),
+                   [Message("system", "be brief"), Message("user", "hi")],
+                   [echo])
     assert body["model"] == "gpt-5.6-luna"
     assert body["temperature"] == 0              # **params ride along
     assert body["messages"] == [                 # system stays a message
@@ -86,7 +91,7 @@ def test_the_body_carries_the_notebook_and_the_toolbox() -> None:
     assert body["tools"] == [{"type": "function", "function": {
         "name": "echo", "description": "Repeat the text back.",
         "parameters": echo.parameters}}]
-    assert "tools" not in OpenAI().encode(Agent(OpenAI()))        # empty toolbox
+    assert "tools" not in encoded(OpenAI(), [])                   # empty toolbox
 
 
 def test_tool_calls_round_trip() -> None:
@@ -94,8 +99,7 @@ def test_tool_calls_round_trip() -> None:
     assert asked.tool_calls == [ToolCall("call_abc123", "echo", {"text": "hi"})]
 
     answered = Message("tool", "hi", tool_call_id="call_abc123")
-    agent = Agent(OpenAI(), messages=[asked, answered])
-    said = agent.model.encode(agent)["messages"]
+    said = encoded(OpenAI(), [asked, answered])["messages"]
     assert said[0]["tool_calls"] == [{
         "id": "call_abc123", "type": "function",
         "function": {"name": "echo", "arguments": '{"text": "hi"}'},   # a string
@@ -125,12 +129,12 @@ def test_unparseable_arguments_keep_the_raw_string() -> None:
 
 
 def test_parts_open_into_content_parts() -> None:
-    agent = Agent(OpenAI(), messages=[Message("user", [
+    body = encoded(OpenAI(), [Message("user", [
         Part("text", "what is this?"),
         Part("image", {"url": "https://example.com/cat.png"}),
         Part("image", {"media_type": "image/png", "data": "aGk="}),
     ])])
-    assert agent.model.encode(agent)["messages"][0]["content"] == [
+    assert body["messages"][0]["content"] == [
         {"type": "text", "text": "what is this?"},
         {"type": "image_url",
          "image_url": {"url": "https://example.com/cat.png"}},
@@ -140,9 +144,8 @@ def test_parts_open_into_content_parts() -> None:
 
 
 def test_a_part_type_the_wire_never_heard_of_says_so() -> None:
-    agent = Agent(OpenAI(), messages=[Message("user", [Part("sound", b"...")])])
     try:
-        agent.model.encode(agent)
+        encoded(OpenAI(), [Message("user", [Part("sound", b"...")])])
     except ContractError as e:
         assert "'sound'" in str(e)
     else:

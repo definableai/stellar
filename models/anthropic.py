@@ -12,7 +12,7 @@ from typing import cast
 
 import httpx
 
-from core import Agent, ContractError, Message, Part, ProviderModel, ToolCall
+from core import ContractError, Message, Part, ProviderModel, Run, ToolCall
 
 VERSION = "2023-06-01"
 
@@ -60,12 +60,12 @@ class Anthropic(ProviderModel):
         self.max_tokens = max_tokens
         self.params = params            # temperature, stop_sequences, whatever else
 
-    def encode(self, agent: Agent) -> dict:
-        """The notebook and the toolbox, as one request body."""
+    def encode(self, run: Run) -> dict:
+        """This run's notebook and the agent's toolbox, as one request body."""
         system: list[str] = []
         turns: list[dict] = []
         merging = False
-        for m in agent.messages:
+        for m in run.messages:
             if m.role == "system":
                 system.append(m.text)
             elif m.role == "tool":
@@ -83,15 +83,15 @@ class Anthropic(ProviderModel):
                 "messages": turns, **self.params}
         if system:
             body["system"] = "\n\n".join(system)
-        if agent.tools:
+        if run.agent.tools:
             body["tools"] = [
                 {"name": t.name, "description": t.description,
                  "input_schema": t.parameters}
-                for t in agent.tools
+                for t in run.agent.tools.values()
             ]
         return body
 
-    async def send(self, agent, body: dict):
+    async def send(self, run, body: dict):
         """POST once, then hand the reply over as Parts."""
         raw = await self.post(body)
         for b in raw.get("content", []):

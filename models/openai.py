@@ -12,7 +12,7 @@ from typing import cast
 
 import httpx
 
-from core import Agent, ContractError, Message, Part, ProviderModel, ToolCall
+from core import ContractError, Message, Part, ProviderModel, Run, ToolCall
 
 
 def part(piece: Part) -> dict:
@@ -78,23 +78,23 @@ class OpenAI(ProviderModel):
         self.base_url = base_url.rstrip("/")
         self.params = params                 # temperature, max_tokens, whatever else
 
-    def encode(self, agent: Agent) -> dict:
-        """The whole notebook and the whole toolbox, as one request body."""
+    def encode(self, run: Run) -> dict:
+        """This run's whole notebook and the whole toolbox, as one request body."""
         body = {
             "model": self.model,
-            "messages": [line(m) for m in agent.messages],
+            "messages": [line(m) for m in run.messages],
             **self.params,
         }
-        if agent.tools:
+        if run.agent.tools:
             body["tools"] = [
                 {"type": "function",
                  "function": {"name": t.name, "description": t.description,
                               "parameters": t.parameters}}
-                for t in agent.tools
+                for t in run.agent.tools.values()
             ]
         return body
 
-    async def send(self, agent, body: dict):
+    async def send(self, run, body: dict):
         """POST once, then hand choice zero over as Parts."""
         raw = await self.post(body)
         choice = raw["choices"][0]
