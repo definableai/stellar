@@ -3,10 +3,13 @@
 Run: uv run python tests/test_openai.py
 """
 
+import asyncio
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from core import (  # noqa: E402
     Agent, ContractError, Message, Part, ToolCall, check_model, tool,
@@ -47,15 +50,21 @@ def echo(text: str) -> str:
 
 
 class Canned(OpenAI):
-    """The same adapter, with the network replaced by a list of replies."""
+    """The same adapter, with the POST replaced by a list of replies."""
 
     def __init__(self, script) -> None:
         super().__init__()
         self.script, self.sent = list(script), []
 
-    async def send(self, body) -> dict:
+    async def post(self, body) -> dict:
         self.sent.append(body)
         return self.script.pop(0)
+
+
+def decoded(body: dict) -> Message:
+    """One canned reply through the real send-and-fold path."""
+    model = Canned([body])
+    return asyncio.run(model.invoke(Agent(model)))
 
 
 def test_three_canned_replies_pass_the_check() -> None:
@@ -65,9 +74,9 @@ def test_three_canned_replies_pass_the_check() -> None:
 
 
 def test_the_body_carries_the_notebook_and_the_toolbox() -> None:
-    agent = Agent(OpenAI(temperature=0), {"echo": echo},
+    agent = Agent(OpenAI(temperature=0), [echo],
                   messages=[Message("system", "be brief"), Message("user", "hi")])
-    body = agent.model.to_provider(agent)
+    body = agent.model.encode(agent)
     assert body["model"] == "gpt-5.6-luna"
     assert body["temperature"] == 0              # **params ride along
     assert body["messages"] == [                 # system stays a message
@@ -77,16 +86,16 @@ def test_the_body_carries_the_notebook_and_the_toolbox() -> None:
     assert body["tools"] == [{"type": "function", "function": {
         "name": "echo", "description": "Repeat the text back.",
         "parameters": echo.parameters}}]
-    assert "tools" not in OpenAI().to_provider(Agent(OpenAI()))   # empty toolbox
+    assert "tools" not in OpenAI().encode(Agent(OpenAI()))        # empty toolbox
 
 
 def test_tool_calls_round_trip() -> None:
-    asked = OpenAI().to_core(ASKS)
+    asked = decoded(ASKS)
     assert asked.tool_calls == [ToolCall("call_abc123", "echo", {"text": "hi"})]
 
     answered = Message("tool", "hi", tool_call_id="call_abc123")
     agent = Agent(OpenAI(), messages=[asked, answered])
-    said = agent.model.to_provider(agent)["messages"]
+    said = agent.model.encode(agent)["messages"]
     assert said[0]["tool_calls"] == [{
         "id": "call_abc123", "type": "function",
         "function": {"name": "echo", "arguments": '{"text": "hi"}'},   # a string
@@ -96,11 +105,11 @@ def test_tool_calls_round_trip() -> None:
 
 
 def test_usage_and_finish_reason_land_in_meta() -> None:
-    said = OpenAI().to_core(PLAIN)
-    assert said.content == "ok"
+    said = decoded(PLAIN)
+    assert said.text == "ok"
     assert said.meta["finish_reason"] == "stop"
     assert said.meta["usage"] == {"input_tokens": 11, "output_tokens": 1}
-    assert OpenAI().to_core(ASKS).meta["finish_reason"] == "tool_calls"
+    assert decoded(ASKS).meta["finish_reason"] == "tool_calls"
 
 
 def test_unparseable_arguments_keep_the_raw_string() -> None:
@@ -109,10 +118,10 @@ def test_unparseable_arguments_keep_the_raw_string() -> None:
             "role": "assistant", "content": None, "tool_calls": [
                 {"id": "call_bad", "type": "function",
                  "function": {"name": "echo", "arguments": junk}}]}}]}
-        said = OpenAI().to_core(broken)
+        said = decoded(broken)
         assert said.tool_calls[0].args == {}          # the loop can still call it
         assert said.meta["invalid_args"] == {"call_bad": junk}
-    assert "invalid_args" not in OpenAI().to_core(ASKS).meta
+    assert "invalid_args" not in decoded(ASKS).meta
 
 
 def test_parts_open_into_content_parts() -> None:
@@ -121,7 +130,7 @@ def test_parts_open_into_content_parts() -> None:
         Part("image", {"url": "https://example.com/cat.png"}),
         Part("image", {"media_type": "image/png", "data": "aGk="}),
     ])])
-    assert agent.model.to_provider(agent)["messages"][0]["content"] == [
+    assert agent.model.encode(agent)["messages"][0]["content"] == [
         {"type": "text", "text": "what is this?"},
         {"type": "image_url",
          "image_url": {"url": "https://example.com/cat.png"}},
@@ -133,7 +142,7 @@ def test_parts_open_into_content_parts() -> None:
 def test_a_part_type_the_wire_never_heard_of_says_so() -> None:
     agent = Agent(OpenAI(), messages=[Message("user", [Part("sound", b"...")])])
     try:
-        agent.model.to_provider(agent)
+        agent.model.encode(agent)
     except ContractError as e:
         assert "'sound'" in str(e)
     else:

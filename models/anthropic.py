@@ -1,24 +1,20 @@
-"""The Messages API, in three steps: build the request, send it, read the reply.
+"""The Messages API, in two steps: build the request, send it back as Parts.
 
-to_provider and to_core are pure. Core never opens a Part and never sees the
-wire — an adapter does both, and here the wire is the Messages API.
+encode is pure. Core never opens a Part and never sees the wire — an adapter
+does both, and here the wire is the Messages API. This adapter does not
+stream off the socket yet: send POSTs once and yields the Parts of that one
+reply, which is all the Part protocol asks for.
 """
 
 import asyncio
 import os
+from typing import cast
 
 import httpx
 
-from core import Message, Part, ProviderModel, ToolCall
+from core import Agent, ContractError, Message, Part, ProviderModel, ToolCall
 
 VERSION = "2023-06-01"
-
-
-def flat(message) -> str:
-    """A message's content as plain text."""
-    if isinstance(message.content, str):
-        return message.content
-    return "".join(p.data for p in message.content if p.type == "text")
 
 
 def source(data: dict) -> dict:
@@ -37,12 +33,9 @@ def block(part: Part) -> dict:
     return {"type": part.type, **part.data}     # a block we never opened, handed back
 
 
-def blocks(message) -> list[dict]:
+def blocks(message: Message) -> list[dict]:
     """Everything one message says: what it holds, then what it asks for."""
-    parts = message.content
-    if isinstance(parts, str):
-        parts = [Part("text", parts)] if parts else []
-    return [block(p) for p in parts] + [
+    return [block(p) for p in cast(list[Part], message.content)] + [
         {"type": "tool_use", "id": c.id, "name": c.name, "input": c.args}
         for c in message.tool_calls
     ]
@@ -60,20 +53,24 @@ class Anthropic(ProviderModel):
         **params,
     ) -> None:
         self.model = model
-        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        self.api_key = api_key if api_key else os.environ.get("ANTHROPIC_API_KEY", "")
+        if not self.api_key:
+            raise ContractError("no API key: pass api_key= or set ANTHROPIC_API_KEY")
         self.base_url = base_url
         self.max_tokens = max_tokens
         self.params = params            # temperature, stop_sequences, whatever else
 
-    def to_provider(self, agent) -> dict:
+    def encode(self, agent: Agent) -> dict:
         """The notebook and the toolbox, as one request body."""
-        system, turns, merging = [], [], False
+        system: list[str] = []
+        turns: list[dict] = []
+        merging = False
         for m in agent.messages:
             if m.role == "system":
-                system.append(flat(m))
+                system.append(m.text)
             elif m.role == "tool":
                 result = {"type": "tool_result", "tool_use_id": m.tool_call_id,
-                          "content": flat(m)}
+                          "content": m.text}
                 if merging:             # results in a row make one user turn
                     turns[-1]["content"].append(result)
                 else:
@@ -90,12 +87,29 @@ class Anthropic(ProviderModel):
             body["tools"] = [
                 {"name": t.name, "description": t.description,
                  "input_schema": t.parameters}
-                for t in agent.tools.values()
+                for t in agent.tools
             ]
         return body
 
-    async def send(self, body) -> dict:
-        """POST it. Three tries; a 429, a 5xx or a timeout earns another one."""
+    async def send(self, agent, body: dict):
+        """POST once, then hand the reply over as Parts."""
+        raw = await self.post(body)
+        for b in raw.get("content", []):
+            if b["type"] == "tool_use":
+                yield Part("tool_call",
+                           ToolCall(b["id"], b["name"], b.get("input") or {}))
+            elif b["type"] == "text":
+                yield Part("text", b["text"])
+            else:
+                yield Part(b["type"], b)    # thinking, and whatever comes next
+        used = raw.get("usage") or {}
+        yield Part("meta", {
+            "usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")},
+            "stop_reason": raw.get("stop_reason"),
+        })
+
+    async def post(self, body: dict) -> dict:
+        """Three tries; a 429, a 5xx or a timeout earns another one."""
         headers = {"x-api-key": self.api_key, "anthropic-version": VERSION}
         async with httpx.AsyncClient(timeout=60) as http:   # no pool to close
             for wait in (1, 2, 0):                          # 0 means last try
@@ -116,25 +130,4 @@ class Anthropic(ProviderModel):
                         f"anthropic {answer.status_code}: {answer.text[:200]}"
                     )
                 await asyncio.sleep(wait)
-
-    def to_core(self, raw) -> Message:
-        """The reply, as one line for the notebook."""
-        calls, parts = [], []
-        for b in raw.get("content", []):
-            if b["type"] == "tool_use":
-                calls.append(ToolCall(b["id"], b["name"], b.get("input") or {}))
-            elif b["type"] == "text":
-                parts.append(Part("text", b["text"]))
-            else:
-                parts.append(Part(b["type"], b))    # thinking, and whatever comes next
-        text_only = all(p.type == "text" for p in parts)
-        used = raw.get("usage") or {}
-        return Message(
-            "assistant",
-            "".join(p.data for p in parts) if text_only else parts,
-            calls,
-            meta={
-                "usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")},
-                "stop_reason": raw.get("stop_reason"),
-            },
-        )
+        raise AssertionError("unreachable: the last try returns or raises")

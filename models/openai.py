@@ -1,20 +1,21 @@
 """OpenAI Chat Completions — the wire format the compatible vendors clone.
 
-Three steps, like any ProviderModel: build the body, POST it, read the reply.
-The quirk worth remembering is that a tool call's arguments travel as a JSON
-*string*: dumped on the way out, parsed on the way back in.
+Two steps, like any ProviderModel: build the body, POST it and yield the
+reply as Parts. The quirk worth remembering is that a tool call's arguments
+travel as a JSON *string*: dumped on the way out, parsed on the way back in.
 """
 
 import asyncio
 import json
 import os
+from typing import cast
 
 import httpx
 
-from core import ContractError, Message, ProviderModel, ToolCall
+from core import Agent, ContractError, Message, Part, ProviderModel, ToolCall
 
 
-def part(piece) -> dict:
+def part(piece: Part) -> dict:
     """One Part as one content part. Text stays text; an image becomes a URL."""
     if piece.type == "text":
         return {"type": "text", "text": piece.data}
@@ -27,12 +28,13 @@ def part(piece) -> dict:
     )
 
 
-def line(message) -> dict:
+def line(message: Message) -> dict:
     """One notebook line as one message: the role, the words, the plumbing."""
-    body = message.content
+    parts = cast(list[Part], message.content)   # always parts after construction
+    text_only = all(p.type == "text" for p in parts)
     said = {
         "role": message.role,
-        "content": body if isinstance(body, str) else [part(p) for p in body],
+        "content": message.text if text_only else [part(p) for p in parts],
     }
     if message.tool_calls:
         said["tool_calls"] = [
@@ -70,11 +72,13 @@ class OpenAI(ProviderModel):
         **params,
     ) -> None:
         self.model = model
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+        self.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
+        if not self.api_key:
+            raise ContractError("no API key: pass api_key= or set OPENAI_API_KEY")
         self.base_url = base_url.rstrip("/")
         self.params = params                 # temperature, max_tokens, whatever else
 
-    def to_provider(self, agent) -> dict:
+    def encode(self, agent: Agent) -> dict:
         """The whole notebook and the whole toolbox, as one request body."""
         body = {
             "model": self.model,
@@ -86,12 +90,35 @@ class OpenAI(ProviderModel):
                 {"type": "function",
                  "function": {"name": t.name, "description": t.description,
                               "parameters": t.parameters}}
-                for t in agent.tools.values()
+                for t in agent.tools
             ]
         return body
 
-    async def send(self, body) -> dict:
-        """POST it. Three tries for the failures worth retrying, then give up.
+    async def send(self, agent, body: dict):
+        """POST once, then hand choice zero over as Parts."""
+        raw = await self.post(body)
+        choice = raw["choices"][0]
+        said = choice["message"]
+        if said.get("content"):
+            yield Part("text", said["content"])
+        invalid = {}
+        for asked in said.get("tool_calls") or []:
+            args, junk = args_of(asked["function"])
+            if junk is not None:
+                invalid[asked["id"]] = junk
+            yield Part("tool_call",
+                       ToolCall(asked["id"], asked["function"]["name"], args))
+        meta = {"finish_reason": choice.get("finish_reason")}
+        used = raw.get("usage") or {}
+        if used:
+            meta["usage"] = {"input_tokens": used.get("prompt_tokens"),
+                             "output_tokens": used.get("completion_tokens")}
+        if invalid:
+            meta["invalid_args"] = invalid
+        yield Part("meta", meta)
+
+    async def post(self, body: dict) -> dict:
+        """Three tries for the failures worth retrying, then give up.
 
         A fresh client per call: no connection reuse, no lifecycle to own.
         """
@@ -113,22 +140,3 @@ class OpenAI(ProviderModel):
                 if attempt < 2:
                     await asyncio.sleep(2**attempt)
         raise RuntimeError(f"chat/completions failed — {problem}")
-
-    def to_core(self, raw) -> Message:
-        """Choice zero, as one assistant line. The rest of the reply is meta."""
-        choice = raw["choices"][0]
-        said = choice["message"]
-        calls, invalid = [], {}
-        for asked in said.get("tool_calls") or []:
-            args, junk = args_of(asked["function"])
-            if junk is not None:
-                invalid[asked["id"]] = junk
-            calls.append(ToolCall(asked["id"], asked["function"]["name"], args))
-        used = raw.get("usage") or {}
-        meta = {"finish_reason": choice.get("finish_reason")}
-        if used:
-            meta["usage"] = {"input_tokens": used.get("prompt_tokens"),
-                             "output_tokens": used.get("completion_tokens")}
-        if invalid:
-            meta["invalid_args"] = invalid
-        return Message("assistant", said.get("content") or "", calls, meta=meta)

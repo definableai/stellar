@@ -4,6 +4,7 @@
 schema? Write a Tool subclass — that is what the class is for.
 """
 
+import asyncio
 import inspect
 from typing import get_origin
 
@@ -39,28 +40,36 @@ def schema(fn) -> dict:
 
 
 def tool(fn) -> Tool:
-    """A plain function becomes a Tool: its name, its docstring, its signature."""
+    """A plain function becomes a Tool: its name, its docstring, its signature.
+
+    A sync function runs in a thread, an async one is awaited, and an async
+    generator streams — every Part it yields rings tool_delta.
+    """
     if any(p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD)
            for p in inspect.signature(fn).parameters.values()):
         raise wrong("tool", f"@tool cannot read *args/**kwargs on {fn.__name__}")
     wants = takes_agent(fn)
 
-    def execute(self, agent, **args):
+    def call(agent, args):
         return fn(agent, **args) if wants else fn(**args)
 
-    async def aexecute(self, agent, **args):
-        return await execute(self, agent, **args)   # fn handed back a coroutine
+    if inspect.isasyncgenfunction(fn):
+        async def execute(self, agent, **args):
+            async for part in call(agent, args):
+                yield part
+    elif inspect.iscoroutinefunction(fn):
+        async def execute(self, agent, **args):
+            return await call(agent, args)
+    else:
+        async def execute(self, agent, **args):
+            return await asyncio.to_thread(call, agent, args)
 
-    body = {
+    return type(fn.__name__, (Tool,), {
         "name": fn.__name__,
         "description": inspect.getdoc(fn) or "",
         "parameters": schema(fn),
-    }
-    if inspect.iscoroutinefunction(fn):
-        body["aexecute"] = aexecute
-    else:
-        body["execute"] = execute
-    return type(fn.__name__, (Tool,), body)()
+        "execute": execute,
+    })()
 
 
 def on(event: str, fn) -> Hook:

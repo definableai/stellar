@@ -9,7 +9,6 @@ import asyncio
 from core.agent import Agent
 from core.contracts import ContractError
 from core.tool import tool
-from core.types import Message
 
 PLAIN = "Say only the word ok."
 ROUND = "Call the echo tool with text='hi', then say done."
@@ -29,19 +28,20 @@ def wrong(number: int, expected: str, messages) -> ContractError:
 
 async def exchanges(model) -> None:
     """Talk to the model three times and read what lands in the notebook."""
-    agent = await Agent(model, messages=[Message("user", PLAIN)]).run()
+    agent = Agent(model)
+    await agent.run(PLAIN)
     said = agent.messages
     if not said or said[-1].role != "assistant" or not said[-1].content:
         raise wrong(1, "an assistant message with content", said)
 
-    agent = await Agent(
-        model, {"echo": echo}, messages=[Message("user", ROUND)]
-    ).run()
+    agent = Agent(model, [echo])
+    await agent.run(ROUND)
     said = agent.messages
     asked = next((i for i, m in enumerate(said) if m.tool_calls), None)
     if asked is None:
-        raise wrong(2, "an assistant message carrying tool_calls — does to_core "
-                       "map them, and does to_provider put agent.tools in the body?",
+        raise wrong(2, "an assistant message carrying tool_calls — does send "
+                       "yield them as tool_call Parts, and does encode put "
+                       "agent.tools in the body?",
                     said)
     call = said[asked].tool_calls[0]
     if not isinstance(call.args, dict):
@@ -61,8 +61,8 @@ async def exchanges(model) -> None:
 def check_model(model) -> None:
     """Grade an adapter; raise if it fails. Call this from sync code only.
 
-    This grades the reply side (to_core) and the loop fit. Nothing here can
-    see whether to_provider built a body your provider will accept — your
-    adapter's own tests must assert that directly.
+    This grades the reply side (the Parts send yields) and the loop fit.
+    Nothing here can see whether encode built a body your provider will
+    accept — your adapter's own tests must assert that directly.
     """
     asyncio.run(exchanges(model))

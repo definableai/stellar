@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    ContractError, FakeModel, Message, ProviderModel, ToolCall, check_model,
+    ContractError, FakeModel, Message, Part, ProviderModel, ToolCall, check_model,
 )
 
 SCRIPT = [
@@ -25,27 +25,27 @@ class Scripted(ProviderModel):
     def __init__(self) -> None:
         self.turn = 0
 
-    def to_provider(self, agent) -> dict:
+    def encode(self, agent) -> dict:
         return {"messages": len(agent.messages)}
 
-    async def send(self, body) -> dict:
+    async def send(self, agent, body):
         self.turn += 1
-        return SCRIPT[self.turn - 1]
-
-    def to_core(self, raw) -> Message:
-        call = raw["call"]
-        return Message(
-            "assistant",
-            raw["text"],
-            [ToolCall(call["id"], call["name"], call["input"])] if call else [],
-        )
+        raw = SCRIPT[self.turn - 1]
+        if raw["text"]:
+            yield Part("text", raw["text"])
+        if raw["call"]:
+            call = raw["call"]
+            yield Part("tool_call", ToolCall(call["id"], call["name"],
+                                             call["input"]))
 
 
 class Deaf(Scripted):
-    """The same wire, but it forgets to map tool_calls."""
+    """The same wire, but it forgets to yield the tool calls."""
 
-    def to_core(self, raw) -> Message:
-        return Message("assistant", raw["text"] or "thinking about it")
+    async def send(self, agent, body):
+        self.turn += 1
+        raw = SCRIPT[self.turn - 1]
+        yield Part("text", raw["text"] or "thinking about it")
 
 
 def test_a_three_line_script_passes() -> None:
@@ -56,7 +56,7 @@ def test_a_three_line_script_passes() -> None:
     ]))
 
 
-def test_a_three_step_provider_passes() -> None:
+def test_a_two_step_provider_passes() -> None:
     model = Scripted()
     check_model(model)
     assert model.turn == 3                      # plain, tool call, final
@@ -67,9 +67,9 @@ def test_a_dropped_tool_call_names_exchange_2() -> None:
         check_model(Deaf())
     except ContractError as e:
         assert "exchange 2" in str(e)
-        assert "tool_calls" in str(e)
+        assert "tool_call" in str(e)
     else:
-        raise AssertionError("an adapter that never maps tool_calls must fail")
+        raise AssertionError("an adapter that never yields tool_calls must fail")
 
 
 def test_an_empty_first_reply_names_exchange_1() -> None:
@@ -84,7 +84,7 @@ def test_an_empty_first_reply_names_exchange_1() -> None:
 if __name__ == "__main__":
     for test in (
         test_a_three_line_script_passes,
-        test_a_three_step_provider_passes,
+        test_a_two_step_provider_passes,
         test_a_dropped_tool_call_names_exchange_2,
         test_an_empty_first_reply_names_exchange_1,
     ):

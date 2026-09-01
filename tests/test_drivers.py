@@ -15,8 +15,9 @@ from drivers.events import EventStream, StepEvent, offer  # noqa: E402
 from drivers.transport import sse, ws_frames  # noqa: E402
 from hooks.logging import Log  # noqa: E402
 
-BELLS = ["run_pre", "model_pre", "model_post", "tool_pre", "tool_post",
-         "model_pre", "model_post", "run_post"]
+BELLS = ["run_pre", "model_pre", "model_delta", "model_delta", "model_post",
+         "tool_pre", "tool_post",
+         "model_pre", "model_delta", "model_post", "run_post"]
 DONE = "event: done\ndata: {}\n\n"
 
 
@@ -27,7 +28,7 @@ class Shout(Tool):
     description = "Shout a word."
     parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
 
-    def execute(self, agent, word) -> str:
+    async def execute(self, agent, word) -> str:
         return word.upper()
 
 
@@ -39,7 +40,7 @@ def wired(stream: EventStream) -> Agent:
                     meta={"usage": {"input_tokens": 10, "output_tokens": 2}}),
             Message("assistant", "done"),
         ]),
-        {"shout": Shout()},
+        [Shout()],
         [Log(stream.emit)],
     )
 
@@ -84,15 +85,18 @@ def test_every_data_line_is_the_whole_event() -> None:
     assert [e["seq"] for e in sent] == list(range(1, len(sent) + 1))
     assert all(isinstance(e["ts"], float) for e in sent)
     assert sent[0]["payload"] == {"step": 0, "messages": 0}
-    assert sent[2]["payload"] == {
+    assert sent[2]["payload"] == {"type": "tool_call", "text": None}
+    assert sent[3]["payload"] == {"type": "meta", "text": None}
+    assert sent[4]["payload"] == {
         "content": "",
         "tool_calls": [{"id": "c1", "name": "shout", "args": {"word": "hi"}}],
         "usage": {"input_tokens": 10, "output_tokens": 2},
     }
-    assert sent[3]["payload"] == {"id": "c1", "name": "shout", "args": {"word": "hi"}}
-    assert sent[4]["payload"] == {"id": "c1", "content": "HI"}
-    assert sent[6]["payload"]["usage"] is None      # that reply carried no meta
-    assert sent[7]["payload"] == {"step": 2, "messages": 3}
+    assert sent[5]["payload"] == {"id": "c1", "name": "shout", "args": {"word": "hi"}}
+    assert sent[6]["payload"] == {"id": "c1", "content": "HI"}
+    assert sent[8]["payload"] == {"type": "text", "text": "done"}
+    assert sent[9]["payload"]["usage"] is None      # that reply carried no meta
+    assert sent[10]["payload"] == {"step": 2, "messages": 3}
 
 
 def test_a_late_subscriber_gets_the_replay_and_the_done_frame() -> None:
@@ -104,7 +108,7 @@ def test_a_late_subscriber_gets_the_replay_and_the_done_frame() -> None:
 def test_websocket_frames_are_one_json_object_each() -> None:
     frames = [json.loads(f) for f in asyncio.run(replay(ws_frames))]
     assert [e["event"] for e in frames] == BELLS   # no done frame: the socket ends
-    assert frames[3]["payload"]["name"] == "shout"
+    assert frames[5]["payload"]["name"] == "shout"
 
 
 def test_an_event_stamps_itself() -> None:

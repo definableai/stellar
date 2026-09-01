@@ -10,8 +10,14 @@ import inspect
 from core import Hook
 
 
+def delta(agent) -> dict:
+    """One streamed Part, JSON-safe: its type, and its words if it has any."""
+    d = agent.delta
+    return {"type": d.type, "text": d.data if d.type == "text" else None}
+
+
 class Log(Hook):
-    """Six methods, six event names, one listener."""
+    """Eight methods, eight event names, one listener."""
 
     def __init__(self, emit) -> None:
         self.emit = emit
@@ -28,10 +34,12 @@ class Log(Hook):
     async def model_pre(self, agent) -> None:
         await self.say("model_pre", {"step": agent.step})
 
+    async def model_delta(self, agent) -> None:
+        await self.say("model_delta", delta(agent))
+
     async def model_post(self, agent) -> None:
-        said = agent.response.content
         await self.say("model_post", {
-            "content": said if isinstance(said, str) else None,   # parts stay home
+            "content": agent.response.text,          # non-text parts stay home
             "tool_calls": [{"id": c.id, "name": c.name, "args": c.args}
                            for c in agent.response.tool_calls],
             "usage": agent.response.meta.get("usage"),
@@ -41,9 +49,12 @@ class Log(Hook):
         await self.say("tool_pre", {"id": agent.call.id, "name": agent.call.name,
                                     "args": agent.call.args})
 
+    async def tool_delta(self, agent) -> None:
+        await self.say("tool_delta", delta(agent))
+
     async def tool_post(self, agent) -> None:
         await self.say("tool_post", {"id": agent.result.tool_call_id,
-                                     "content": agent.result.content})
+                                     "content": agent.result.text})
 
     async def run_post(self, agent) -> None:
         await self.say("run_post", {"step": agent.step,

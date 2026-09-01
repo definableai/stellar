@@ -1,14 +1,18 @@
 """The Anthropic adapter: what goes on the wire, and what comes back off it.
 
-The three canned bodies are real Messages API responses. No network here.
+The three canned bodies are real Messages API responses. No network here —
+Canned swaps the POST out and the reply still travels the real Part path.
 
 Run: uv run python tests/test_anthropic.py
 """
 
+import asyncio
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 
 from core import Agent, Message, Part, ToolCall, check_model, tool  # noqa: E402
 from models.anthropic import Anthropic  # noqa: E402
@@ -78,19 +82,25 @@ def echo(text: str) -> str:
 
 
 class Canned(Anthropic):
-    """The three replies check_model expects, off the shelf."""
+    """The real adapter with the POST swapped for a list of replies."""
 
-    def __init__(self) -> None:
+    def __init__(self, bodies) -> None:
         super().__init__(api_key="test")
-        self.sent = []
+        self.bodies, self.sent = list(bodies), []
 
-    async def send(self, body) -> dict:
+    async def post(self, body) -> dict:
         self.sent.append(body)
-        return BODIES[len(self.sent) - 1]
+        return self.bodies[len(self.sent) - 1]
+
+
+def decoded(body: dict) -> Message:
+    """One canned reply through the real send-and-fold path."""
+    model = Canned([body])
+    return asyncio.run(model.invoke(Agent(model)))
 
 
 def test_canned_replies_pass_check_model() -> None:
-    model = Canned()
+    model = Canned(BODIES)
     check_model(model)
     assert len(model.sent) == 3
     assert "tools" not in model.sent[0]               # no toolbox, no tools field
@@ -105,7 +115,7 @@ def test_system_messages_go_to_the_top() -> None:
                   messages=[Message("system", "Be brief."),
                             Message("user", "hi"),
                             Message("system", "Be kind too.")])
-    body = agent.model.to_provider(agent)
+    body = agent.model.encode(agent)
     assert body["system"] == "Be brief.\n\nBe kind too."
     assert body["messages"] == [
         {"role": "user", "content": [{"type": "text", "text": "hi"}]}
@@ -117,7 +127,7 @@ def test_system_messages_go_to_the_top() -> None:
 def test_tool_results_in_a_row_become_one_turn() -> None:
     agent = Agent(
         Anthropic(api_key="x"),
-        {"echo": echo},
+        [echo],
         messages=[
             Message("user", "echo a and b"),
             Message("assistant", "", [ToolCall("t1", "echo", {"text": "a"}),
@@ -127,7 +137,7 @@ def test_tool_results_in_a_row_become_one_turn() -> None:
             Message("user", "thanks"),
         ],
     )
-    body = agent.model.to_provider(agent)
+    body = agent.model.encode(agent)
     assert [t["role"] for t in body["messages"]] == [
         "user", "assistant", "user", "user"
     ]
@@ -154,7 +164,7 @@ def test_parts_become_content_blocks() -> None:
         Part("image", {"media_type": "image/png", "data": "aGk="}),
         Part("image", {"url": "https://example.com/cat.png"}),
     ])])
-    assert agent.model.to_provider(agent)["messages"][0]["content"] == [
+    assert agent.model.encode(agent)["messages"][0]["content"] == [
         {"type": "text", "text": "what is this?"},
         {"type": "image", "source": {"type": "base64", "media_type": "image/png",
                                      "data": "aGk="}},
@@ -163,10 +173,11 @@ def test_parts_become_content_blocks() -> None:
     ]
 
 
-def test_to_core_reads_text_tool_use_and_usage() -> None:
-    answer = Anthropic(api_key="x").to_core(BODIES[1])
+def test_send_yields_text_tool_use_and_usage() -> None:
+    answer = decoded(BODIES[1])
     assert answer.role == "assistant"
-    assert answer.content == "I'll call the echo tool."
+    assert answer.text == "I'll call the echo tool."
+    assert answer.content == [Part("text", "I'll call the echo tool.")]
     assert answer.tool_calls == [
         ToolCall("toolu_01A09q90qw90lq917835lq9", "echo", {"text": "hi"})
     ]
@@ -176,22 +187,24 @@ def test_to_core_reads_text_tool_use_and_usage() -> None:
     }
 
 
-def test_text_blocks_join_into_one_string() -> None:
+def test_text_blocks_fold_into_one_part() -> None:
     two = dict(BODIES[2], content=[{"type": "text", "text": "all "},
                                    {"type": "text", "text": "done"}])
-    assert Anthropic(api_key="x").to_core(two).content == "all done"
+    assert decoded(two).content == [Part("text", "all done")]
 
 
-def test_a_block_we_do_not_know_turns_the_content_into_parts() -> None:
-    model = Anthropic(api_key="x")
-    answer = model.to_core(MIXED)
+def test_a_block_we_do_not_know_passes_through_untouched() -> None:
+    answer = decoded(MIXED)
     assert answer.content == [
         Part("thinking", MIXED["content"][0]),
-        Part("text", "half one "),
-        Part("text", "half two"),
+        Part("text", "half one half two"),           # halves folded into one
     ]
+    model = Anthropic(api_key="x")
     agent = Agent(model, messages=[Message("user", "hi"), answer])
-    assert model.to_provider(agent)["messages"][1]["content"] == MIXED["content"]
+    assert model.encode(agent)["messages"][1]["content"] == [
+        MIXED["content"][0],
+        {"type": "text", "text": "half one half two"},
+    ]
 
 
 if __name__ == "__main__":
@@ -200,9 +213,9 @@ if __name__ == "__main__":
         test_system_messages_go_to_the_top,
         test_tool_results_in_a_row_become_one_turn,
         test_parts_become_content_blocks,
-        test_to_core_reads_text_tool_use_and_usage,
-        test_text_blocks_join_into_one_string,
-        test_a_block_we_do_not_know_turns_the_content_into_parts,
+        test_send_yields_text_tool_use_and_usage,
+        test_text_blocks_fold_into_one_part,
+        test_a_block_we_do_not_know_passes_through_untouched,
     ):
         test()
         print(f"  ok {test.__name__}")

@@ -1,6 +1,6 @@
 """The event stream: one run's bells, fanned out to whoever is listening.
 
-The six event names ARE the six hook names — the grammar is the hook
+The eight event names ARE the eight hook names — the grammar is the hook
 vocabulary, nothing more. One stream is one run: the run_post event closes
 it, and every subscriber runs out of events.
 """

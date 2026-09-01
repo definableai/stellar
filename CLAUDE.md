@@ -14,7 +14,7 @@ tasks when it is used well.
   whole backpack again at the top of every step.
 - Two control signals only: `raise Stop`, and a pre-filled `agent.result` in
   `tool_pre`. `run_post` always fires.
-- The six hook names ARE the six event names. Transport: SSE, WS.
+- The eight hook names ARE the eight event names. Transport: SSE, WS.
 
 ## Agents
 
