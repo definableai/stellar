@@ -20,6 +20,7 @@ from core import (  # noqa: E402
 )
 from core.conformance import check_model  # noqa: E402
 from models.anthropic import DOES, Anthropic  # noqa: E402
+from models.anthropic import mapping  # noqa: E402
 
 # a clone behind a proxy that cannot SSE: the same model, one POST at a time
 ONCE = Profile("claude-sonnet-5", 1_000_000, 4096, DOES - {"stream"})
@@ -428,6 +429,15 @@ def test_scripted_streams_pass_check_model() -> None:
     ]
 
 
+def test_the_mapping_names_its_rows() -> None:
+    thought = {"type": "thinking", "thinking": "x"}
+    assert set(mapping.OUT) == {"text", "image"}          # Part.type -> block
+    assert set(mapping.IN) == {"text", "tool_use"}        # block type -> Part
+    assert mapping.OUT.get("document", mapping.passthrough) is mapping.passthrough
+    assert mapping.IN.get("thinking", mapping.whole)(thought) == Part(
+        "thinking", thought)
+
+
 if __name__ == "__main__":
     for test in (
         test_canned_replies_pass_check_model,
@@ -445,6 +455,7 @@ if __name__ == "__main__":
         test_usage_is_merged_once_from_both_ends_of_the_stream,
         test_an_error_event_stops_the_stream,
         test_scripted_streams_pass_check_model,
+        test_the_mapping_names_its_rows,
     ):
         test()
         print(f"  ok {test.__name__}")

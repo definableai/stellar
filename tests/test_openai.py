@@ -17,6 +17,7 @@ from core import (  # noqa: E402
 )
 from core.conformance import check_model  # noqa: E402
 from models.openai import OpenAI  # noqa: E402
+from models.openai import mapping  # noqa: E402
 
 ONCE = Profile("once", 8_000, 512, frozenset({"tools"}))          # no stream: POST
 LIVE = Profile("live", 8_000, 512, frozenset({"tools", "stream", "tool_stream"}))
@@ -349,6 +350,14 @@ def test_an_error_chunk_ends_the_stream() -> None:
         raise AssertionError("an error chunk must not fold into a reply")
 
 
+def test_the_mapping_names_its_rows() -> None:
+    assert set(mapping.OUT) == {"text", "image"}          # Part.type -> content part
+    # and no IN: this reply has no block types — text is a string, calls a list
+    assert not hasattr(mapping, "IN")
+    assert mapping.USAGE == {"input_tokens": "prompt_tokens",
+                             "output_tokens": "completion_tokens"}
+
+
 if __name__ == "__main__":
     for test in (
         test_three_canned_replies_pass_the_check,
@@ -367,6 +376,7 @@ if __name__ == "__main__":
         test_argument_fragments_ride_the_bus_when_the_profile_says_so,
         test_three_scripted_streams_pass_the_check,
         test_an_error_chunk_ends_the_stream,
+        test_the_mapping_names_its_rows,
     ):
         test()
         print(f"  ok {test.__name__}")
