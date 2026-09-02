@@ -164,14 +164,34 @@ Put what the reply cost in a meta Part, as
 `meta["model"]` names who answered — the wire's own word for itself, else the
 id you asked for, never `None`.
 
-### A provider is four things
+### A provider is a folder
 
-`core/llm.py` holds the half every HTTP provider shares: the key, the
-profile, one client, the retries, an SSE parser. A provider file writes four
-things — `PROFILES`, `headers`, `encode`, `send` — and inherits the rest.
+`core/llm.py` holds the half every HTTP provider shares: the key, the profile,
+one client, the retries, an SSE parser. A provider writes the other half in
+two files. `mapping.py` is the table: what crosses the wire, one row per thing
+that crosses. `model.py` is the rest — `PROFILES`, `headers`, `encode` (the
+body's own keys), `send` (the stream's grammar) — and inherits everything else.
+
+| core noun | the wire's word | the row |
+| --- | --- | --- |
+| `Part` | a block, a content part | many per message, keyed by type: `OUT`, and `IN` where the reply has blocks. |
+| `Message` | a turn | one per message: `turn()` — and on Claude a `notebook()` over the lot, because system lines ride outside the turns. |
+| `Tool` | a tool schema | one per tool: `tool()`. |
+| `Message.meta` | the reply's header | one per reply: `meta()` — what it cost, who answered, why it stopped. |
+
+Rows are named for what they make: an out-row makes a wire thing — `text`,
+`image`, `tool_use`, `function` — and an in-row makes a core one, `tool_call`
+or `meta`. There is no dispatcher to write: a call site reads
+`OUT.get(p.type, passthrough)(p)`, and the else-rule is that `.get` default,
+under a name of its own. Claude's is `passthrough`, and a block it never
+opened goes back as it came; Chat Completions' is `unsaid`, which raises
+`ContractError`, because a profile word promised that part.
 
 ```python
+# models/openai/model.py — mapping.py sits beside it, __init__.py re-exports
 from core import Profile, Provider
+
+from .mapping import meta, tool, tool_call, turn
 
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
 
@@ -225,7 +245,7 @@ and `system`.
 A vendor that copied the wire is three lines, and a local model wants no key:
 
 ```python
-class Groq(OpenAI):                          # models/groq.py
+class Groq(OpenAI):                          # in your code, not in models/
     url, env = "https://api.groq.com/openai/v1", "GROQ_API_KEY"
     PROFILES = {…}                           # its own rows, off its own docs
 
@@ -283,17 +303,16 @@ reply — tests ride the same fold and delta path with no network at all.
 
 ### The two shipped ones
 
-`models/anthropic.py` — the Messages API. `models/openai.py` — Chat
-Completions, the format the compatible vendors clone; point `base_url` at a
-clone and the same class talks to it. Both name their model first —
+`models/anthropic/` — the Messages API. `models/openai/` — Chat Completions,
+the format the compatible vendors clone; point `base_url` at a clone and the
+same class talks to it. Both name their model first —
 `Anthropic("claude-sonnet-5")`, `OpenAI("gpt-5.6-luna")` — take `api_key=` or
 read the environment, pass any extra keyword straight through to the request
 body, and stream off the socket whenever the profile says `stream`.
 
-Each one's module docstring carries its whole mapping, both directions, as one
-table, and the functions under it are named for what they return: `block()` a
-content block, `line()` or `blocks()` a whole turn, `part()` a `Part`,
-`meta()` the meta Part.
+To read a wire, open its `mapping.py`; the Chat Completions one says out loud
+that its reply has no block types — text arrives as a string, tool calls as a
+list — so it has an `OUT` and no `IN`.
 
 Chat Completions has no shape for a thinking block, so an assistant turn drops
 what this wire cannot say — the model's own past, off another wire, replays
@@ -650,7 +669,9 @@ core/             the twelve nouns and the loop — stdlib (bar llm.py), under 2
   llm.py            Provider, Profile, Fallback — the HTTP half; the only httpx in core
   conformance.py    check_model
   __init__.py       the barrel: all of it, in one import
-models/           anthropic.py, openai.py — one file per provider
+models/           one folder per provider: __init__.py, mapping.py, model.py
+  anthropic/        the Messages API
+  openai/           Chat Completions, the format the compatible vendors clone
 hooks/            steps.py, budget.py, permission.py, logging.py
 drivers/          transport.py — sse() and ws_frames() over events.stream()
 tests/            plain python files, assert-based, no pytest
@@ -660,7 +681,10 @@ main.py           the front door: one agent, one tool, one card, one radio
 Imports are flat and one-way: `from core import Agent`,
 `from models.anthropic import Anthropic`, `from hooks.steps import Steps`.
 `models/`, `hooks/` and `drivers/` speak `core` and the standard library and
-never each other. Nothing imports an adapter, and `core/` imports none of them.
+never each other. A provider's own files speak each other with one dot —
+`from .mapping import turn` — and never reach into another provider, so a
+clone subclasses `OpenAI` in your code, not in `models/`. Nothing imports an
+adapter, and `core/` imports none of them.
 
 ## Running the tests
 
@@ -683,7 +707,7 @@ need not be on your PATH.
 - `core/` never says a product or protocol name — no mcp, anthropic, openai,
   litellm, claude, gpt, a2a, acp.
 - `models/`, `hooks/` and `drivers/` import only `core` and the standard
-  library, plus httpx in `models/`.
+  library, plus httpx in `models/` — and a provider's own files, one dot deep.
 
 Two more belong to whoever reviews the change, because no test can see them:
 
