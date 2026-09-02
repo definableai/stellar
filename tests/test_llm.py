@@ -7,6 +7,7 @@ import asyncio
 import logging
 import os
 import sys
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -113,6 +114,9 @@ def test_the_profile_gates_what_the_run_asks_for() -> None:
     assert refused(big, [words], [echo]) == ""
     sound = Message("user", [Part("sound", b"...")])
     assert refused(Stub("small-2", api_key="k"), [sound]) == ""   # a word is a word
+    assert "'sound'" in refused(big, [sound])             # not a word this one knows
+    replay = Message("assistant", [Part("sound", b"...")])
+    assert refused(big, [replay]) == ""                   # its own output, untouched
     assert big.tool_schemas(run_of(big, [words], [echo])) == [
         {"name": "echo", "description": "Repeat the text back.",
          "parameters": echo.parameters}]
@@ -170,10 +174,11 @@ def test_post_tries_three_times_for_what_is_worth_retrying() -> None:
     dead = Wired(*[httpx.ConnectError("no route") for _ in range(3)])
     try:
         asyncio.run(dead.post("say", {}))
-    except httpx.TransportError:
-        pass
+    except ProviderError as ex:
+        assert ex.status is None                          # no reply, so no status
+        assert isinstance(ex.__cause__, httpx.TransportError)      # the socket's own
     else:
-        raise AssertionError("a socket that never opened is not a ProviderError")
+        raise AssertionError("a socket that never opened raises ProviderError too")
     assert WAITS == [1.0, 2.0]
 
     WAITS.clear()
@@ -197,6 +202,13 @@ def test_sse_yields_the_data_lines_and_nothing_else() -> None:
     else:
         raise AssertionError("a 400 must not come back as an empty stream")
 
+    try:
+        asyncio.run(drain(Wired(httpx.Response(200, content=b"data: {oops\n\n"))))
+    except ProviderError as ex:
+        assert ex.status is None and "not JSON" in str(ex)
+    else:
+        raise AssertionError("a data line that is not JSON is not a chunk")
+
 
 def test_the_client_is_one_per_instance_and_one_per_loop() -> None:
     model = Stub("big", api_key="k")
@@ -214,6 +226,28 @@ def test_the_client_is_one_per_instance_and_one_per_loop() -> None:
         return model.http
 
     assert asyncio.run(shut()) is not two and two.is_closed
+
+
+def test_the_client_a_swap_replaces_is_closed_on_its_own_loop() -> None:
+    model = Stub("big", api_key="k")
+    ready = threading.Event()                    # the far loop has built its client
+    far: dict = {}
+
+    async def hold() -> None:
+        """Build a client, then keep that loop alive until the main thread says stop."""
+        far["loop"], far["stop"] = asyncio.get_running_loop(), asyncio.Event()
+        far["client"] = model.http
+        ready.set()
+        await far["stop"].wait()
+
+    thread = threading.Thread(target=lambda: asyncio.run(hold()))
+    thread.start()
+    assert ready.wait(5), "the far loop never built its client"
+    first = far["client"]
+    assert asyncio.run(swap(model)) is not first  # another loop, another client
+    far["loop"].call_soon_threadsafe(far["stop"].set)   # queued behind the aclose
+    thread.join(5)
+    assert not thread.is_alive() and first.is_closed
 
 
 def run_of(model, messages, tools=()) -> Run:
@@ -245,6 +279,11 @@ def status(model) -> int | None:
     raise AssertionError("that reply should have raised ProviderError")
 
 
+async def swap(model) -> httpx.AsyncClient:
+    """The client this loop builds — and the one it replaces goes home to close."""
+    return model.http
+
+
 async def drain(model) -> list[dict]:
     """Every chunk one stream yields."""
     return [piece async for piece in model.sse("say", {})]
@@ -259,6 +298,7 @@ if __name__ == "__main__":
         test_post_tries_three_times_for_what_is_worth_retrying,
         test_sse_yields_the_data_lines_and_nothing_else,
         test_the_client_is_one_per_instance_and_one_per_loop,
+        test_the_client_a_swap_replaces_is_closed_on_its_own_loop,
     ):
         test()
         print(f"  ok {test.__name__}")

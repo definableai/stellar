@@ -54,7 +54,7 @@ async def exchanges(
         raise wrong(1, "an assistant message with text", said)
     if sum(m.role == "assistant" for m in said) != 1:
         raise wrong(1, "one model call and no tool calls — there is no toolbox", said)
-    adds_up(1, model, said, deltas)
+    adds_up(1, said, deltas)
 
     said, deltas = await talk(model, ROUND, echo)
     asked = next((i for i, m in enumerate(said) if m.tool_calls), None)
@@ -80,7 +80,7 @@ async def exchanges(
         raise wrong(3, "the model to stop after the tool result — one ask, "
                        "one answer, one goodbye; does encode carry the tool "
                        "result back?", said)
-    adds_up(2, model, said, deltas)
+    adds_up(2, said, deltas)
 
 
 async def talk(
@@ -98,7 +98,6 @@ async def talk(
 
 def adds_up(
     number: Annotated[int, "which exchange to blame when the two do not match"],
-    model: Annotated[Model, "the adapter — its profile, if any, grades the types"],
     said: Annotated[
         list[Message],
         "the notebook; its assistant text is what the deltas must add to"],
@@ -106,8 +105,8 @@ def adds_up(
 ) -> None:
     """What was streamed has to add up to what landed in the notebook.
 
-    A Model that streams nothing rings no deltas and is excused. A profile,
-    if there is one, must admit every Part type send yields — its own replay.
+    A Model that streams nothing rings no deltas and is excused; every
+    ProviderModel rings one per Part, so its stream is graded in order.
     """
     streamed = "".join(p.data for p in deltas if p.type == "text")
     folded = "".join(m.text for m in said if m.role == "assistant")
@@ -116,11 +115,6 @@ def adds_up(
                     f"streamed {streamed!r}, folded {folded!r}", said)
     if any(p.type == "meta" for p in deltas) and not any(m.meta for m in said):
         raise wrong(number, "the meta parts merged into message.meta", said)
-    profile = getattr(model, "profile", None)   # duck-typed: core knows no Profile
-    for p in deltas if profile is not None else ():
-        if p.type not in ("text", "tool_call", "meta") and p.type not in profile:
-            raise wrong(number, f"the profile to admit {p.type!r} parts — send "
-                        "yields them, so the replay must take them back", said)
 
 
 def wrong(

@@ -88,6 +88,11 @@ BROKEN = [
          "function": {"name": "echo", "arguments": '{"text": '}}]}}]},
     {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
 ]
+CUT = [                                      # the stream stops without saying why
+    {"choices": [{"index": 0, "delta": {"tool_calls": [
+        {"index": 0, "id": "call_cut", "type": "function",
+         "function": {"name": "echo", "arguments": '{"text": "hi"}'}}]}}]},
+]
 BYE = [
     {"choices": [{"index": 0, "delta": {"content": "done"}}]},
     {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
@@ -258,6 +263,10 @@ def test_a_tool_call_is_assembled_from_its_fragments() -> None:
     both, _ = played(BOTH)
     assert both.tool_calls == [ToolCall("call_a", "echo", {"text": "one"}),
                               ToolCall("call_b", "echo", {"text": "two"})]
+
+    cut, _ = played(CUT)                         # no finish_reason, no lost call
+    assert cut.tool_calls == [ToolCall("call_cut", "echo", {"text": "hi"})]
+    assert cut.meta["stop_reason"] is None
 
 
 def test_the_stream_ends_with_one_meta() -> None:

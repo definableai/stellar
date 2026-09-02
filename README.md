@@ -189,26 +189,26 @@ dicts), and two ways out: `post(path, body)` for one reply, `sse(path, body)`
 for a stream of dicts. Both try three times, on a dead socket or a status in
 `{408, 409, 429, 500, 502, 503, 504, 529}`, honouring `retry-after`; `sse`
 stops retrying once a chunk is out, because there is no asking again without
-replaying it. `aclose()` closes the client — nothing else does.
+replaying it. `aclose()` closes the client; a loop swap closes the one it
+replaces, on the loop that built it.
 
 The model id is positional and required: `OpenAI("gpt-5.6-luna")`, one id per
 instance, no silent default. `api_key=` beats the environment, and `env = None`
 is a model that wants no key at all. A missing key raises `ValueError` naming
-the variable. A refusal raises `ProviderError` with `.status` — `None` when a
-stream broke mid-flight — and a socket that never opened after three tries
-raises the httpx error itself.
+the variable. A refusal raises `ProviderError` with `.status`; a socket that
+never opened after three tries, a data line that is not JSON, and an error
+event inside a stream raise the same thing with `status None`.
 
 A `Profile` is one row off the provider's docs: `id`, `context`, `max_output`
 (the max-tokens `encode` writes, unless a param of yours says otherwise) and a
 set of words. `"image" in model.profile` is the whole API — a router's
-question, and the one `accept()` asks of every Part in the notebook, and of the
-toolbox, before anything is sent: a picture nobody can read never costs a round
-trip. One rule: **a feature named after a Part type admits that Part.** The
-words in the box are `image`, `document`, `thinking`, `tools`, `stream`,
-`tool_stream`, `json` and `system`; `models/anthropic.py` adds
-`redacted_thinking`, because its `send` yields Parts of that type. Add yours
-the same way — an adapter's profile must name every Part type it yields, and
-that is exactly what `check_model` grades.
+question, and the one `accept()` asks of every Part you put in the notebook,
+and of the toolbox, before anything is sent: a picture nobody can read never
+costs a round trip. One rule: **a feature named after a Part type admits that
+Part in what you send** — user, system and tool messages. The model's own
+output is replayed untouched, so it is never graded. The words in the box are
+`image`, `document`, `thinking`, `tools`, `stream`, `tool_stream`, `json` and
+`system`.
 
 - `stream` picks the path: with it, `encode` asks for the event stream and
   `send` yields a text Part per chunk; without it, one POST and the same parse.
@@ -270,11 +270,11 @@ with it.
 
 It grades the reply side: do the Parts `send` yields fold into a `Message`,
 do the deltas add up to what landed, do tool calls arrive as whole `ToolCall`s
-with a dict of args, does every Part type it yields sit in its own profile,
-does the round trip close. It cannot see whether `encode` built a body your
-provider would accept — assert that yourself against `model.encode(run)`.
-`tests/test_anthropic.py` and `tests/test_openai.py` do both halves.
-`check_model` calls `asyncio.run` inside, so call it from sync code only.
+with a dict of args, does the round trip close. It cannot see whether `encode`
+built a body your provider would accept — assert that yourself against
+`model.encode(run)`. `tests/test_anthropic.py` and `tests/test_openai.py` do
+both halves. `check_model` calls `asyncio.run` inside, so call it from sync
+code only.
 
 `FakeModel` is a `ProviderModel` whose `send` yields the Parts of a scripted
 reply — tests ride the same fold and delta path with no network at all.

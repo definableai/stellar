@@ -13,6 +13,7 @@ from typing import cast
 from core import (
     ContractError, Message, Part, Profile, Provider, ProviderError, Run, ToolCall,
 )
+from core.llm import args_of
 
 # what every chat model below can do; the rows differ only in their numbers
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
@@ -48,17 +49,6 @@ def line(message: Message) -> dict:
     if message.tool_call_id:
         said["tool_call_id"] = message.tool_call_id
     return said
-
-
-def args_of(function: dict) -> tuple[dict, str | None]:
-    """The arguments string as a dict — or an empty one and the string back."""
-    try:
-        args = json.loads(function.get("arguments") or "{}")
-        if not isinstance(args, dict):
-            raise ValueError("arguments must be a JSON object")
-    except ValueError:                       # a broken parse is a ValueError too
-        return {}, function.get("arguments")
-    return args, None
 
 
 class OpenAI(Provider):
@@ -108,7 +98,7 @@ class OpenAI(Provider):
             yield Part("text", said["content"])
         invalid = {}
         for asked in said.get("tool_calls") or []:
-            args, junk = args_of(asked["function"])
+            args, junk = args_of(asked["function"].get("arguments") or "")
             if junk is not None:
                 invalid[asked["id"]] = junk
             yield Part("tool_call",
@@ -125,9 +115,9 @@ class OpenAI(Provider):
     async def streamed(self, run: Run, body: dict):
         """The same reply off the socket: text now, tool calls when the turn ends.
 
-        A call's arguments arrive in pieces, filed by index until a
-        finish_reason closes the turn — nothing half-parsed leaves here, and
-        the fragments ride the bus as tool.args when the profile allows it.
+        A call's arguments arrive in pieces, filed by index until the stream
+        ends — nothing half-parsed leaves here, and the fragments ride the bus
+        as tool.args when the profile allows it.
         """
         calls: dict[int, list] = {}          # index → [id, name, fragments]
         invalid: dict[str, str] = {}
@@ -154,14 +144,12 @@ class OpenAI(Provider):
                     run.emit("tool.args",
                              {"id": slot[0], "name": slot[1], "delta": fragment},
                              source=f"model:{self.model}")
-            if choice.get("finish_reason"):   # ponytail: no finish_reason, no flush
-                stop = choice["finish_reason"]
-                for call_id, name, fragments in calls.values():
-                    args, junk = args_of({"arguments": "".join(fragments)})
-                    if junk is not None:
-                        invalid[call_id] = junk
-                    yield Part("tool_call", ToolCall(call_id, name, args))
-                calls.clear()                # flushed once; a second bell is empty
+            stop = choice.get("finish_reason") or stop
+        for call_id, name, fragments in calls.values():   # the turn is over now
+            args, junk = args_of("".join(fragments))
+            if junk is not None:
+                invalid[call_id] = junk
+            yield Part("tool_call", ToolCall(call_id, name, args))
         meta: dict = {"usage": {"input_tokens": used.get("prompt_tokens"),
                                 "output_tokens": used.get("completion_tokens")},
                       "stop_reason": stop}

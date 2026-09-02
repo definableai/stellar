@@ -8,17 +8,16 @@ content_block_stop, so a thinking block lands whole — the shape block()
 replays next turn.
 """
 
-import json
 from typing import cast
 
 from core import Message, Part, Profile, Provider, ProviderError, Run, ToolCall
+from core.llm import args_of
 
 VERSION = "2023-06-01"
 
-# Every current Claude does all nine — pictures, PDFs, tools, thinking, the lot;
-# redacted_thinking is a Part type of its own, and one it must read back unchanged
+# Every current Claude does all eight — pictures, PDFs, tools, thinking, the lot
 DOES = frozenset({"image", "document", "tools", "stream", "tool_stream",
-                  "thinking", "redacted_thinking", "json", "system"})
+                  "thinking", "json", "system"})
 
 
 def source(data: dict) -> dict:
@@ -43,17 +42,6 @@ def blocks(message: Message) -> list[dict]:
         {"type": "tool_use", "id": c.id, "name": c.name, "input": c.args}
         for c in message.tool_calls
     ]
-
-
-def args_of(raw: str) -> tuple[dict, str | None]:
-    """The fragments as one dict — or an empty one and the string back, unread."""
-    try:
-        args = json.loads(raw or "{}")
-        if not isinstance(args, dict):
-            raise ValueError("tool arguments must be a JSON object")
-    except ValueError:                  # a broken parse is a ValueError too
-        return {}, raw
-    return args, None
 
 
 class Anthropic(Provider):

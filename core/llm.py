@@ -28,17 +28,21 @@ if TYPE_CHECKING:                   # the checker's eyes only: no runtime edge
     from core.agent import Run
 
 __all__ = ["ALWAYS", "ANY", "Profile", "Provider", "ProviderError", "RETRY",
-           "Unsupported"]
+           "Unsupported", "args_of"]
 
 RETRY = {408, 409, 429, 500, 502, 503, 504, 529}   # worth asking again
 ALWAYS = frozenset({"text", "tool_call", "meta"})  # core folds these itself
 
 
 class ProviderError(RuntimeError):
-    """The provider said no. status is None when a stream broke mid-flight."""
+    """The provider said no.
+
+    status is None when there was no HTTP status to give — a dead socket, a
+    broken chunk, an error event inside a stream.
+    """
 
     def __init__(self, status: int | None, detail: str) -> None:
-        super().__init__(f"{status or 'stream'}: {detail}")
+        super().__init__(f"{status or 'no status'}: {detail}")
         self.status = status
 
 
@@ -115,12 +119,15 @@ class Provider(ProviderModel):
         """Refuse here what the wire would refuse later, for free.
 
         A content Part the profile does not name, or a toolbox on a model
-        without tools, raises Unsupported — nothing has been sent yet.
+        without tools, raises Unsupported — nothing has been sent yet. Only
+        what you authored is graded: the model's own turns go back as they came.
         """
         if run.agent.tools and "tools" not in self.profile:
             raise Unsupported(f"{self.profile.id} takes no tools; empty the "
                               "toolbox, or name a model whose profile has them")
-        for message in run.messages:    # every line, every turn: a string compare
+        for message in run.messages:    # every line you wrote: a string compare
+            if message.role == "assistant":
+                continue                # block() and line() replay it untouched
             for piece in cast(list[Part], message.content):
                 if piece.type not in ALWAYS and piece.type not in self.profile:
                     raise Unsupported(
@@ -149,11 +156,15 @@ class Provider(ProviderModel):
         """One client per instance, opened on first use — and again per loop.
 
         A client outlives the loop that made it; its connection pool does
-        not, so a second asyncio.run() gets a fresh one.
-        ponytail: the one it replaces is dropped, not closed — aclose() is yours.
+        not, so a second asyncio.run() gets a fresh one. The one it replaces is
+        closed on the loop that built it, if that loop still runs; a closed
+        loop took its sockets down with it, so that one is only dropped.
         """
         loop = asyncio.get_running_loop()
         if self._client is None or self._loop is not loop:
+            old, was = self._client, self._loop
+            if old is not None and was is not None and not was.is_closed():
+                was.call_soon_threadsafe(was.create_task, old.aclose())
             self._client = httpx.AsyncClient(
                 base_url=self.base_url, headers=self.headers(),
                 timeout=httpx.Timeout(10, read=600))
@@ -175,9 +186,9 @@ class Provider(ProviderModel):
         for attempt in (1, 2, 3):
             try:
                 answer = await self.http.post(path, json=body)
-            except httpx.TransportError:
+            except httpx.TransportError as ex:
                 if attempt == 3:
-                    raise
+                    raise ProviderError(None, f"{type(ex).__name__}: {ex}") from ex
                 nap = float(attempt)
             else:
                 if answer.status_code < 400:
@@ -212,9 +223,9 @@ class Provider(ProviderModel):
                                 started = True
                                 yield piece
                         return
-            except httpx.TransportError:
+            except httpx.TransportError as ex:
                 if started or attempt == 3:
-                    raise
+                    raise ProviderError(None, f"{type(ex).__name__}: {ex}") from ex
             await asyncio.sleep(nap)
 
 
@@ -231,4 +242,18 @@ def chunk(line: str) -> dict | None:
     if not line.startswith("data:"):
         return None                     # blank lines, `:` comments, `event:` names
     data = line[5:].strip()
-    return None if not data or data == "[DONE]" else json.loads(data)
+    try:
+        return None if not data or data == "[DONE]" else json.loads(data)
+    except ValueError as ex:
+        raise ProviderError(None, f"not JSON: {data[:200]}") from ex
+
+
+def args_of(raw: str) -> tuple[dict, str | None]:
+    """The arguments as one dict — or an empty one and the string back, unread."""
+    try:
+        args = json.loads(raw or "{}")
+        if not isinstance(args, dict):
+            raise ValueError("tool arguments must be a JSON object")
+    except ValueError:                  # a broken parse is a ValueError too
+        return {}, raw
+    return args, None
