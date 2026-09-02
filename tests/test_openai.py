@@ -249,6 +249,30 @@ def test_a_part_type_the_wire_never_heard_of_says_so() -> None:
         raise AssertionError("an unknown part type must not go on the wire")
 
 
+def test_the_models_own_past_off_another_wire_replays_without_it() -> None:
+    thought = Part("thinking", {"type": "thinking", "thinking": "Two halves.",
+                                "signature": "EqQBCgIYAhgCIkDrtM1kM+2v"})
+    said = encoded(OpenAI("gpt-5.6-luna"), [
+        Message("user", "hi"),
+        Message("assistant", [thought, Part("text", "half")],
+                [ToolCall("call_abc123", "echo", {"text": "hi"})]),
+        Message("tool", "hi", tool_call_id="call_abc123"),
+    ])["messages"]
+    assert said[1] == {                          # the thinking block is dropped
+        "role": "assistant", "content": "half",
+        "tool_calls": [{"id": "call_abc123", "type": "function",
+                        "function": {"name": "echo",
+                                     "arguments": '{"text": "hi"}'}}],
+    }
+    assert said[2]["role"] == "tool"             # and its result still answers it
+    try:
+        encoded(OpenAI("gpt-5.6-luna"), [Message("user", [thought])])
+    except ContractError as e:
+        assert "'thinking'" in str(e)            # yours, though: a promise broken
+    else:
+        raise AssertionError("a part you authored must not be dropped quietly")
+
+
 def test_text_arrives_one_chunk_at_a_time() -> None:
     said, heard = played(SAYS)
     assert [p.data for p in deltas(heard) if p.type == "text"] == ["o", "k"]
@@ -279,6 +303,15 @@ def test_the_stream_ends_with_one_meta() -> None:
     assert broken.tool_calls[0].args == {}       # the loop can still call it
     assert broken.meta["invalid_args"] == {"call_bad": '{"text": '}
     assert "invalid_args" not in said.meta
+
+
+def test_meta_says_which_model_answered() -> None:
+    assert decoded(PLAIN).meta["model"] == "gpt-5.6-luna"      # the body's own word
+    said, _ = played(SAYS)
+    assert said.meta["model"] == "gpt-5.6-luna"                # none said: the id
+    dated, _ = played([dict(c, model="gpt-5.6-luna-2026-03-01") if i == 1 else c
+                       for i, c in enumerate(SAYS)])
+    assert dated.meta["model"] == "gpt-5.6-luna-2026-03-01"    # the wire's word wins
 
 
 def test_argument_fragments_ride_the_bus_when_the_profile_says_so() -> None:
@@ -316,9 +349,11 @@ if __name__ == "__main__":
         test_unparseable_arguments_keep_the_raw_string,
         test_parts_open_into_content_parts,
         test_a_part_type_the_wire_never_heard_of_says_so,
+        test_the_models_own_past_off_another_wire_replays_without_it,
         test_text_arrives_one_chunk_at_a_time,
         test_a_tool_call_is_assembled_from_its_fragments,
         test_the_stream_ends_with_one_meta,
+        test_meta_says_which_model_answered,
         test_argument_fragments_ride_the_bus_when_the_profile_says_so,
         test_three_scripted_streams_pass_the_check,
         test_an_error_chunk_ends_the_stream,

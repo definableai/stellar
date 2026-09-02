@@ -6,6 +6,19 @@ event stream when the profile has one, else one POST and the same parse. Off
 the stream every block but text is held open at its index until
 content_block_stop, so a thinking block lands whole — the shape block()
 replays next turn.
+
+core                  Messages API
+Part("text")          {"type": "text", "text"}       streams as deltas
+Part("image")         {"type": "image", "source": url | base64}
+Part("document")      {"type": "document", "source": …}
+Part(other)           {"type": other, **data}        thinking etc., replayed as it came
+ToolCall              {"type": "tool_use", "id", "name", "input"}
+Message("tool")       a user turn holding {"type": "tool_result",
+                      "tool_use_id", "content"}
+Message("system")     top-level "system"
+meta.usage            usage.input_tokens / output_tokens
+meta.model            model
+meta.stop_reason      stop_reason
 """
 
 from typing import cast
@@ -18,6 +31,9 @@ VERSION = "2023-06-01"
 # Every current Claude does all eight — pictures, PDFs, tools, thinking, the lot
 DOES = frozenset({"image", "document", "tools", "stream", "tool_stream",
                   "thinking", "json", "system"})
+
+
+# ---- out: core -> wire.  block() makes a block, blocks() a whole turn ----
 
 
 def source(data: dict) -> dict:
@@ -42,6 +58,24 @@ def blocks(message: Message) -> list[dict]:
         {"type": "tool_use", "id": c.id, "name": c.name, "input": c.args}
         for c in message.tool_calls
     ]
+
+
+# ---- in: wire -> core.  part() makes a Part, usage() makes the usage row ----
+
+
+def part(block: dict) -> Part:
+    """One content block, as the one Part core folds — whole, off either path."""
+    if block["type"] == "text":
+        return Part("text", block["text"])
+    if block["type"] == "tool_use":
+        return Part("tool_call",
+                    ToolCall(block["id"], block["name"], block.get("input") or {}))
+    return Part(block["type"], block)   # thinking, and whatever comes next
+
+
+def usage(raw: dict) -> dict:
+    """What the turn cost: core's two numbers, off the wire's fuller row."""
+    return {k: raw.get(k) for k in ("input_tokens", "output_tokens")}
 
 
 class Anthropic(Provider):
@@ -100,16 +134,10 @@ class Anthropic(Provider):
         if "stream" not in self.profile:
             raw = await self.post("/v1/messages", body)
             for b in raw.get("content", []):
-                if b["type"] == "tool_use":
-                    yield Part("tool_call",
-                               ToolCall(b["id"], b["name"], b.get("input") or {}))
-                elif b["type"] == "text":
-                    yield Part("text", b["text"])
-                else:
-                    yield Part(b["type"], b)    # thinking, and whatever comes next
-            used = raw.get("usage") or {}
+                yield part(b)
             yield Part("meta", {
-                "usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")},
+                "usage": usage(raw.get("usage") or {}),
+                "model": raw.get("model") or self.model,
                 "stop_reason": raw.get("stop_reason"),
             })
             return
@@ -117,13 +145,14 @@ class Anthropic(Provider):
         held: dict[int, dict] = {}      # the blocks still open, by index
         fragments: dict[int, str] = {}  # a tool call's arguments, still in pieces
         invalid: dict[str, str] = {}
-        usage: dict[str, int | None] = {"input_tokens": None, "output_tokens": None}
+        used: dict = usage({})          # one row, filled from both ends of the stream
+        who: str = self.model           # who answered: the wire's own word for it
         stop: str | None = None
         async for piece in self.sse("/v1/messages", body):
             kind, index = piece.get("type"), piece.get("index")
             if kind == "message_start":
-                used = piece["message"].get("usage") or {}
-                usage["input_tokens"] = used.get("input_tokens")
+                used = usage(piece["message"].get("usage") or {})
+                who = piece["message"].get("model") or who
             elif kind == "content_block_start":
                 if piece["content_block"]["type"] != "text":
                     held[index] = dict(piece["content_block"])   # text holds nothing
@@ -146,22 +175,20 @@ class Anthropic(Provider):
             elif kind == "content_block_stop":
                 slot = held.pop(index, None)
                 if slot is None:
-                    continue                        # a text block: already yielded
-                if slot["type"] != "tool_use":
-                    yield Part(slot["type"], slot)  # whole, exactly as it came
-                    continue
-                args, junk = args_of(fragments.pop(index, ""))
-                if junk is not None:
-                    invalid[slot["id"]] = junk
-                yield Part("tool_call", ToolCall(slot["id"], slot["name"], args))
+                    continue                    # a text block: already yielded
+                if slot["type"] == "tool_use":  # its arguments, done arriving
+                    slot["input"], junk = args_of(fragments.pop(index, ""))
+                    if junk is not None:
+                        invalid[slot["id"]] = junk
+                yield part(slot)                # whole, exactly as it came
             elif kind == "message_delta":
                 stop = piece["delta"].get("stop_reason") or stop
-                used = piece.get("usage") or {}     # cumulative: the last one wins
-                usage["output_tokens"] = used.get(
-                    "output_tokens", usage["output_tokens"])
+                grown = piece.get("usage") or {}    # cumulative: the last one wins
+                used["output_tokens"] = grown.get(
+                    "output_tokens", used["output_tokens"])
             elif kind == "error":
                 raise ProviderError(None, str(piece.get("error")))
-        meta: dict = {"usage": usage, "stop_reason": stop}
+        meta: dict = {"usage": used, "model": who, "stop_reason": stop}
         if invalid:
             meta["invalid_args"] = invalid
         yield Part("meta", meta)        # once, and merged: fold's merge is shallow

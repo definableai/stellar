@@ -327,8 +327,11 @@ def test_send_yields_text_tool_use_and_usage() -> None:
     ]
     assert answer.meta == {
         "usage": {"input_tokens": 380, "output_tokens": 64},
+        "model": "claude-sonnet-5",
         "stop_reason": "tool_use",
     }
+    dated = decoded(dict(BODIES[1], model="claude-sonnet-5-20260801"))
+    assert dated.meta["model"] == "claude-sonnet-5-20260801"   # the wire's word wins
 
 
 def test_text_blocks_fold_into_one_part() -> None:
@@ -400,6 +403,7 @@ def test_usage_is_merged_once_from_both_ends_of_the_stream() -> None:
     said, heard = replied(TEXT)
     assert said.meta == {
         "usage": {"input_tokens": 25, "output_tokens": 15},   # start, then delta
+        "model": "claude-sonnet-5",
         "stop_reason": "end_turn",
     }
     assert [p.type for p in deltas(heard)].count("meta") == 1  # merge is shallow

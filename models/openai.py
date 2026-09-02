@@ -5,6 +5,19 @@ Parts — off the event stream when the profile has one, off a single POST when
 it does not. The quirk worth remembering is that a tool call's arguments
 travel as a JSON *string*: dumped on the way out, parsed on the way back in,
 and on the stream they arrive a fragment at a time.
+
+core                  Chat Completions
+Part("text")          {"type": "text", "text"}
+Part("image")         {"type": "image_url", "image_url": {"url": url | data-url}}
+Part(other)           a user turn: ContractError, the wire cannot say it
+                      an assistant turn: dropped — its own past, off another wire
+ToolCall              message.tool_calls[{"id", "type": "function",
+                      "function": {"name", "arguments": JSON string}}]
+Message("tool")       {"role": "tool", "tool_call_id", "content"}
+Message("system")     as it is
+meta.usage            usage.prompt_tokens / completion_tokens
+meta.model            model
+meta.stop_reason      choices[0].finish_reason
 """
 
 import json
@@ -17,28 +30,37 @@ from core.llm import args_of
 
 # what every chat model below can do; the rows differ only in their numbers
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
+SAID = frozenset({"text", "image"})     # the part types this wire has a shape for
 
 
-def part(piece: Part) -> dict:
+# ---- out: core -> wire.  block() makes a block, line() makes a message ----
+
+
+def block(part: Part) -> dict:
     """One Part as one content part. Text stays text; an image becomes a URL."""
-    if piece.type == "text":
-        return {"type": "text", "text": piece.data}
-    if piece.type == "image":                # {"url": …} or {"media_type": …, "data": …}
-        d = piece.data
+    if part.type == "text":
+        return {"type": "text", "text": part.data}
+    if part.type == "image":            # {"url": …} or {"media_type": …, "data": …}
+        d = part.data
         url = d["url"] if "url" in d else f"data:{d['media_type']};base64,{d['data']}"
         return {"type": "image_url", "image_url": {"url": url}}
     raise ContractError(
-        f"Chat Completions has no part type {piece.type!r}; say 'text' or 'image'"
+        f"Chat Completions has no part type {part.type!r}; say 'text' or 'image'"
     )
 
 
 def line(message: Message) -> dict:
     """One notebook line as one message: the role, the words, the plumbing."""
     parts = cast(list[Part], message.content)   # always parts after construction
+    if message.role == "assistant":
+        # its own past may be off another wire — a thinking block from a Claude
+        # turn — so drop what this one cannot say; a part you authored still
+        # raises in block(), because a profile word promised it
+        parts = [p for p in parts if p.type in SAID]
     text_only = all(p.type == "text" for p in parts)
     said = {
         "role": message.role,
-        "content": message.text if text_only else [part(p) for p in parts],
+        "content": message.text if text_only else [block(p) for p in parts],
     }
     if message.tool_calls:
         said["tool_calls"] = [
@@ -49,6 +71,27 @@ def line(message: Message) -> dict:
     if message.tool_call_id:
         said["tool_call_id"] = message.tool_call_id
     return said
+
+
+# ---- in: wire -> core.  part() makes a Part, usage() makes the usage row ----
+
+
+def part(call: dict, invalid: dict) -> Part:
+    """One tool call, in the POST shape both paths end up holding.
+
+    Arguments that will not parse are filed in invalid under the call's id,
+    and the ToolCall goes out with none — the loop answers the model itself.
+    """
+    args, junk = args_of(call["function"].get("arguments") or "")
+    if junk is not None:
+        invalid[call["id"]] = junk
+    return Part("tool_call", ToolCall(call["id"], call["function"]["name"], args))
+
+
+def usage(raw: dict) -> dict:
+    """What the turn cost, under the two names core reads."""
+    return {"input_tokens": raw.get("prompt_tokens"),
+            "output_tokens": raw.get("completion_tokens")}
 
 
 class OpenAI(Provider):
@@ -96,18 +139,14 @@ class OpenAI(Provider):
         said = choice["message"]
         if said.get("content"):
             yield Part("text", said["content"])
-        invalid = {}
+        invalid: dict = {}
         for asked in said.get("tool_calls") or []:
-            args, junk = args_of(asked["function"].get("arguments") or "")
-            if junk is not None:
-                invalid[asked["id"]] = junk
-            yield Part("tool_call",
-                       ToolCall(asked["id"], asked["function"]["name"], args))
-        meta = {"stop_reason": choice.get("finish_reason")}
+            yield part(asked, invalid)
+        meta: dict = {"stop_reason": choice.get("finish_reason"),
+                      "model": raw.get("model") or self.model}
         used = raw.get("usage") or {}
         if used:
-            meta["usage"] = {"input_tokens": used.get("prompt_tokens"),
-                             "output_tokens": used.get("completion_tokens")}
+            meta["usage"] = usage(used)
         if invalid:
             meta["invalid_args"] = invalid
         yield Part("meta", meta)
@@ -122,10 +161,12 @@ class OpenAI(Provider):
         calls: dict[int, list] = {}          # index → [id, name, fragments]
         invalid: dict[str, str] = {}
         used: dict = {}
+        who: str = self.model                # who answered: the wire's own word
         stop: str | None = None
         async for chunk in self.sse("/chat/completions", body):
             if chunk.get("error"):
                 raise ProviderError(None, str(chunk["error"])[:200])
+            who = chunk.get("model") or who
             used = chunk.get("usage") or used
             if not chunk.get("choices"):     # the usage chunk carries none of them
                 continue
@@ -146,13 +187,10 @@ class OpenAI(Provider):
                              source=f"model:{self.model}")
             stop = choice.get("finish_reason") or stop
         for call_id, name, fragments in calls.values():   # the turn is over now
-            args, junk = args_of("".join(fragments))
-            if junk is not None:
-                invalid[call_id] = junk
-            yield Part("tool_call", ToolCall(call_id, name, args))
-        meta: dict = {"usage": {"input_tokens": used.get("prompt_tokens"),
-                                "output_tokens": used.get("completion_tokens")},
-                      "stop_reason": stop}
+            asked = {"id": call_id, "function": {"name": name,
+                                                 "arguments": "".join(fragments)}}
+            yield part(asked, invalid)
+        meta: dict = {"usage": usage(used), "model": who, "stop_reason": stop}
         if invalid:
             meta["invalid_args"] = invalid
         yield Part("meta", meta)             # one meta: fold merges it shallowly
