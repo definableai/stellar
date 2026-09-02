@@ -65,9 +65,9 @@ and no bridges: sync code is one `asyncio.to_thread` line the implementer writes
 inside the async method.
 
 `from core import …` also gives you the things that are not new nouns:
-`ProviderModel` and `FakeModel` (both are Models), the `@tool` and `@hook`
-decorators, `STAGES`, and the loop's own `run` and `check`. `check_model` lives
-in `core.conformance`.
+`ProviderModel`, `FakeModel` and `Fallback` (all three are Models), the `@tool`
+and `@hook` decorators, `STAGES`, and the loop's own `run` and `check`.
+`check_model` lives in `core.conformance`.
 
 ## Quickstart
 
@@ -160,7 +160,9 @@ is shared: `Part("image", {"url": …})` or
 
 Put what the reply cost in a meta Part, as
 `{"usage": {"input_tokens": …, "output_tokens": …}}`. That is the convention
-`Budget` reads; an adapter that leaves it out just counts as free.
+`Budget` reads; an adapter that leaves it out just counts as free. Beside it,
+`meta["model"]` names who answered — the wire's own word for itself, else the
+id you asked for, never `None`.
 
 ### A provider is four things
 
@@ -206,9 +208,9 @@ question, and the one `accept()` asks of every Part you put in the notebook,
 and of the toolbox, before anything is sent: a picture nobody can read never
 costs a round trip. One rule: **a feature named after a Part type admits that
 Part in what you send** — user, system and tool messages. The model's own
-output is replayed untouched, so it is never graded. The words in the box are
-`image`, `document`, `thinking`, `tools`, `stream`, `tool_stream`, `json` and
-`system`.
+output is never graded: it is its past, not your request. The words in the box
+are `image`, `document`, `thinking`, `tools`, `stream`, `tool_stream`, `json`
+and `system`.
 
 - `stream` picks the path: with it, `encode` asks for the event stream and
   `send` yields a text Part per chunk; without it, one POST and the same parse.
@@ -287,6 +289,75 @@ clone and the same class talks to it. Both name their model first —
 `Anthropic("claude-sonnet-5")`, `OpenAI("gpt-5.6-luna")` — take `api_key=` or
 read the environment, pass any extra keyword straight through to the request
 body, and stream off the socket whenever the profile says `stream`.
+
+Each one's module docstring carries its whole mapping, both directions, as one
+table, and the functions under it are named for what they return: `block()` a
+content block, `line()` or `blocks()` a whole turn, `part()` a `Part`,
+`usage()` the usage row.
+
+Chat Completions has no shape for a thinking block, so an assistant turn drops
+what this wire cannot say — the model's own past, off another wire, replays
+without it. A part *you* authored stays loud; nothing you wrote goes missing in
+silence.
+
+### Fallback, and routing
+
+Routing composes Models. It is not a setting inside a provider: `Fallback` is a
+`Model` made of `Model`s, asked in order, and the first that takes the run and
+answers wins. That is why it crosses providers for free — the notebook is
+core-shaped, and every adapter encodes from `Message`, never from another
+adapter's wire.
+
+```python
+from core import Agent, Fallback
+from models.anthropic import Anthropic
+from models.openai import OpenAI
+
+agent = Agent(
+    model=Fallback(                                   # order = preference
+        Anthropic("claude-opus-5"),
+        OpenAI("gpt-5.6-terra", reasoning_effort="high"),
+        OpenAI("gpt-5.6-luna"),                       # the last one's error is yours
+    ),
+    tools=[write],
+)
+run = await agent.run("what is in this pdf?")         # a document: opus takes it
+run.messages[-1].meta["model"]                        # who actually answered
+```
+
+It catches exactly two things: `Unsupported`, the gate's no before any byte — a
+picture on a text-only model costs no round trip — and `ProviderError`, the
+wire's no with its retries already spent. Everything else stays loud,
+`ContractError` first among them: a wiring mistake is not a reason to ask
+someone else. The signature is `Fallback(first, *rest)`, one Model minimum, and
+the last one is asked outside the net, so its refusal reaches you as itself.
+
+Every skip rides the bus as a `model.skip` event carrying the refusal's own
+words, source `model:<id>` — or the class name, for a Model that has no id. The
+reply's `meta["model"]` is how you tell who ended up answering.
+
+A smarter policy — cheap first, by toolbox or by notebook length — is a Model
+of your own, and it nests inside a `Fallback`, because every layer here is a
+Model:
+
+```python
+class Cheap(Model):
+    def __init__(self, small, big) -> None:
+        self.small, self.big = small, big
+
+    async def invoke(self, run) -> Message:
+        long = sum(len(m.text) for m in run.messages) > 20_000
+        return await (self.big if long else self.small).invoke(run)
+
+
+model = Fallback(Cheap(haiku, opus), OpenAI("gpt-5.6-luna"))
+```
+
+Two ceilings. A provider that is down is retried in full — three tries, with
+backoff — at every step before the next one is asked; add a per-model cooldown
+when that starts to hurt. And a stream that dies after its first delta falls
+through like any other refusal: the notebook comes out right, but the radio
+already carried the dead one's deltas.
 
 ## Tools
 
@@ -576,7 +647,7 @@ core/             the twelve nouns and the loop — stdlib (bar llm.py), under 2
   events.py         Event, Events
   tool.py           @tool
   fake.py           FakeModel
-  llm.py            Provider, Profile — the HTTP half; the only httpx in core
+  llm.py            Provider, Profile, Fallback — the HTTP half; the only httpx in core
   conformance.py    check_model
   __init__.py       the barrel: all of it, in one import
 models/           anthropic.py, openai.py — one file per provider
