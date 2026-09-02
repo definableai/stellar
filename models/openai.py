@@ -1,18 +1,20 @@
 """OpenAI Chat Completions — the wire format the compatible vendors clone.
 
-Two steps, like any ProviderModel: build the body, POST it and yield the
-reply as Parts. The quirk worth remembering is that a tool call's arguments
-travel as a JSON *string*: dumped on the way out, parsed on the way back in.
+Two steps, like any Provider: build the body, then hand the reply back as
+Parts — off the event stream when the profile has one, off a single POST when
+it does not. The quirk worth remembering is that a tool call's arguments
+travel as a JSON *string*: dumped on the way out, parsed on the way back in,
+and on the stream they arrive a fragment at a time.
 """
 
-import asyncio
 import json
-import os
 from typing import cast
 
-import httpx
+from core import ContractError, Message, Part, Run, ToolCall
+from models.base import Profile, Provider, ProviderError
 
-from core import ContractError, Message, Part, ProviderModel, Run, ToolCall
+# what every chat model below can do; the rows differ only in their numbers
+CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
 
 
 def part(piece: Part) -> dict:
@@ -58,45 +60,47 @@ def args_of(function: dict) -> tuple[dict, str | None]:
     return args, None
 
 
-class OpenAI(ProviderModel):
+class OpenAI(Provider):
     """The brain behind api.openai.com — or anything that copied its format.
 
-    Point base_url somewhere else and the same class talks to the clone.
+    Point base_url somewhere else and the same class talks to the clone. A
+    clone that cannot hold a stream open gets a profile without "stream" and
+    takes the one-POST path instead; everything else is the same wire.
     """
 
-    def __init__(
-        self,
-        model: str = "gpt-5.6-luna",
-        api_key: str | None = None,
-        base_url: str = "https://api.openai.com/v1",
-        **params,
-    ) -> None:
-        self.model = model
-        self.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
-        if not self.api_key:
-            raise ContractError("no API key: pass api_key= or set OPENAI_API_KEY")
-        self.base_url = base_url.rstrip("/")
-        self.params = params                 # temperature, max_tokens, whatever else
+    url, env = "https://api.openai.com/v1", "OPENAI_API_KEY"
+    PROFILES = {                    # developers.openai.com/api/docs/models
+        "gpt-5.6-sol": Profile("gpt-5.6-sol", 1_050_000, 128_000, CHAT),
+        "gpt-5.6-terra": Profile("gpt-5.6-terra", 1_050_000, 128_000, CHAT),
+        "gpt-5.6-luna": Profile("gpt-5.6-luna", 1_050_000, 128_000, CHAT),
+        "gpt-5.5": Profile("gpt-5.5", 1_050_000, 128_000, CHAT),
+    }
+
+    def headers(self) -> dict:
+        """The key, carried as a bearer token — the only header this wire wants."""
+        return {"Authorization": f"Bearer {self.key}"}
 
     def encode(self, run: Run) -> dict:
         """This run's whole notebook and the whole toolbox, as one request body."""
         body = {
             "model": self.model,
             "messages": [line(m) for m in run.messages],
-            **self.params,
+            "max_completion_tokens": self.profile.max_output,
         }
         if run.agent.tools:
-            body["tools"] = [
-                {"type": "function",
-                 "function": {"name": t.name, "description": t.description,
-                              "parameters": t.parameters}}
-                for t in run.agent.tools.values()
-            ]
-        return body
+            body["tools"] = [{"type": "function", "function": schema}
+                             for schema in self.tool_schemas(run)]
+        if "stream" in self.profile:
+            body |= {"stream": True, "stream_options": {"include_usage": True}}
+        return body | self.params            # a param of yours wins over all of it
 
-    async def send(self, run, body: dict):
-        """POST once, then hand choice zero over as Parts."""
-        raw = await self.post(body)
+    async def send(self, run: Run, body: dict):
+        """The reply as Parts: chunk by chunk when the profile streams, else once."""
+        if "stream" in self.profile:
+            async for piece in self.streamed(run, body):
+                yield piece
+            return
+        raw = await self.post("/chat/completions", body)
         choice = raw["choices"][0]
         said = choice["message"]
         if said.get("content"):
@@ -108,7 +112,7 @@ class OpenAI(ProviderModel):
                 invalid[asked["id"]] = junk
             yield Part("tool_call",
                        ToolCall(asked["id"], asked["function"]["name"], args))
-        meta = {"finish_reason": choice.get("finish_reason")}
+        meta = {"stop_reason": choice.get("finish_reason")}
         used = raw.get("usage") or {}
         if used:
             meta["usage"] = {"input_tokens": used.get("prompt_tokens"),
@@ -117,26 +121,49 @@ class OpenAI(ProviderModel):
             meta["invalid_args"] = invalid
         yield Part("meta", meta)
 
-    async def post(self, body: dict) -> dict:
-        """Three tries for the failures worth retrying, then give up.
+    async def streamed(self, run: Run, body: dict):
+        """The same reply off the socket: text now, tool calls when the turn ends.
 
-        A fresh client per call: no connection reuse, no lifecycle to own.
+        A call's arguments arrive in pieces, filed by index until a
+        finish_reason closes the turn — nothing half-parsed leaves here, and
+        the fragments ride the bus as tool.args when the profile allows it.
         """
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        async with httpx.AsyncClient(timeout=60) as http:
-            for attempt in range(3):
-                try:
-                    reply = await http.post(
-                        f"{self.base_url}/chat/completions", json=body, headers=headers
-                    )
-                except httpx.TimeoutException as ex:
-                    problem = f"timeout: {ex!r}"
-                else:
-                    if reply.status_code < 400:
-                        return reply.json()
-                    problem = f"{reply.status_code}: {reply.text[:200]}"
-                    if reply.status_code != 429 and reply.status_code < 500:
-                        break                # our mistake; asking again won't fix it
-                if attempt < 2:
-                    await asyncio.sleep(2**attempt)
-        raise RuntimeError(f"chat/completions failed — {problem}")
+        calls: dict[int, list] = {}          # index → [id, name, fragments]
+        invalid: dict[str, str] = {}
+        used: dict = {}
+        stop: str | None = None
+        async for chunk in self.sse("/chat/completions", body):
+            if chunk.get("error"):
+                raise ProviderError(None, str(chunk["error"])[:200])
+            used = chunk.get("usage") or used
+            if not chunk.get("choices"):     # the usage chunk carries none of them
+                continue
+            choice = chunk["choices"][0]
+            delta = choice.get("delta") or {}
+            if delta.get("content"):
+                yield Part("text", delta["content"])
+            for asked in delta.get("tool_calls") or ():
+                slot = calls.setdefault(asked.get("index", 0), [None, None, []])
+                fn = asked.get("function") or {}
+                slot[0] = asked.get("id") or slot[0]
+                slot[1] = fn.get("name") or slot[1]
+                fragment = fn.get("arguments") or ""
+                slot[2].append(fragment)
+                if fragment and "tool_stream" in self.profile:
+                    run.emit("tool.args",
+                             {"id": slot[0], "name": slot[1], "delta": fragment},
+                             source=f"model:{self.model}")
+            if choice.get("finish_reason"):   # ponytail: no finish_reason, no flush
+                stop = choice["finish_reason"]
+                for call_id, name, fragments in calls.values():
+                    args, junk = args_of({"arguments": "".join(fragments)})
+                    if junk is not None:
+                        invalid[call_id] = junk
+                    yield Part("tool_call", ToolCall(call_id, name, args))
+                calls.clear()                # flushed once; a second bell is empty
+        meta: dict = {"usage": {"input_tokens": used.get("prompt_tokens"),
+                                "output_tokens": used.get("completion_tokens")},
+                      "stop_reason": stop}
+        if invalid:
+            meta["invalid_args"] = invalid
+        yield Part("meta", meta)             # one meta: fold merges it shallowly
