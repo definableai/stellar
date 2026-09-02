@@ -290,6 +290,29 @@ def test_tool_results_in_a_row_become_one_turn() -> None:
     }]
 
 
+def test_a_tool_result_carries_its_blocks() -> None:
+    body = encoded(
+        Anthropic("claude-sonnet-5", api_key="x"),
+        [
+            Message("user", "what does it look like?"),
+            Message("assistant", "", [ToolCall("t1", "echo", {"text": "hi"})]),
+            Message("tool", [Part("text", "here"),
+                             Part("image", {"media_type": "image/png",
+                                            "data": "aGk="})],
+                    tool_call_id="t1"),
+        ],
+        [echo],
+    )
+    assert body["messages"][-1]["content"] == [{
+        "type": "tool_result", "tool_use_id": "t1", "content": [
+            {"type": "text", "text": "here"},
+            {"type": "image", "source": {"type": "base64",
+                                         "media_type": "image/png",
+                                         "data": "aGk="}},
+        ],
+    }]
+
+
 def test_parts_become_content_blocks() -> None:
     body = encoded(Anthropic("claude-sonnet-5", api_key="x"), [Message("user", [
         Part("text", "what is this?"),
@@ -443,6 +466,7 @@ if __name__ == "__main__":
         test_canned_replies_pass_check_model,
         test_system_messages_go_to_the_top,
         test_tool_results_in_a_row_become_one_turn,
+        test_a_tool_result_carries_its_blocks,
         test_parts_become_content_blocks,
         test_the_body_says_max_tokens_and_stream_the_profile_way,
         test_send_yields_text_tool_use_and_usage,

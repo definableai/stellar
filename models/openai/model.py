@@ -10,7 +10,7 @@ the stream they arrive a fragment at a time.
 
 from core import Part, Profile, Provider, ProviderError, Run
 
-from .mapping import meta, tool, tool_call, turn
+from .mapping import meta, notebook, tool, tool_call
 
 # what every chat model below can do; the rows differ only in their numbers
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
@@ -45,7 +45,7 @@ class OpenAI(Provider):
         """This run's whole notebook and the whole toolbox, as one request body."""
         body = {
             "model": self.model,
-            "messages": [turn(m) for m in run.messages],
+            "messages": notebook(run.messages),
             "max_completion_tokens": self.profile.max_output,
         }
         if run.agent.tools:

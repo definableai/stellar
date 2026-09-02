@@ -53,6 +53,9 @@ def turn(m: Message) -> dict:
         # turn — so drop what this one cannot say; a part you authored goes
         # through unsaid, because a profile word promised it
         parts = [p for p in parts if p.type in OUT]
+    elif m.role == "tool":
+        # a tool message says text here; its pictures go in the next user line
+        parts = [p for p in parts if p.type == "text"]
     said = {"role": m.role,
             "content": (m.text if all(p.type == "text" for p in parts)
                         else [OUT.get(p.type, unsaid)(p) for p in parts])}
@@ -61,6 +64,31 @@ def turn(m: Message) -> dict:
     if m.tool_call_id:
         said["tool_call_id"] = m.tool_call_id
     return said
+
+
+def notebook(messages: list[Message]) -> list[dict]:
+    """Every line as a message; a tool's pictures follow the run of tool lines.
+
+    A tool message holds text only on this wire, so the image Parts off a
+    run of tool lines ride in one user line right after that run, each
+    captioned with its call id — the model reads which result it belongs to.
+    Anything else a tool returned has no shape here and is dropped.
+    """
+    lines: list[dict] = []
+    shown: list[dict] = []          # captions and images, held till the run ends
+    for m in messages:
+        if shown and m.role != "tool":
+            lines.append({"role": "user", "content": shown})
+            shown = []
+        lines.append(turn(m))
+        if m.role == "tool":
+            images = [p for p in cast(list[Part], m.content) if p.type == "image"]
+            if images:
+                caption = f"[image returned by tool call {m.tool_call_id}]"
+                shown += [text(Part("text", caption))] + [image(p) for p in images]
+    if shown:
+        lines.append({"role": "user", "content": shown})
+    return lines
 
 # ---- reply -> Parts -----------------------------------------------------
 

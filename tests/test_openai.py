@@ -216,6 +216,44 @@ def test_tool_calls_round_trip() -> None:
     ]
 
 
+def test_a_tools_pictures_follow_the_run_of_tool_lines() -> None:
+    shot = Part("image", {"url": "https://example.com/shot.png"})
+    seen = {"type": "image_url", "image_url": {"url": "https://example.com/shot.png"}}
+    asks = Message("assistant", "", [ToolCall("t1", "echo", {"text": "a"}),
+                                     ToolCall("t2", "echo", {"text": "b"})])
+
+    one = encoded(OpenAI("gpt-5.6-luna"), [
+        Message("user", "look"),
+        Message("assistant", "", [ToolCall("t1", "echo", {"text": "a"})]),
+        Message("tool", [Part("text", "here"), shot], tool_call_id="t1"),
+    ])["messages"]
+    assert one[2] == {"role": "tool", "content": "here", "tool_call_id": "t1"}
+    assert one[3] == {"role": "user", "content": [
+        {"type": "text", "text": "[image returned by tool call t1]"}, seen]}
+    assert len(one) == 4                         # the picture, one line later
+
+    two = encoded(OpenAI("gpt-5.6-luna"), [
+        Message("user", "look twice"),
+        asks,
+        Message("tool", [shot], tool_call_id="t1"),          # a picture and no words
+        Message("tool", [Part("text", "b"), shot], tool_call_id="t2"),
+        Message("user", "thanks"),
+    ])["messages"]
+    assert [m["role"] for m in two] == [
+        "user", "assistant", "tool", "tool", "user", "user"]
+    assert two[2] == {"role": "tool", "content": "", "tool_call_id": "t1"}
+    assert two[4] == {"role": "user", "content": [    # one line for the whole run
+        {"type": "text", "text": "[image returned by tool call t1]"}, seen,
+        {"type": "text", "text": "[image returned by tool call t2]"}, seen]}
+    assert two[5] == {"role": "user", "content": "thanks"}
+
+    plain = encoded(OpenAI("gpt-5.6-luna"), [
+        asks, Message("tool", "a", tool_call_id="t1"),
+        Message("tool", "b", tool_call_id="t2"),
+    ])["messages"]
+    assert [m["role"] for m in plain] == ["assistant", "tool", "tool"]  # no pictures
+
+
 def test_usage_and_stop_reason_land_in_meta() -> None:
     said = decoded(PLAIN)
     assert said.text == "ok"
@@ -364,6 +402,7 @@ if __name__ == "__main__":
         test_the_body_carries_the_notebook_and_the_toolbox,
         test_the_body_streams_when_the_profile_does,
         test_tool_calls_round_trip,
+        test_a_tools_pictures_follow_the_run_of_tool_lines,
         test_usage_and_stop_reason_land_in_meta,
         test_unparseable_arguments_keep_the_raw_string,
         test_parts_open_into_content_parts,

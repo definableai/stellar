@@ -48,7 +48,11 @@ def tool_use(c: ToolCall) -> dict:
 
 
 def tool_result(m: Message) -> dict:
-    return {"type": "tool_result", "tool_use_id": m.tool_call_id, "content": m.text}
+    """A tool Message as one tool_result block: its text, or every block it holds."""
+    parts = cast(list[Part], m.content)
+    content = (m.text if all(p.type == "text" for p in parts)
+               else [OUT.get(p.type, passthrough)(p) for p in parts])
+    return {"type": "tool_result", "tool_use_id": m.tool_call_id, "content": content}
 
 
 def tool(schema: dict) -> dict:
