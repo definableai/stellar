@@ -15,7 +15,10 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core import Agent, Message, Part, Run, llm, tool  # noqa: E402
+from core import (  # noqa: E402
+    Agent, ContractError, FakeModel, Fallback, Message, Model, Part, Run,
+    llm, tool,
+)
 from core.llm import ANY, Profile, Provider, ProviderError, Unsupported  # noqa: E402
 
 WAITS: list[float] = []
@@ -90,6 +93,13 @@ class Wired(Stub):
     @property
     def http(self) -> httpx.AsyncClient:
         return self.client
+
+
+class Posts(Wired):
+    """Wired, with send() actually asking the socket — so a refusal reaches invoke."""
+
+    async def send(self, run, body):
+        yield Part("text", (await self.post("say", body))["said"])
 
 
 def test_lookup_takes_the_longest_id_it_starts_with() -> None:
@@ -250,6 +260,57 @@ def test_the_client_a_swap_replaces_is_closed_on_its_own_loop() -> None:
     assert not thread.is_alive() and first.is_closed
 
 
+def test_fallback_asks_the_next_one_when_this_one_says_no() -> None:
+    blind = Stub("small", api_key="k")                    # no "image" word on it
+    agent = Agent(Fallback(blind, FakeModel(["ok"])))
+    run = asyncio.run(agent.run(Message("user", [Part("image", {"url": "u"})])))
+    assert run.messages[-1].text == "ok"                  # the second one answered
+    [skipped] = skips(agent)
+    assert skipped.source == "model:small" and "'image'" in skipped.data
+    assert [e.data.data for e in agent.events.log
+            if e.name == "model.delta"] == ["ok"]         # the blind one never rang
+
+    WAITS.clear()
+    dead = Posts(busy(503), busy(503), busy(503))
+    agent = Agent(Fallback(dead, FakeModel(["ok"])))
+    run = asyncio.run(agent.run(Message("user", "hi")))
+    assert run.messages[-1].text == "ok"
+    assert WAITS == [1.0, 2.0]                            # the retries came first
+    [skipped] = skips(agent)
+    assert skipped.source == "model:big" and "503" in skipped.data
+
+
+def test_fallback_leaves_the_last_word_and_every_other_error_alone() -> None:
+    agent = Agent(Fallback(Posts(busy(400))))
+    try:
+        asyncio.run(agent.run("hi"))
+    except ProviderError as ex:
+        assert ex.status == 400                           # its own error, unwrapped
+    else:
+        raise AssertionError("the last one's refusal is the caller's to read")
+    assert skips(agent) == []                             # nobody was skipped
+
+    class Broken(Model):
+        """Wired wrong — and that is nobody else's turn to answer for."""
+
+        async def invoke(self, run) -> Message:
+            raise ContractError("wired wrong")
+
+    try:
+        asyncio.run(Agent(Fallback(Broken(), FakeModel(["ok"]))).run("hi"))
+    except ContractError as ex:
+        assert "wired wrong" in str(ex)
+    else:
+        raise AssertionError("a dev mistake is not a reason to ask someone else")
+
+    try:
+        Fallback()
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("Fallback takes one Model minimum")
+
+
 def run_of(model, messages, tools=()) -> Run:
     """One Run built by hand: the gate needs a notebook and a toolbox, no loop."""
     return Run(Agent(model, tools), "rid", list(messages))
@@ -289,6 +350,11 @@ async def drain(model) -> list[dict]:
     return [piece async for piece in model.sse("say", {})]
 
 
+def skips(agent) -> list:
+    """Every model.skip the agent's bus heard, in order."""
+    return [e for e in agent.events.log if e.name == "model.skip"]
+
+
 if __name__ == "__main__":
     for test in (
         test_lookup_takes_the_longest_id_it_starts_with,
@@ -299,6 +365,8 @@ if __name__ == "__main__":
         test_sse_yields_the_data_lines_and_nothing_else,
         test_the_client_is_one_per_instance_and_one_per_loop,
         test_the_client_a_swap_replaces_is_closed_on_its_own_loop,
+        test_fallback_asks_the_next_one_when_this_one_says_no,
+        test_fallback_leaves_the_last_word_and_every_other_error_alone,
     ):
         test()
         print(f"  ok {test.__name__}")

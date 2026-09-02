@@ -6,6 +6,8 @@ do; accept() reads it before anything is sent, so a picture nobody can see
 never costs a round trip. Two ways out, retried the same way: post() for one
 reply, sse() for a stream of them.
 
+Fallback is the one composite: Models in a row, the first that answers wins.
+
 The one file in core that speaks httpx: a socket is what it is for.
 """
 
@@ -21,14 +23,14 @@ from typing import TYPE_CHECKING, AsyncIterator, ClassVar, cast
 
 import httpx
 
-from core.contracts import ProviderModel, Tool
+from core.contracts import Model, ProviderModel, Tool
 from core.types import Message, Part
 
 if TYPE_CHECKING:                   # the checker's eyes only: no runtime edge
     from core.agent import Run
 
-__all__ = ["ALWAYS", "ANY", "Profile", "Provider", "ProviderError", "RETRY",
-           "Unsupported", "args_of"]
+__all__ = ["ALWAYS", "ANY", "Fallback", "Profile", "Provider", "ProviderError",
+           "RETRY", "Unsupported", "args_of"]
 
 RETRY = {408, 409, 429, 500, 502, 503, 504, 529}   # worth asking again
 ALWAYS = frozenset({"text", "tool_call", "meta"})  # core folds these itself
@@ -227,6 +229,33 @@ class Provider(ProviderModel):
                 if started or attempt == 3:
                     raise ProviderError(None, f"{type(ex).__name__}: {ex}") from ex
             await asyncio.sleep(nap)
+
+
+class Fallback(Model):
+    """Ask each in turn; the first that takes the run and answers wins.
+
+    A gate refusal (Unsupported, before any byte) or a wire refusal
+    (ProviderError, retries spent) moves to the next one, and rides the bus
+    as a model.skip event. The last one's error is yours. ContractError and
+    anything else stay loud: a dev mistake is not a reason to ask someone else.
+    """
+
+    def __init__(self, first: Model, *rest: Model) -> None:
+        self.models = (first, *rest)      # in preference order; one minimum
+
+    async def invoke(self, run: Run) -> Message:
+        """Down the row until one answers; every skip is said on the bus."""
+        # ponytail: a dead provider is retried every step (three tries,
+        # backoff) before the next is asked — a per-model cooldown when it hurts
+        # ponytail: a stream that dies after its first delta falls through too;
+        # the notebook is right, the bus shows both — ProviderError.partial then
+        for model in self.models[:-1]:
+            try:
+                return await model.invoke(run)
+            except (Unsupported, ProviderError) as ex:
+                name = getattr(model, "model", None) or type(model).__name__
+                run.emit("model.skip", str(ex), source=f"model:{name}")
+        return await self.models[-1].invoke(run)
 
 
 def wait(answer: httpx.Response, attempt: int) -> float:

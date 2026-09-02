@@ -14,14 +14,14 @@ from core.contracts import (
 )
 from core.events import Event, Events
 from core.fake import FakeModel
-from core.llm import ANY, Profile, Provider, ProviderError, Unsupported
+from core.llm import ANY, Fallback, Profile, Provider, ProviderError, Unsupported
 from core.loop import check, run
 from core.tool import tool
 from core.types import Message, Part, ToolCall
 
 __all__ = [
     "ANY", "STAGES", "Agent", "ContractError", "Event", "Events", "FakeModel",
-    "Hooks", "Message", "Model", "Part", "Profile", "Provider",
+    "Fallback", "Hooks", "Message", "Model", "Part", "Profile", "Provider",
     "ProviderError", "ProviderModel", "Run", "Stop", "Tool", "ToolCall",
     "Unsupported", "check", "hook", "run", "tool",
 ]
