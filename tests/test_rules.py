@@ -17,15 +17,20 @@ PRODUCTS = re.compile(
 ADAPTERS = {"models": {"httpx"}, "hooks": set(), "drivers": set()}
 
 
-def import_roots(source: str) -> list[str]:
-    """Every import's top-level package name. A relative import answers to "."."""
-    roots = []
+def imports(source: str) -> list[str]:
+    """Every import's module name, dotted. A relative import answers to "."."""
+    names = []
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
-            roots += [alias.name.split(".")[0] for alias in node.names]
+            names += [alias.name for alias in node.names]
         elif isinstance(node, ast.ImportFrom):
-            roots.append("." if node.level else (node.module or "").split(".")[0])
-    return roots
+            names.append("." if node.level else (node.module or ""))
+    return names
+
+
+def root(name: str) -> str:
+    """The top-level package one dotted import belongs to."""
+    return name.split(".")[0] or "."
 
 
 def test_core_fits_the_budget() -> None:
@@ -36,9 +41,10 @@ def test_core_fits_the_budget() -> None:
 
 def test_core_imports_stdlib_and_itself_only() -> None:
     for f in CORE:
-        for root in import_roots(f.read_text()):
-            ok = root in (".", "core") or root in sys.stdlib_module_names
-            assert ok, f"core/{f.name} imports {root}"
+        for name in imports(f.read_text()):
+            top = root(name)
+            ok = top in (".", "core") or top in sys.stdlib_module_names
+            assert ok, f"core/{f.name} imports {top}"
 
 
 def test_core_names_no_products() -> None:
@@ -48,14 +54,22 @@ def test_core_names_no_products() -> None:
 
 
 def test_adapters_import_core_and_stdlib_only() -> None:
-    """models/, hooks/ and drivers/ speak core and stdlib — never each other."""
+    """models/, hooks/ and drivers/ speak core and stdlib — never each other.
+
+    One exception, and it is dotted: inside models/, base.py is the one
+    shared file, so an adapter may import models.base. base.py gets no
+    exception, and no adapter imports a sibling.
+    """
     for folder, extra in ADAPTERS.items():
         files = sorted((ROOT / folder).glob("*.py"))
         assert files, f"no {folder}/*.py files found"
         for f in files:
-            for root in import_roots(f.read_text()):
-                ok = root in extra or root == "core" or root in sys.stdlib_module_names
-                assert ok, f"{folder}/{f.name} imports {root}"
+            shared = folder == "models" and f.name != "base.py"
+            for name in imports(f.read_text()):
+                top = root(name)
+                ok = ((shared and name == "models.base") or top in extra
+                      or top == "core" or top in sys.stdlib_module_names)
+                assert ok, f"{folder}/{f.name} imports {name}"
 
 
 if __name__ == "__main__":
