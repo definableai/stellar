@@ -58,6 +58,15 @@ class Liar(Model):
         return Message("assistant", "ok")
 
 
+class Thinks(Scripted):
+    """The same wire, with a thinking Part in front of every reply."""
+
+    async def send(self, run, body):
+        yield Part("thinking", {"thinking": "hmm"})
+        async for part in super().send(run, body):
+            yield part
+
+
 def test_a_three_line_script_passes() -> None:
     check_model(FakeModel(["ok", ASKS, "done"]))
 
@@ -107,6 +116,28 @@ def test_a_second_tool_round_names_exchange_3() -> None:
         raise AssertionError("check_model allows exactly one tool round")
 
 
+def test_a_yielded_type_needs_no_profile() -> None:
+    check_model(Thinks())                    # no profile attribute, nothing to grade
+
+
+def test_a_profile_that_admits_the_type_passes() -> None:
+    model = Thinks()
+    model.profile = frozenset({"thinking"})  # duck-typed: anything `in` works on
+    check_model(model)
+
+
+def test_a_profile_missing_a_yielded_type_names_it() -> None:
+    model = Thinks()
+    model.profile = frozenset({"image"})
+    try:
+        check_model(model)
+    except ContractError as e:
+        assert "exchange 1" in str(e)
+        assert "the profile to admit 'thinking' parts" in str(e)
+    else:
+        raise AssertionError("a Part type the profile will not read back must fail")
+
+
 if __name__ == "__main__":
     for test in (
         test_a_three_line_script_passes,
@@ -115,6 +146,9 @@ if __name__ == "__main__":
         test_an_empty_first_reply_names_exchange_1,
         test_deltas_that_do_not_add_up_name_exchange_1,
         test_a_second_tool_round_names_exchange_3,
+        test_a_yielded_type_needs_no_profile,
+        test_a_profile_that_admits_the_type_passes,
+        test_a_profile_missing_a_yielded_type_names_it,
     ):
         test()
         print(f"  ok {test.__name__}")

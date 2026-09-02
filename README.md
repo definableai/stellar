@@ -87,7 +87,7 @@ def shout(word: str) -> str:
     return word.upper()
 
 
-agent = Agent(Anthropic(), [shout])
+agent = Agent(Anthropic("claude-sonnet-5"), [shout])
 agent.hooks.attach(Steps(8))                       # a runaway cap, on every run
 
 
@@ -103,7 +103,8 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-`Anthropic()` reads `ANTHROPIC_API_KEY` from the environment unless you pass
+`Anthropic("claude-sonnet-5")` names the model — one id per instance, no
+default — and reads `ANTHROPIC_API_KEY` from the environment unless you pass
 `api_key=`. `run()` takes a str (wrapped into a user message), a `Message`
 (appended as it is — images and all), or `messages=` (the notebook to start
 from; the list you hand over is copied, never touched). With nothing at all it
@@ -131,22 +132,13 @@ class MyModel(Model):
 passes `check()` and runs — nothing checks your ancestry. A sync `invoke` is
 refused by `check()` up front, because the loop could never await it.
 
-**`ProviderModel`.** An HTTP provider in two steps:
-
-```python
-class MyProvider(ProviderModel):
-    def encode(self, run) -> dict:          # pure: notebook + toolbox -> request body
-        ...
-
-    async def send(self, run, body):        # the network call; retries live here
-        ...
-        yield Part("text", "…")             # yield the reply as Parts
-```
-
-`encode` is pure translation, which is what makes it easy to test. Everything
-that can go wrong on a network lives in `send`. A provider that does not
-stream just yields the Parts of its one response — the shipped adapters do
-exactly that.
+**`ProviderModel`.** An HTTP provider in two steps: `encode(run)` builds the
+request body — pure translation, which is what makes it easy to test — and
+`async send(run, body)` owns the network and yields the reply as Parts.
+Everything that can go wrong on a network lives in `send`. A provider that
+streams yields a Part per chunk; one that does not yields the Parts of its one
+response, and core cannot tell the difference. `models/base.py` writes the
+other half for you — the recipe is below.
 
 `send` speaks the Part protocol, and core folds the stream into one assistant
 `Message`, firing `model.delta` per Part along the way:
@@ -170,22 +162,99 @@ Put what the reply cost in a meta Part, as
 `{"usage": {"input_tokens": …, "output_tokens": …}}`. That is the convention
 `Budget` reads; an adapter that leaves it out just counts as free.
 
-### Test with a canned POST, then grade it
+### A provider is four things
 
-Replace the network call with a list of real response bodies — the reply
-still travels the adapter's own parsing and the real fold path. No network,
-no key:
+`models/base.py` holds the half every HTTP provider shares: the key, the
+profile, one client, the retries, an SSE parser. A provider file writes four
+things — `PROFILES`, `headers`, `encode`, `send` — and inherits the rest.
+
+```python
+from models.base import Profile, Provider
+
+CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
+
+
+class OpenAI(Provider):
+    url, env = "https://api.openai.com/v1", "OPENAI_API_KEY"
+    PROFILES = {"gpt-5.6-luna": Profile("gpt-5.6-luna", 1_050_000, 128_000, CHAT)}
+
+    def headers(self) -> dict: ...        # the key rides in here
+    def encode(self, run) -> dict: ...    # pure, and it reads self.profile
+    async def send(self, run, body): ...  # Parts, off self.sse() or self.post()
+```
+
+The base hands you `self.key`, `self.profile`, `self.params` (the extra
+keywords you were built with), `tool_schemas(run)` (the toolbox as plain
+dicts), and two ways out: `post(path, body)` for one reply, `sse(path, body)`
+for a stream of dicts. Both try three times, on a dead socket or a status in
+`{408, 409, 429, 500, 502, 503, 504, 529}`, honouring `retry-after`; `sse`
+stops retrying once a chunk is out, because there is no asking again without
+replaying it. `aclose()` closes the client — nothing else does.
+
+The model id is positional and required: `OpenAI("gpt-5.6-luna")`, one id per
+instance, no silent default. `api_key=` beats the environment, and `env = None`
+is a model that wants no key at all. A missing key raises `ValueError` naming
+the variable. A refusal raises `ProviderError` with `.status` — `None` when a
+stream broke mid-flight — and a socket that never opened after three tries
+raises the httpx error itself.
+
+A `Profile` is one row off the provider's docs: `id`, `context`, `max_output`
+(the max-tokens `encode` writes, unless a param of yours says otherwise) and a
+set of words. `"image" in model.profile` is the whole API — a router's
+question, and the one `accept()` asks of every Part in the notebook, and of the
+toolbox, before anything is sent: a picture nobody can read never costs a round
+trip. One rule: **a feature named after a Part type admits that Part.** The
+words in the box are `image`, `document`, `thinking`, `tools`, `stream`,
+`tool_stream`, `json` and `system`; `models/anthropic.py` adds
+`redacted_thinking`, because its `send` yields Parts of that type. Add yours
+the same way — an adapter's profile must name every Part type it yields, and
+that is exactly what `check_model` grades.
+
+- `stream` picks the path: with it, `encode` asks for the event stream and
+  `send` yields a text Part per chunk; without it, one POST and the same parse.
+- `tool_stream` puts the argument fragments on the radio as `tool.args` events,
+  `{"id", "name", "delta"}`, source `model:<id>` — an event and not a Part,
+  because a Part would land in the message.
+- an id nobody wrote a row for takes the longest one it starts with
+  (`gpt-5.6-luna-2026-08-01` → `gpt-5.6-luna`), else the `ANY` profile and a
+  logged warning, never an error. The numbers in the shipped rows come from the
+  providers' own docs; a row nobody could verify is absent, not invented.
+
+A vendor that copied the wire is three lines, and a local model wants no key:
+
+```python
+class Groq(OpenAI):                          # models/groq.py
+    url, env = "https://api.groq.com/openai/v1", "GROQ_API_KEY"
+    PROFILES = {…}                           # its own rows, off its own docs
+
+
+class Ollama(OpenAI):
+    url, env = "http://localhost:11434/v1", None
+```
+
+A clone that cannot hold a stream open gets a profile without `stream` —
+`profile=` in the constructor, or its own `PROFILES` — and takes the one-POST
+path.
+
+### Test with canned traffic, then grade it
+
+Replace the network with a list of real response bodies, or a script of real
+stream chunks — the reply still travels the adapter's own parsing and the real
+fold path. No network, no key:
 
 ```python
 from core.conformance import check_model
+from models.base import Profile
+
+ONCE = Profile("claude-sonnet-5", 1_000_000, 128_000, frozenset({"tools"}))  # no SSE
 
 
 class Canned(Anthropic):
     def __init__(self, bodies) -> None:
-        super().__init__(api_key="test")
+        super().__init__("claude-sonnet-5", api_key="test", profile=ONCE)
         self.bodies, self.sent = list(bodies), []
 
-    async def post(self, body) -> dict:
+    async def post(self, path, body) -> dict:
         self.sent.append(body)
         return self.bodies[len(self.sent) - 1]
 
@@ -193,29 +262,31 @@ class Canned(Anthropic):
 check_model(Canned(BODIES))
 ```
 
-`check_model` makes exactly three model calls, always in this order: a plain
-reply, a reply asking for the `echo` tool, and a final reply after the tool
-result — so a three-entry script lines up with it.
+`post` and `sse` are the seam: override `post` for the one-POST path, `sse`
+for the streaming one, never httpx. `check_model` makes exactly three model
+calls, always in this order: a plain reply, a reply asking for the `echo` tool,
+and a final reply after the tool result — so a three-entry script lines up
+with it.
 
 It grades the reply side: do the Parts `send` yields fold into a `Message`,
 do the deltas add up to what landed, do tool calls arrive as whole `ToolCall`s
-with a dict of args, does the round trip close. It cannot see whether `encode`
-built a body your provider would accept — assert that yourself against
-`model.encode(run)`. `tests/test_anthropic.py` and `tests/test_openai.py` do
-both halves. `check_model` calls `asyncio.run` inside, so call it from sync
-code only.
+with a dict of args, does every Part type it yields sit in its own profile,
+does the round trip close. It cannot see whether `encode` built a body your
+provider would accept — assert that yourself against `model.encode(run)`.
+`tests/test_anthropic.py` and `tests/test_openai.py` do both halves.
+`check_model` calls `asyncio.run` inside, so call it from sync code only.
 
 `FakeModel` is a `ProviderModel` whose `send` yields the Parts of a scripted
 reply — tests ride the same fold and delta path with no network at all.
 
 ### The two shipped ones
 
-`models/anthropic.py` — the Messages API, default `claude-sonnet-5`.
-`models/openai.py` — Chat Completions (the format the compatible vendors
-clone), default `gpt-5.6-luna`; point `base_url` at a clone and the same class
-talks to it. Both take `api_key=` or read the environment, and pass any extra
-keyword straight through to the request body. Neither streams off the socket
-yet; both yield their one response as Parts, which is all the protocol asks.
+`models/anthropic.py` — the Messages API. `models/openai.py` — Chat
+Completions, the format the compatible vendors clone; point `base_url` at a
+clone and the same class talks to it. Both name their model first —
+`Anthropic("claude-sonnet-5")`, `OpenAI("gpt-5.6-luna")` — take `api_key=` or
+read the environment, pass any extra keyword straight through to the request
+body, and stream off the socket whenever the profile says `stream`.
 
 ## Tools
 
@@ -507,7 +578,7 @@ core/             the twelve nouns and the loop — stdlib only, under 2000 line
   fake.py           FakeModel
   conformance.py    check_model
   __init__.py       the barrel: all of it, in one import
-models/           anthropic.py, openai.py — the only place httpx is allowed
+models/           base.py, anthropic.py, openai.py — the only place httpx is allowed
 hooks/            steps.py, budget.py, permission.py, logging.py
 drivers/          transport.py — sse() and ws_frames() over events.stream()
 tests/            plain python files, assert-based, no pytest
@@ -517,7 +588,9 @@ main.py           the front door: one agent, one tool, one card, one radio
 Imports are flat and one-way: `from core import Agent`,
 `from models.anthropic import Anthropic`, `from hooks.steps import Steps`.
 `models/`, `hooks/` and `drivers/` speak `core` and the standard library and
-never each other. `core/` imports none of them.
+never each other — with one exception, and it lives inside `models/`: an
+adapter may import `models.base`, the one shared file. `base.py` gets no
+exception, and nothing imports an adapter. `core/` imports none of them.
 
 ## Running the tests
 
@@ -527,7 +600,8 @@ uv run ruff check .
 ```
 
 Every test file is an ordinary Python script. Run one on its own and it prints
-what passed.
+what passed. `uv run python` is how it gets an interpreter — a bare `python`
+need not be on your PATH.
 
 ## The rules
 
@@ -538,7 +612,8 @@ what passed.
 - `core/` never says a product or protocol name — no mcp, anthropic, openai,
   litellm, claude, gpt, a2a, acp.
 - `models/`, `hooks/` and `drivers/` import only `core` and the standard
-  library, plus httpx in `models/`.
+  library, plus httpx in `models/` — and `models.base`, which an adapter may
+  import and `base.py` itself may not.
 
 Two more belong to whoever reviews the change, because no test can see them:
 
