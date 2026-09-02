@@ -11,8 +11,7 @@ replays next turn.
 import json
 from typing import cast
 
-from core import Message, Part, Run, ToolCall
-from models.base import Profile, Provider, ProviderError
+from core import Message, Part, Profile, Provider, ProviderError, Run, ToolCall
 
 VERSION = "2023-06-01"
 

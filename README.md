@@ -137,7 +137,7 @@ request body — pure translation, which is what makes it easy to test — and
 `async send(run, body)` owns the network and yields the reply as Parts.
 Everything that can go wrong on a network lives in `send`. A provider that
 streams yields a Part per chunk; one that does not yields the Parts of its one
-response, and core cannot tell the difference. `models/base.py` writes the
+response, and core cannot tell the difference. `core/llm.py` writes the
 other half for you — the recipe is below.
 
 `send` speaks the Part protocol, and core folds the stream into one assistant
@@ -164,12 +164,12 @@ Put what the reply cost in a meta Part, as
 
 ### A provider is four things
 
-`models/base.py` holds the half every HTTP provider shares: the key, the
+`core/llm.py` holds the half every HTTP provider shares: the key, the
 profile, one client, the retries, an SSE parser. A provider file writes four
 things — `PROFILES`, `headers`, `encode`, `send` — and inherits the rest.
 
 ```python
-from models.base import Profile, Provider
+from core import Profile, Provider
 
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
 
@@ -244,7 +244,7 @@ fold path. No network, no key:
 
 ```python
 from core.conformance import check_model
-from models.base import Profile
+from core import Profile
 
 ONCE = Profile("claude-sonnet-5", 1_000_000, 128_000, frozenset({"tools"}))  # no SSE
 
@@ -568,7 +568,7 @@ stellar ships no server. These are strings; where they go is yours.
 ## Layout
 
 ```
-core/             the twelve nouns and the loop — stdlib only, under 2000 lines
+core/             the twelve nouns and the loop — stdlib (bar llm.py), under 2000 lines
   types.py          Part, ToolCall, Message
   contracts.py      Model, ProviderModel, Tool, Hooks, @hook, fold, the skeletons
   agent.py          Agent and Run
@@ -576,9 +576,10 @@ core/             the twelve nouns and the loop — stdlib only, under 2000 line
   events.py         Event, Events
   tool.py           @tool
   fake.py           FakeModel
+  llm.py            Provider, Profile — the HTTP half; the only httpx in core
   conformance.py    check_model
   __init__.py       the barrel: all of it, in one import
-models/           base.py, anthropic.py, openai.py — the only place httpx is allowed
+models/           anthropic.py, openai.py — one file per provider
 hooks/            steps.py, budget.py, permission.py, logging.py
 drivers/          transport.py — sse() and ws_frames() over events.stream()
 tests/            plain python files, assert-based, no pytest
@@ -588,9 +589,7 @@ main.py           the front door: one agent, one tool, one card, one radio
 Imports are flat and one-way: `from core import Agent`,
 `from models.anthropic import Anthropic`, `from hooks.steps import Steps`.
 `models/`, `hooks/` and `drivers/` speak `core` and the standard library and
-never each other — with one exception, and it lives inside `models/`: an
-adapter may import `models.base`, the one shared file. `base.py` gets no
-exception, and nothing imports an adapter. `core/` imports none of them.
+never each other. Nothing imports an adapter, and `core/` imports none of them.
 
 ## Running the tests
 
@@ -608,12 +607,12 @@ need not be on your PATH.
 `tests/test_rules.py` fails the build on four of them:
 
 - `core/*.py` is 2000 lines all together, at most.
-- `core/` imports the standard library and itself, nothing else.
+- `core/` imports the standard library and itself, nothing else — plus httpx,
+  in `llm.py` and nowhere else.
 - `core/` never says a product or protocol name — no mcp, anthropic, openai,
   litellm, claude, gpt, a2a, acp.
 - `models/`, `hooks/` and `drivers/` import only `core` and the standard
-  library, plus httpx in `models/` — and `models.base`, which an adapter may
-  import and `base.py` itself may not.
+  library, plus httpx in `models/`.
 
 Two more belong to whoever reviews the change, because no test can see them:
 

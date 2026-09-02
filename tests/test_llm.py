@@ -1,6 +1,6 @@
 """The shared half of an adapter: the profile gate, the key, the retries, the stream.
 
-Run: uv run python tests/test_base.py
+Run: uv run python tests/test_llm.py
 """
 
 import asyncio
@@ -14,9 +14,8 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core import Agent, Message, Part, Run, tool  # noqa: E402
-from models import base  # noqa: E402
-from models.base import ANY, Profile, Provider, ProviderError, Unsupported  # noqa: E402
+from core import Agent, Message, Part, Run, llm, tool  # noqa: E402
+from core.llm import ANY, Profile, Provider, ProviderError, Unsupported  # noqa: E402
 
 WAITS: list[float] = []
 STREAM = (b": ready\n\n"
@@ -37,7 +36,7 @@ async def nap(seconds: float) -> None:
     WAITS.append(seconds)
 
 
-base.asyncio = SimpleNamespace(   # the module's own name for it, and only there
+llm.asyncio = SimpleNamespace(    # the module's own name for it, and only there
     sleep=nap, get_running_loop=asyncio.get_running_loop)
 
 
@@ -95,7 +94,7 @@ class Wired(Stub):
 def test_lookup_takes_the_longest_id_it_starts_with() -> None:
     assert Stub.lookup("big") is Stub.PROFILES["big"]                 # exact
     assert Stub.lookup("small-2-2026-08-01") is Stub.PROFILES["small-2"]
-    said = logging.getLogger("models.base")
+    said = logging.getLogger("core.llm")
     said.addHandler(Heard())
     unknown = Stub.lookup("who-knows")
     said.handlers.pop()
@@ -263,4 +262,4 @@ if __name__ == "__main__":
     ):
         test()
         print(f"  ok {test.__name__}")
-    print("test_base: all ok")
+    print("test_llm: all ok")

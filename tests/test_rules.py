@@ -1,4 +1,4 @@
-"""The rules that keep core small, stdlib-only and provider-blind.
+"""The rules that keep core small, stdlib-only (httpx in llm.py) and provider-blind.
 
 Run: uv run python tests/test_rules.py
 """
@@ -43,7 +43,8 @@ def test_core_imports_stdlib_and_itself_only() -> None:
     for f in CORE:
         for name in imports(f.read_text()):
             top = root(name)
-            ok = top in (".", "core") or top in sys.stdlib_module_names
+            ok = (top in (".", "core") or top in sys.stdlib_module_names
+                  or (f.name == "llm.py" and top == "httpx"))
             assert ok, f"core/{f.name} imports {top}"
 
 
@@ -54,21 +55,15 @@ def test_core_names_no_products() -> None:
 
 
 def test_adapters_import_core_and_stdlib_only() -> None:
-    """models/, hooks/ and drivers/ speak core and stdlib — never each other.
-
-    One exception, and it is dotted: inside models/, base.py is the one
-    shared file, so an adapter may import models.base. base.py gets no
-    exception, and no adapter imports a sibling.
-    """
+    """models/, hooks/ and drivers/ speak core and stdlib — never each other."""
     for folder, extra in ADAPTERS.items():
         files = sorted((ROOT / folder).glob("*.py"))
         assert files, f"no {folder}/*.py files found"
         for f in files:
-            shared = folder == "models" and f.name != "base.py"
             for name in imports(f.read_text()):
                 top = root(name)
-                ok = ((shared and name == "models.base") or top in extra
-                      or top == "core" or top in sys.stdlib_module_names)
+                ok = (top in extra or top == "core"
+                      or top in sys.stdlib_module_names)
                 assert ok, f"{folder}/{f.name} imports {name}"
 
 

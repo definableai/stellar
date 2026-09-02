@@ -10,8 +10,9 @@ and on the stream they arrive a fragment at a time.
 import json
 from typing import cast
 
-from core import ContractError, Message, Part, Run, ToolCall
-from models.base import Profile, Provider, ProviderError
+from core import (
+    ContractError, Message, Part, Profile, Provider, ProviderError, Run, ToolCall,
+)
 
 # what every chat model below can do; the rows differ only in their numbers
 CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})

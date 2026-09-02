@@ -10,9 +10,9 @@ tasks when it is used well.
 - Three contracts: Model and Tool are classes, `invoke(run)` and
   `execute(run, …)`; a hook is an async `fn(payload[, run])`; an event listener
   is a sync `fn(event)`. `Agent` has one method, `run()`.
-- Layout: `core/` (stdlib only) plus `models/`, `hooks/`, `drivers/`. Flat
-  imports, one way: they speak `core`, never each other — inside `models/`,
-  `base.py` is the one shared file an adapter may import.
+- Layout: `core/` (stdlib only; httpx in `llm.py` alone) plus `models/`,
+  `hooks/`, `drivers/`. Flat imports, one way: they speak `core`, never each
+  other.
 - Composition is by assignment, hot-swap allowed mid-run — `check()` reads the
   whole backpack again at the top of every step.
 - Two control signals only: `raise Stop`, and a `tool.pre` hook returning a

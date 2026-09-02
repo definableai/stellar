@@ -16,11 +16,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 
 from core import (  # noqa: E402
-    Agent, Message, Part, Run, ToolCall, tool,
+    Agent, Message, Part, Profile, ProviderError, Run, ToolCall, tool,
 )
 from core.conformance import check_model  # noqa: E402
 from models.anthropic import DOES, Anthropic  # noqa: E402
-from models.base import Profile, ProviderError  # noqa: E402
 
 # a clone behind a proxy that cannot SSE: the same model, one POST at a time
 ONCE = Profile("claude-sonnet-5", 1_000_000, 4096, DOES - {"stream"})

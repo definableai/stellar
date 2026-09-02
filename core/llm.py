@@ -1,10 +1,12 @@
-"""Everything an HTTP model shares: the key, the profile, the socket.
+"""The HTTP half of a Model: the key, the profile, the socket.
 
 A provider file writes four things — PROFILES, headers, encode, send — and
 inherits the rest of a Model from here. A Profile says what one model id can
 do; accept() reads it before anything is sent, so a picture nobody can see
 never costs a round trip. Two ways out, retried the same way: post() for one
 reply, sse() for a stream of them.
+
+The one file in core that speaks httpx: a socket is what it is for.
 """
 
 from __future__ import annotations
@@ -15,11 +17,15 @@ import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import AsyncIterator, ClassVar, cast
+from typing import TYPE_CHECKING, AsyncIterator, ClassVar, cast
 
 import httpx
 
-from core import Message, Part, ProviderModel, Run, Tool
+from core.contracts import ProviderModel, Tool
+from core.types import Message, Part
+
+if TYPE_CHECKING:                   # the checker's eyes only: no runtime edge
+    from core.agent import Run
 
 __all__ = ["ALWAYS", "ANY", "Profile", "Provider", "ProviderError", "RETRY",
            "Unsupported"]

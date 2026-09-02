@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from core import (  # noqa: E402
-    Agent, ContractError, Event, Message, Part, Run, ToolCall, tool,
+    Agent, ContractError, Event, Message, Part, Profile, ProviderError, Run,
+    ToolCall, tool,
 )
 from core.conformance import check_model  # noqa: E402
-from models.base import Profile, ProviderError  # noqa: E402
 from models.openai import OpenAI  # noqa: E402
 
 ONCE = Profile("once", 8_000, 512, frozenset({"tools"}))          # no stream: POST
