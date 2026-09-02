@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
     Agent, ContractError, FakeModel, Message, Model, Part, Run, Stop, Tool,
-    ToolCall, check, hook, loop,
+    ToolCall, check, hook, loop, tool,
 )
 
 
@@ -173,6 +173,153 @@ def test_a_hook_can_replace_the_call() -> None:
     r = asyncio.run(agent.run("go"))
     assert r.messages[2].text == "HI"       # the replacement is what ran
     assert said == ["shout"]                # and what the bus was told about
+
+
+def test_parallel_tools_run_together_and_a_serial_one_is_a_barrier() -> None:
+    order: list[str] = []
+    met = {"left": asyncio.Event(), "right": asyncio.Event()}
+
+    @tool(parallel=True)
+    async def left() -> str:
+        """Hand-shake with right — a second of waiting, then the test fails."""
+        order.append("left")
+        met["left"].set()
+        await asyncio.wait_for(met["right"].wait(), 1)
+        order.append("left done")
+        return "L"
+
+    @tool(parallel=True)
+    async def right() -> str:
+        """Hand-shake with left."""
+        order.append("right")
+        met["right"].set()
+        await asyncio.wait_for(met["left"].wait(), 1)
+        order.append("right done")
+        return "R"
+
+    @tool
+    async def alone() -> str:
+        """Serial, the default: a barrier."""
+        order.append("alone")
+        return "A"
+
+    four = Message("assistant", "", [
+        ToolCall("c1", "left"), ToolCall("c2", "right"),
+        ToolCall("c3", "alone"), ToolCall("c4", "left")])
+    agent = Agent(FakeModel([four, "done"]), [left, right, alone])
+    said = [m for m in asyncio.run(agent.run("go")).messages if m.role == "tool"]
+    assert sorted(order[:4]) == ["left", "left done", "right", "right done"]
+    assert order[4:] == ["alone", "left", "left done"]   # the barrier, then the rest
+    assert [m.tool_call_id for m in said] == ["c1", "c2", "c3", "c4"]
+    assert [m.text for m in said] == ["L", "R", "A", "L"]   # answered in call order
+
+
+def test_within_a_batch_every_pre_rings_before_any_tool_and_post_lands_in_order() -> None:
+    log: list[str] = []
+
+    @hook("tool.pre")
+    async def watch(call) -> None:
+        log.append(f"pre:{call.id}")
+
+    @tool(parallel=True)
+    async def left() -> str:
+        """Starts first, finishes last."""
+        log.append("run:left")
+        await asyncio.sleep(0.02)
+        log.append("done:left")
+        return "L"
+
+    @tool(parallel=True)
+    async def right() -> str:
+        """Starts second, finishes first."""
+        log.append("run:right")
+        log.append("done:right")
+        return "R"
+
+    two = Message("assistant", "", [ToolCall("c1", "left"), ToolCall("c2", "right")])
+    agent = Agent(FakeModel([two, "done"]), [left, right])
+    agent.hooks.attach(watch)
+    bells: list = []
+    agent.events.listen(bells.append, "tool")
+    r = asyncio.run(agent.run("go"))
+    assert log == ["pre:c1", "pre:c2", "run:left", "run:right",
+                   "done:right", "done:left"]        # both pres, then both tools
+    assert [e.name for e in bells] == [
+        "tool.pre", "tool.pre", "tool.post", "tool.post"]
+    assert [e.data.id for e in bells[:2]] == ["c1", "c2"]
+    assert [e.data.tool_call_id for e in bells[2:]] == ["c1", "c2"]   # call order
+    assert [m.text for m in r.messages if m.role == "tool"] == ["L", "R"]
+
+
+def test_stop_in_a_batch_waits_for_the_siblings_and_ends_the_run() -> None:
+    def batch(stopper: str) -> tuple[list[str], list, list[str]]:
+        """One run of two parallel tools, one of which raises Stop."""
+        done: list[str] = []
+
+        @tool(parallel=True)
+        async def left() -> str:
+            """Stops the run, or answers slowly."""
+            if stopper == "left":
+                raise Stop
+            await asyncio.sleep(0.02)
+            done.append("left")
+            return "L"
+
+        @tool(parallel=True)
+        async def right() -> str:
+            """Answers slowly, or stops the run."""
+            if stopper == "right":
+                raise Stop
+            await asyncio.sleep(0.02)
+            done.append("right")
+            return "R"
+
+        two = Message(
+            "assistant", "", [ToolCall("c1", "left"), ToolCall("c2", "right")])
+        agent = Agent(FakeModel([two, "never asked for"]), [left, right])
+        heard: list[str] = []
+        agent.events.listen(lambda e: heard.append(e.name))
+        r = asyncio.run(agent.run("go"))
+        said = [(m.text, m.tool_call_id) for m in r.messages if m.role == "tool"]
+        return done, said, heard
+
+    done, said, heard = batch("left")
+    assert done == ["right"]                 # the sibling ran on, uncancelled
+    assert said == []                        # the first in call order raised
+    assert heard.count("model.pre") == 1 and heard[-1] == "run.post"
+
+    done, said, heard = batch("right")
+    assert done == ["left"]
+    assert said == [("L", "c1")]             # left's reply landed, right's did not
+    assert heard.count("model.pre") == 1 and heard[-1] == "run.post"
+
+
+def test_a_denial_inside_a_batch_skips_that_call_only() -> None:
+    ran: list[str] = []
+
+    @hook("tool.pre")
+    async def deny(call) -> str | None:
+        return "denied" if call.name == "left" else None
+
+    @tool(parallel=True)
+    async def left() -> str:
+        """Denied before it ever runs."""
+        ran.append("left")
+        return "L"
+
+    @tool(parallel=True)
+    async def right() -> str:
+        """Its sibling's denial is not its own."""
+        ran.append("right")
+        return "R"
+
+    two = Message("assistant", "", [ToolCall("c1", "left"), ToolCall("c2", "right")])
+    agent = Agent(FakeModel([two, "done"]), [left, right])
+    agent.hooks.attach(deny)
+    r = asyncio.run(agent.run("go"))
+    assert ran == ["right"]
+    assert [(m.text, m.tool_call_id) for m in r.messages if m.role == "tool"] == [
+        ("denied", "c1"), ("R", "c2")]
 
 
 def test_stop_from_a_hook() -> None:
@@ -411,14 +558,37 @@ def test_every_result_becomes_a_tool_message() -> None:
         async def execute(self, run) -> Message:
             return Message("assistant", "mine")
 
-    three = Message(
+    class Pic(Tool):
+        name = "pic"
+
+        async def execute(self, run) -> Part:
+            return Part("image", {"url": "u"})
+
+    class Both(Tool):
+        name = "both"
+
+        async def execute(self, run) -> list[Part]:
+            return [Part("text", "a"), Part("image", {"url": "u"})]
+
+    class Nothing(Tool):
+        name = "nothing"
+
+        async def execute(self, run) -> list:
+            return []
+
+    six = Message(
         "assistant", "", [ToolCall("c1", "line"), ToolCall("c2", "bag"),
-                          ToolCall("c3", "note")]
+                          ToolCall("c3", "note"), ToolCall("c4", "pic"),
+                          ToolCall("c5", "both"), ToolCall("c6", "nothing")]
     )
-    agent = Agent(FakeModel([three, "done"]), [Line(), Bag(), Note()])
+    agent = Agent(FakeModel([six, "done"]),
+                  [Line(), Bag(), Note(), Pic(), Both(), Nothing()])
     results = [m for m in asyncio.run(agent.run("go")).messages if m.role == "tool"]
-    assert [m.tool_call_id for m in results] == ["c1", "c2", "c3"]
-    assert [m.text for m in results] == ["plain", '{"n": 1}', "mine"]
+    assert [m.tool_call_id for m in results] == ["c1", "c2", "c3", "c4", "c5", "c6"]
+    assert [m.text for m in results] == [
+        "plain", '{"n": 1}', "mine", "", "a", "[]"]     # an empty list is still json
+    assert results[3].content == [Part("image", {"url": "u"})]   # the one Part
+    assert results[4].content == [Part("text", "a"), Part("image", {"url": "u"})]
 
 
 def test_run_post_fires_after_a_crash() -> None:
@@ -562,6 +732,10 @@ if __name__ == "__main__":
         test_a_streaming_tool_that_raises_still_answers_the_model,
         test_a_hook_can_deny_a_tool_by_returning_its_result,
         test_a_hook_can_replace_the_call,
+        test_parallel_tools_run_together_and_a_serial_one_is_a_barrier,
+        test_within_a_batch_every_pre_rings_before_any_tool_and_post_lands_in_order,
+        test_stop_in_a_batch_waits_for_the_siblings_and_ends_the_run,
+        test_a_denial_inside_a_batch_skips_that_call_only,
         test_stop_from_a_hook,
         test_stop_from_a_tool,
         test_a_broken_tool_becomes_a_result,

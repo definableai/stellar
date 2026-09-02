@@ -11,7 +11,7 @@ from typing import Annotated
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core import (  # noqa: E402
-    Agent, FakeModel, Message, Part, Run, ToolCall, check, tool,
+    Agent, FakeModel, Message, Part, Run, Tool, ToolCall, check, tool,
 )
 
 
@@ -129,6 +129,33 @@ def test_sync_and_async_functions_both_work() -> None:
     check(Agent(FakeModel([]), [shout, slowly, told]))   # all three pass
 
 
+def test_parallel_is_one_keyword_and_the_default_is_a_barrier() -> None:
+    @tool(parallel=True)
+    def read(path: Annotated[str, "which file"], n: int = 1) -> str:
+        """Read a path."""
+        return path.upper() * n
+
+    @tool()
+    def bare(path: str) -> str:
+        """No keyword at all: still a barrier."""
+        return path
+
+    class Search(Tool):
+        parallel = True                              # the class form
+
+    assert (shout.parallel, bare.parallel, read.parallel) == (False, False, True)
+    assert Tool.parallel is False and Search().parallel is True
+    assert isinstance(read, Tool) and read.name == "read"
+    assert read.description == "Read a path."
+    assert read.parameters == {                      # the keyword changed nothing else
+        "type": "object",
+        "properties": {"path": {"type": "string", "description": "which file"},
+                       "n": {"type": "integer"}},
+        "required": ["path"],
+    }
+    assert asyncio.run(read.execute(None, path="hi", n=2)) == "HIHI"
+
+
 def test_a_decorated_tool_runs_end_to_end() -> None:
     asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
     said = asyncio.run(Agent(FakeModel([asked, "done"]), [shout]).run("go")).messages
@@ -163,6 +190,7 @@ if __name__ == "__main__":
         test_the_run_is_injected_only_when_declared,
         test_only_the_first_parameter_answers_to_run,
         test_sync_and_async_functions_both_work,
+        test_parallel_is_one_keyword_and_the_default_is_a_barrier,
         test_a_decorated_tool_runs_end_to_end,
         test_the_run_reaches_a_tool_that_asked_for_it,
         test_an_async_generator_streams_end_to_end,

@@ -105,12 +105,15 @@ class Tool:
     """One thing the agent can do. Override execute — async.
 
     An async generator works too: each Part it yields rings tool.delta and
-    folds into the tool message, same protocol as a streaming model.
+    folds into the tool message, same protocol as a streaming model. Set
+    parallel = True on a tool that may run beside other parallel tools; the
+    default is a barrier.
     """
 
     name: str = ""
     description: str = ""
     parameters: dict[str, Any] = {"type": "object", "properties": {}}  # read-only
+    parallel: bool = False   # beside other parallel tools; serial is a barrier
 
     # the real shape is (self, run, **args); typed loose so an override
     # may name the args its schema promises without an override complaint

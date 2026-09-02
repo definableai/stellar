@@ -9,18 +9,19 @@ Agent.run() calls run(); Agent.__post_init__ and every step call check().
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
 from core.contracts import ContractError, Model, Stop, Tool, fold, wrong
-from core.types import Message, ToolCall
+from core.types import Message, Part, ToolCall
 
 if TYPE_CHECKING:                       # names for the checker, no runtime edge
     from core.agent import Agent, Run
 
-__all__ = ["check", "coerce", "run", "use"]
+__all__ = ["act", "check", "coerce", "run", "use"]
 
 
 def check(
@@ -66,13 +67,19 @@ def coerce(
 ) -> Message:
     """Whatever the tool handed back, make it one tool message.
 
-    A Message is re-roled and stamped with the call id; a str is the content;
-    anything else is json.dumps'd, str() for whatever will not serialise.
+    A Message is re-roled and stamped with the call id; a Part, or a list of
+    them, is the content; a str is the content; anything else is json.dumps'd,
+    str() for whatever will not serialise.
     """
     if isinstance(result, Message):
         result.role = "tool"
         result.tool_call_id = result.tool_call_id or call.id
         return result
+    if isinstance(result, Part):
+        result = [result]
+    if isinstance(result, list) and result and all(
+            isinstance(p, Part) for p in result):
+        return Message("tool", result, tool_call_id=call.id)
     if not isinstance(result, str):
         result = json.dumps(result, default=str)
     return Message("tool", result, tool_call_id=call.id)
@@ -100,6 +107,73 @@ async def use(
         fold(result, part)
         run.emit("tool.delta", part, source=call.name)
     return result
+
+
+async def act(
+    run: Annotated[Run, "its notebook grows by one tool message per call"],
+    answer: Annotated[Message, "the assistant turn whose tool_calls are run"],
+) -> None:
+    """Run what one answer asked for, batch by batch: a serial tool is a barrier.
+
+    Within a batch every tool.pre rings first, in call order; then the calls
+    run at once; then every tool.post rings and lands in the notebook, in
+    call order — the notebook reads the same whichever finished first. Stop
+    or ContractError from any of them is raised once the batch is done,
+    first in call order: nothing is cancelled mid-write.
+    """
+    toolbox = cast(Mapping[str, Tool], run.agent.tools)
+    for batch in _batches(toolbox, answer.tool_calls):
+        asked: list[tuple[ToolCall, Any]] = []   # the call, and a hook's denial
+        for call in batch:
+            out = await run.hooks.fire("tool.pre", run, call)
+            call, denied = (out[0], None) if isinstance(out, tuple) else (call, out)
+            run.emit("tool.pre", call, source="loop")
+            asked.append((call, denied))
+        results = await asyncio.gather(
+            *(_attempt(run, call, answer, denied) for call, denied in asked),
+            return_exceptions=True)              # every tool finishes; signals wait
+        for (call, _), result in zip(asked, results):
+            if isinstance(result, BaseException):
+                raise result                     # Stop, ContractError — nothing else
+            reply = coerce(result, call)
+            [call, reply] = await run.hooks.fire("tool.post", run, call, reply)
+            run.emit("tool.post", reply, source="loop")
+            run.messages.append(reply)
+
+
+async def _attempt(run: Run, call: ToolCall, answer: Message, denied: Any) -> Any:
+    """After tool.pre: the denial, the tool's result, or the error it becomes."""
+    if denied is not None:
+        return denied
+    raw = answer.meta.get("invalid_args", {}).get(call.id)
+    if raw is not None:                          # the adapter could not read the args
+        return f"error: tool arguments were not valid JSON: {raw}"
+    tool = cast(Mapping[str, Tool], run.agent.tools).get(call.name)
+    if tool is None:
+        return f"error: unknown tool: {call.name}"
+    try:
+        return await use(run, tool, call)
+    except (Stop, ContractError):
+        raise                                    # stop means stop; a broken
+    except Exception as ex:                      # contract stays loud
+        return f"error: {type(ex).__name__}: {ex}"
+
+
+def _batches(
+    toolbox: Mapping[str, Tool], calls: list[ToolCall],
+) -> Iterator[list[ToolCall]]:
+    """Consecutive calls on parallel tools ride together; any other call rides alone."""
+    held: list[ToolCall] = []
+    for call in calls:
+        if getattr(toolbox.get(call.name), "parallel", False):
+            held.append(call)
+            continue
+        if held:
+            yield held
+            held = []
+        yield [call]
+    if held:
+        yield held
 
 
 async def run(
@@ -133,32 +207,7 @@ async def run(
             run.messages.append(answer)
             if not answer.tool_calls:
                 break
-            for call in answer.tool_calls:
-                out = await run.hooks.fire("tool.pre", run, call)
-                if isinstance(out, tuple):
-                    call, result = out[0], None
-                else:
-                    result = out                 # a str or Message: denied
-                run.emit("tool.pre", call, source="loop")
-                if result is None:
-                    toolbox = cast(Mapping[str, Tool], run.agent.tools)
-                    tool = toolbox.get(call.name)   # check() proved the mapping
-                    raw = answer.meta.get("invalid_args", {}).get(call.id)
-                    if raw is not None:      # the adapter could not read the args
-                        result = f"error: tool arguments were not valid JSON: {raw}"
-                    elif tool is None:
-                        result = f"error: unknown tool: {call.name}"
-                    else:
-                        try:
-                            result = await use(run, tool, call)
-                        except (Stop, ContractError):
-                            raise                # stop means stop; a broken
-                        except Exception as ex:  # contract stays loud
-                            result = f"error: {type(ex).__name__}: {ex}"
-                reply = coerce(result, call)
-                [call, reply] = await run.hooks.fire("tool.post", run, call, reply)
-                run.emit("tool.post", reply, source="loop")
-                run.messages.append(reply)
+            await act(run, answer)
     except Stop:
         pass
     finally:

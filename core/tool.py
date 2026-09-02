@@ -1,14 +1,18 @@
 """One shortcut: a plain function becomes a Tool.
 
-@tool takes no arguments, on purpose. Want a different name, description or
-schema? Write a Tool subclass — that is what the class is for.
+@tool takes one keyword, parallel=…, and nothing else on purpose. Want a
+different name, description or schema? Write a Tool subclass — that is what
+the class is for.
 """
 
 from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import TYPE_CHECKING, Annotated, Any, Callable, get_args, get_origin
+from functools import partial
+from typing import (
+    TYPE_CHECKING, Annotated, Any, Callable, get_args, get_origin, overload,
+)
 
 from core.contracts import Tool, wrong
 
@@ -30,11 +34,22 @@ TYPES = {                               # a hint the schema knows, or nothing
 }
 
 
+@overload
+def tool(fn: Callable[..., Any], /) -> Tool: ...
+@overload
+def tool(*, parallel: bool = ...) -> Callable[[Callable[..., Any]], Tool]: ...
+
+
 def tool(
     fn: Annotated[
-        Callable[..., Any],
-        "called as it is, never bound — the wrapper's self goes unused"],
-) -> Tool:
+        Callable[..., Any] | None,
+        "called as it is, never bound — the wrapper's self goes unused"] = None,
+    /,
+    *,
+    parallel: Annotated[
+        bool, "True lets it run beside other parallel tools; serial is a barrier",
+    ] = False,
+) -> Tool | Callable[[Callable[..., Any]], Tool]:
     """A plain function becomes a Tool: its name, its docstring, its signature.
 
     A sync function runs in a thread, an async one is awaited, and an async
@@ -46,6 +61,8 @@ def tool(
     ContractError on *args/**kwargs — an unreadable signature is no schema —
     and on anything without a __name__: the function's name is the tool's.
     """
+    if fn is None:                      # @tool(parallel=True): come back with the fn
+        return partial(tool, parallel=parallel)
     name = getattr(fn, "__name__", "")
     if not name:
         raise wrong("tool", f"@tool needs a named function, not {type(fn).__name__}")
@@ -82,6 +99,7 @@ def tool(
         "description": inspect.getdoc(fn) or "",
         "parameters": schema(fn),
         "execute": execute,
+        "parallel": parallel,
     })()
 
 
