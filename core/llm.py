@@ -129,7 +129,7 @@ class Provider(ProviderModel):
                               "toolbox, or name a model whose profile has them")
         for message in run.messages:    # every line you wrote: a string compare
             if message.role == "assistant":
-                continue                # block() and line() replay it untouched
+                continue                # its past: replayed as its wire allows
             for piece in cast(list[Part], message.content):
                 if piece.type not in ALWAYS and piece.type not in self.profile:
                     raise Unsupported(
