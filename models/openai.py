@@ -1,10 +1,10 @@
 """OpenAI Chat Completions — the wire format the compatible vendors clone.
 
 Two steps, like any Provider: build the body, then hand the reply back as
-Parts — off the event stream when the profile has one, off a single POST when
-it does not. The quirk worth remembering is that a tool call's arguments
-travel as a JSON *string*: dumped on the way out, parsed on the way back in,
-and on the stream they arrive a fragment at a time.
+Parts — off one parse, because a POST reply is a stream of one chunk. The
+quirk worth remembering is that a tool call's arguments travel as a JSON
+*string*: dumped on the way out, parsed on the way back in, and on the stream
+they arrive a fragment at a time.
 
 core                  Chat Completions
 Part("text")          {"type": "text", "text"}
@@ -73,7 +73,7 @@ def line(message: Message) -> dict:
     return said
 
 
-# ---- in: wire -> core.  part() makes a Part, usage() makes the usage row ----
+# ---- in: wire -> core.  part() makes a Part, meta() makes the meta Part ----
 
 
 def part(call: dict, invalid: dict) -> Part:
@@ -88,10 +88,21 @@ def part(call: dict, invalid: dict) -> Part:
     return Part("tool_call", ToolCall(call["id"], call["function"]["name"], args))
 
 
-def usage(raw: dict) -> dict:
-    """What the turn cost, under the two names core reads."""
-    return {"input_tokens": raw.get("prompt_tokens"),
-            "output_tokens": raw.get("completion_tokens")}
+def meta(seen: dict, asked: str, invalid: dict) -> Part:
+    """The one meta Part: what the turn cost, who answered, why it stopped."""
+    used = seen.get("usage") or {}
+    said = {"usage": {"input_tokens": used.get("prompt_tokens"),
+                      "output_tokens": used.get("completion_tokens")},
+            "model": seen.get("model") or asked,
+            "stop_reason": seen.get("finish_reason")}
+    if invalid:
+        said["invalid_args"] = invalid
+    return Part("meta", said)
+
+
+async def once(reply):
+    """One POST reply as a stream of one chunk — so both paths share a parse."""
+    yield await reply
 
 
 class OpenAI(Provider):
@@ -129,68 +140,45 @@ class OpenAI(Provider):
         return body | self.params            # a param of yours wins over all of it
 
     async def send(self, run: Run, body: dict):
-        """The reply as Parts: chunk by chunk when the profile streams, else once."""
-        if "stream" in self.profile:
-            async for piece in self.streamed(run, body):
-                yield piece
-            return
-        raw = await self.post("/chat/completions", body)
-        choice = raw["choices"][0]
-        said = choice["message"]
-        if said.get("content"):
-            yield Part("text", said["content"])
-        invalid: dict = {}
-        for asked in said.get("tool_calls") or []:
-            yield part(asked, invalid)
-        meta: dict = {"stop_reason": choice.get("finish_reason"),
-                      "model": raw.get("model") or self.model}
-        used = raw.get("usage") or {}
-        if used:
-            meta["usage"] = usage(used)
-        if invalid:
-            meta["invalid_args"] = invalid
-        yield Part("meta", meta)
+        """The reply as Parts, off one parse: a POST reply is a stream of one chunk.
 
-    async def streamed(self, run: Run, body: dict):
-        """The same reply off the socket: text now, tool calls when the turn ends.
-
-        A call's arguments arrive in pieces, filed by index until the stream
-        ends — nothing half-parsed leaves here, and the fragments ride the bus
-        as tool.args when the profile allows it.
+        Text yields as it comes. A tool call's arguments arrive a fragment at a
+        time, grown in place by index until the turn ends — nothing half-parsed
+        leaves here, and the fragments ride the bus as tool.args when the
+        profile allows it. One meta last.
         """
-        calls: dict[int, list] = {}          # index → [id, name, fragments]
-        invalid: dict[str, str] = {}
-        used: dict = {}
-        who: str = self.model                # who answered: the wire's own word
-        stop: str | None = None
-        async for chunk in self.sse("/chat/completions", body):
+        path = "/chat/completions"
+        chunks = (self.sse(path, body) if "stream" in self.profile
+                  else once(self.post(path, body)))
+        calls: dict[int, dict] = {}     # index -> the call, POST-shaped, still growing
+        seen: dict = {}                 # model, usage, finish_reason: the last word
+        async for chunk in chunks:
             if chunk.get("error"):
                 raise ProviderError(None, str(chunk["error"])[:200])
-            who = chunk.get("model") or who
-            used = chunk.get("usage") or used
-            if not chunk.get("choices"):     # the usage chunk carries none of them
+            seen |= {k: chunk[k] for k in ("model", "usage") if chunk.get(k)}
+            if not chunk.get("choices"):    # the usage chunk carries none of them
                 continue
             choice = chunk["choices"][0]
-            delta = choice.get("delta") or {}
-            if delta.get("content"):
-                yield Part("text", delta["content"])
-            for asked in delta.get("tool_calls") or ():
-                slot = calls.setdefault(asked.get("index", 0), [None, None, []])
+            # a piece off the stream, or the whole message off the POST
+            said = choice.get("delta") or choice.get("message") or {}
+            if said.get("content"):
+                yield Part("text", said["content"])
+            # a POST's tool calls carry no index; their position is their index
+            for n, asked in enumerate(said.get("tool_calls") or ()):
+                call = calls.setdefault(asked.get("index", n), {
+                    "id": None, "function": {"name": None, "arguments": ""}})
                 fn = asked.get("function") or {}
-                slot[0] = asked.get("id") or slot[0]
-                slot[1] = fn.get("name") or slot[1]
-                fragment = fn.get("arguments") or ""
-                slot[2].append(fragment)
-                if fragment and "tool_stream" in self.profile:
+                call["id"] = asked.get("id") or call["id"]
+                call["function"]["name"] = fn.get("name") or call["function"]["name"]
+                call["function"]["arguments"] += fn.get("arguments") or ""
+                if fn.get("arguments") and "tool_stream" in self.profile:
                     run.emit("tool.args",
-                             {"id": slot[0], "name": slot[1], "delta": fragment},
+                             {"id": call["id"], "name": call["function"]["name"],
+                              "delta": fn["arguments"]},
                              source=f"model:{self.model}")
-            stop = choice.get("finish_reason") or stop
-        for call_id, name, fragments in calls.values():   # the turn is over now
-            asked = {"id": call_id, "function": {"name": name,
-                                                 "arguments": "".join(fragments)}}
-            yield part(asked, invalid)
-        meta: dict = {"usage": usage(used), "model": who, "stop_reason": stop}
-        if invalid:
-            meta["invalid_args"] = invalid
-        yield Part("meta", meta)             # one meta: fold merges it shallowly
+            seen["finish_reason"] = (choice.get("finish_reason")
+                                     or seen.get("finish_reason"))
+        invalid: dict = {}
+        for call in calls.values():         # the turn is over now
+            yield part(call, invalid)
+        yield meta(seen, self.model, invalid)   # one meta: fold merges it shallowly

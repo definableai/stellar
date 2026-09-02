@@ -1,9 +1,9 @@
 """The Messages API, in two steps: build the request, send it back as Parts.
 
 encode is pure. Core never opens a Part and never sees the wire — an adapter
-does both, and here the wire is the Messages API. send has two ways home: the
-event stream when the profile has one, else one POST and the same parse. Off
-the stream every block but text is held open at its index until
+does both, and here the wire is the Messages API. send has two ways home: one
+POST, or the event stream assembling the message that POST would have said.
+Off the stream every block but text is held open at its index until
 content_block_stop, so a thinking block lands whole — the shape block()
 replays next turn.
 
@@ -60,7 +60,7 @@ def blocks(message: Message) -> list[dict]:
     ]
 
 
-# ---- in: wire -> core.  part() makes a Part, usage() makes the usage row ----
+# ---- in: wire -> core.  part() makes a Part, meta() makes the meta Part ----
 
 
 def part(block: dict) -> Part:
@@ -73,9 +73,15 @@ def part(block: dict) -> Part:
     return Part(block["type"], block)   # thinking, and whatever comes next
 
 
-def usage(raw: dict) -> dict:
-    """What the turn cost: core's two numbers, off the wire's fuller row."""
-    return {k: raw.get(k) for k in ("input_tokens", "output_tokens")}
+def meta(raw: dict, asked: str, invalid: dict) -> Part:
+    """The one meta Part: what the turn cost, who answered, why it stopped."""
+    used = raw.get("usage") or {}
+    said = {"usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")},
+            "model": raw.get("model") or asked,
+            "stop_reason": raw.get("stop_reason")}
+    if invalid:
+        said["invalid_args"] = invalid
+    return Part("meta", said)
 
 
 class Anthropic(Provider):
@@ -130,65 +136,52 @@ class Anthropic(Provider):
         return body
 
     async def send(self, run: Run, body: dict):
-        """The reply as Parts — one POST, or the event stream, block by block."""
+        """The reply as Parts: one POST, or the stream assembling what it would say.
+
+        Off the stream, text yields as it comes and every other block is held
+        open at its index until content_block_stop, so a thinking block lands
+        whole. A tool call's input arrives as partial_json on its block and is
+        parsed once, at the stop. One meta last, on either path.
+        """
+        invalid: dict[str, str] = {}
         if "stream" not in self.profile:
             raw = await self.post("/v1/messages", body)
             for b in raw.get("content", []):
                 yield part(b)
-            yield Part("meta", {
-                "usage": usage(raw.get("usage") or {}),
-                "model": raw.get("model") or self.model,
-                "stop_reason": raw.get("stop_reason"),
-            })
-            return
-
-        held: dict[int, dict] = {}      # the blocks still open, by index
-        fragments: dict[int, str] = {}  # a tool call's arguments, still in pieces
-        invalid: dict[str, str] = {}
-        used: dict = usage({})          # one row, filled from both ends of the stream
-        who: str = self.model           # who answered: the wire's own word for it
-        stop: str | None = None
-        async for piece in self.sse("/v1/messages", body):
-            kind, index = piece.get("type"), piece.get("index")
-            if kind == "message_start":
-                used = usage(piece["message"].get("usage") or {})
-                who = piece["message"].get("model") or who
-            elif kind == "content_block_start":
-                if piece["content_block"]["type"] != "text":
-                    held[index] = dict(piece["content_block"])   # text holds nothing
-            elif kind == "content_block_delta":
-                delta = piece["delta"]
-                if delta["type"] == "text_delta":
-                    yield Part("text", delta["text"])
-                elif delta["type"] == "input_json_delta":
-                    more = delta["partial_json"]
-                    fragments[index] = fragments.get(index, "") + more
-                    if "tool_stream" in self.profile:
-                        ask = held[index]
-                        run.emit("tool.args", {"id": ask["id"], "name": ask["name"],
-                                               "delta": more},
-                                 source=f"model:{self.model}")
-                elif index in held:     # thinking, signature, whatever comes next
-                    key = delta["type"].removesuffix("_delta")
-                    if key in delta:    # a *_delta is named for the field it grows
-                        held[index][key] = held[index].get(key, "") + delta[key]
-            elif kind == "content_block_stop":
-                slot = held.pop(index, None)
-                if slot is None:
-                    continue                    # a text block: already yielded
-                if slot["type"] == "tool_use":  # its arguments, done arriving
-                    slot["input"], junk = args_of(fragments.pop(index, ""))
-                    if junk is not None:
-                        invalid[slot["id"]] = junk
-                yield part(slot)                # whole, exactly as it came
-            elif kind == "message_delta":
-                stop = piece["delta"].get("stop_reason") or stop
-                grown = piece.get("usage") or {}    # cumulative: the last one wins
-                used["output_tokens"] = grown.get(
-                    "output_tokens", used["output_tokens"])
-            elif kind == "error":
-                raise ProviderError(None, str(piece.get("error")))
-        meta: dict = {"usage": used, "model": who, "stop_reason": stop}
-        if invalid:
-            meta["invalid_args"] = invalid
-        yield Part("meta", meta)        # once, and merged: fold's merge is shallow
+        else:
+            raw, held = {}, {}      # the message so far; blocks still open, by index
+            async for ev in self.sse("/v1/messages", body):
+                kind, i = ev.get("type"), ev.get("index")
+                if kind == "message_start":
+                    raw = dict(ev["message"])           # model, usage, stop_reason
+                elif kind == "content_block_start":
+                    if ev["content_block"]["type"] != "text":
+                        held[i] = dict(ev["content_block"])   # text streams, never held
+                elif kind == "content_block_delta":
+                    delta = ev["delta"]
+                    if delta["type"] == "text_delta":
+                        yield Part("text", delta["text"])
+                    elif i in held:                 # thinking, signature, partial_json
+                        # a string delta grows the field it names; a dict is not ours
+                        for field, more in delta.items():
+                            if field != "type" and isinstance(more, str):
+                                held[i][field] = held[i].get(field, "") + more
+                        if "partial_json" in delta and "tool_stream" in self.profile:
+                            run.emit("tool.args",
+                                     {"id": held[i]["id"], "name": held[i]["name"],
+                                      "delta": delta["partial_json"]},
+                                     source=f"model:{self.model}")
+                elif kind == "content_block_stop" and i in held:   # text: already out
+                    done = held.pop(i)
+                    if done["type"] == "tool_use":    # its arguments, done arriving
+                        done["input"], junk = args_of(done.pop("partial_json", ""))
+                        if junk is not None:
+                            invalid[done["id"]] = junk
+                    yield part(done)
+                elif kind == "message_delta":     # cumulative: the last word wins
+                    raw["stop_reason"] = (ev["delta"].get("stop_reason")
+                                          or raw.get("stop_reason"))
+                    raw["usage"] = (raw.get("usage") or {}) | (ev.get("usage") or {})
+                elif kind == "error":
+                    raise ProviderError(None, str(ev.get("error")))
+        yield meta(raw, self.model, invalid)    # once, and merged: fold's is shallow

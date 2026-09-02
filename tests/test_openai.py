@@ -204,6 +204,16 @@ def test_tool_calls_round_trip() -> None:
     assert said[1] == {"role": "tool", "content": "hi",
                        "tool_call_id": "call_abc123"}
 
+    both = ASKS["choices"][0]["message"]["tool_calls"] + [
+        {"id": "call_def456", "type": "function",
+         "function": {"name": "echo", "arguments": '{"text": "ho"}'}}]
+    pair = decoded({"choices": [{"finish_reason": "tool_calls", "message": {
+        "role": "assistant", "content": None, "tool_calls": both}}]})
+    assert pair.tool_calls == [              # a POST says no index: position is one
+        ToolCall("call_abc123", "echo", {"text": "hi"}),
+        ToolCall("call_def456", "echo", {"text": "ho"}),
+    ]
+
 
 def test_usage_and_stop_reason_land_in_meta() -> None:
     said = decoded(PLAIN)

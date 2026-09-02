@@ -293,7 +293,7 @@ body, and stream off the socket whenever the profile says `stream`.
 Each one's module docstring carries its whole mapping, both directions, as one
 table, and the functions under it are named for what they return: `block()` a
 content block, `line()` or `blocks()` a whole turn, `part()` a `Part`,
-`usage()` the usage row.
+`meta()` the meta Part.
 
 Chat Completions has no shape for a thinking block, so an assistant turn drops
 what this wire cannot say — the model's own past, off another wire, replays
