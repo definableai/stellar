@@ -143,7 +143,10 @@ async def run(
                 if result is None:
                     toolbox = cast(Mapping[str, Tool], run.agent.tools)
                     tool = toolbox.get(call.name)   # check() proved the mapping
-                    if tool is None:
+                    raw = answer.meta.get("invalid_args", {}).get(call.id)
+                    if raw is not None:      # the adapter could not read the args
+                        result = f"error: tool arguments were not valid JSON: {raw}"
+                    elif tool is None:
                         result = f"error: unknown tool: {call.name}"
                     else:
                         try:

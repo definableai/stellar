@@ -228,6 +228,24 @@ def test_an_unknown_tool_becomes_a_result() -> None:
     assert r.messages[3].text == "done"
 
 
+def test_unparsable_arguments_become_a_result() -> None:
+    ran = []
+
+    class Watched(Shout):
+        async def execute(self, run, word) -> str:
+            ran.append(word)
+            return word.upper()
+
+    junk = Message("assistant", "", [ToolCall("c1", "shout", {})],
+                   meta={"invalid_args": {"c1": "{oops"}})
+    agent = Agent(FakeModel([junk, "done"]), [Watched()])
+    r = asyncio.run(agent.run("go"))
+    assert ran == []                        # the tool never ran
+    assert r.messages[2].text.startswith("error: tool arguments")
+    assert "{oops" in r.messages[2].text    # the model reads its own mistake
+    assert r.messages[3].text == "done"
+
+
 def test_the_model_must_return_a_message() -> None:
     class Junk(Model):
         async def invoke(self, run) -> dict:
@@ -548,6 +566,7 @@ if __name__ == "__main__":
         test_stop_from_a_tool,
         test_a_broken_tool_becomes_a_result,
         test_an_unknown_tool_becomes_a_result,
+        test_unparsable_arguments_become_a_result,
         test_the_model_must_return_a_message,
         test_a_bare_function_is_not_a_model,
         test_a_look_alike_with_an_async_invoke_passes,

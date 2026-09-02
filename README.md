@@ -155,6 +155,9 @@ exactly that.
 - `Part("tool_call", ToolCall(…))` arrives whole — buffer partial JSON in the
   adapter, core never sees half an argument string.
 - `Part("meta", dict)` merges into `Message.meta`, later keys winning.
+- arguments that are not valid JSON are `ToolCall(id, name, {})` plus
+  `meta["invalid_args"][id] = <the raw string>` — the loop turns that into the
+  tool's result, so the model reads its own mistake instead of a TypeError.
 - any other type lands in `content` untouched — thinking blocks, provider
   extras, whatever comes next. New provider features are new Part types,
   never new methods.
