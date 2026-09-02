@@ -314,6 +314,12 @@ To read a wire, open its `mapping.py`; the Chat Completions one says out loud
 that its reply has no block types — text arrives as a string, tool calls as a
 list — so it has an `OUT` and no `IN`.
 
+A tool result that is more than text is where the two part. Claude puts the
+tool's blocks inside the `tool_result` — its text when there is only text, else
+every block it holds. Chat Completions keeps the tool line to text and sends
+the pictures off a run of tool lines in one user line right after that run,
+each captioned `[image returned by tool call <id>]`.
+
 Chat Completions has no shape for a thinking block, so an assistant turn drops
 what this wire cannot say — the model's own past, off another wire, replays
 without it. A part *you* authored stays loud; nothing you wrote goes missing in
@@ -391,9 +397,9 @@ def shout(word: str, times: int = 1) -> str:
 
 The name is the function's name, the description is its docstring, and the
 schema is the signature: hints become JSON types, and a parameter with no
-default is required. `@tool` takes no arguments at all — for a different name,
-description or schema, write a `Tool` subclass; that is what the class is for.
-It refuses `*args`/`**kwargs` and says so.
+default is required. `@tool` takes one keyword, `parallel=`, and nothing else —
+for a different name, description or schema, write a `Tool` subclass; that is
+what the class is for. It refuses `*args`/`**kwargs` and says so.
 
 A sync function runs in a thread, an async one is awaited, and an async
 generator streams — every `Part` it yields rings `tool.delta`.
@@ -407,6 +413,47 @@ def notebook(run) -> int:
     """How many lines the notebook holds."""
     return len(run.messages)
 ```
+
+### Parallel tools
+
+```python
+@tool(parallel=True)                    # may run beside other parallel tools
+def read(path: str) -> str: ...
+
+
+@tool                                   # serial, the default: a barrier
+def write(path: str, content: str) -> str: ...
+
+
+class Search(Tool):
+    parallel = True                     # the class form
+```
+
+The model's turn asks for N calls, in order, and the loop cuts them into
+batches: consecutive calls on `parallel=True` tools ride together, any other
+call rides alone. **A serial tool is a barrier** — everything before it
+finishes first, it runs by itself, then the next batch starts. Serial is the
+default, so nothing runs together until you opt a tool in.
+
+Inside one batch every `tool.pre` rings first, in call order — a permission
+card still asks one question at a time, and a denial skips that call only.
+Then the calls run at once. Then every `tool.post` rings and its result lands
+in the notebook, in call order: the notebook reads the same whichever tool
+finished first. `tool.delta` from streaming siblings interleaves, and each
+event names its own tool in `source`.
+
+The batches are cut from the names the model asked for, before any `tool.pre`
+rings, so a hook that reroutes a call to a differently-parallel tool does not
+re-batch it.
+
+A `Stop` or a `ContractError` from any tool in a batch is raised once the whole
+batch is done, first in call order — nothing is cancelled mid-write, so a
+half-written file is never left behind. The replies before it are already in
+the notebook; the ones behind it are dropped, though their tools ran.
+
+Two ceilings. A slow sibling delays the `Stop` by its own runtime. There is no
+concurrency limit — a turn asking for fifty parallel calls runs fifty at once;
+add a semaphore in `act()` when that hurts.
 
 ### A class
 
@@ -427,15 +474,22 @@ folds into the tool message, same protocol as a streaming model.
 
 ### What comes back
 
-Return a `str` and the model sees it. Return anything else and it arrives as
-JSON — whatever JSON cannot hold becomes its `str`. Return a `Message` and it is
-used as it is, with its role forced to `tool` and the call's id filled in. An
-async generator's result is the fold of everything it yielded.
+Return a `str` and the model sees it. Return a `Part`, or a list of them, and
+they are the result's content — a picture, or text and a picture together.
+Return anything else and it arrives as JSON — whatever JSON cannot hold becomes
+its `str`, and an empty list is still `[]`. Return a `Message` and it is used as
+it is, with its role forced to `tool` and the call's id filled in. An async
+generator yields those same Parts one at a time, and its result is the fold of
+them.
+
+The gate grades a tool's result like anything else you wrote: an image Part on
+a profile without the word `image` raises `Unsupported`, before the network.
 
 Raise, and the model sees `error: ValueError: nope` and gets another turn. Ask
 for a tool that is not in the toolbox and it sees
 `error: unknown tool: ghost`. Run-time mistakes are answers, not crashes. The
-one exception is `Stop`, which always ends the run.
+two exceptions are `Stop`, which always ends the run, and `ContractError`,
+which stays loud.
 
 `agent.tools` is a mapping of name to tool. Hand the constructor an iterable and
 it keys one for you — `Agent(model, [shout])` — or hand it the mapping. Two
