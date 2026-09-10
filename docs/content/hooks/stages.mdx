@@ -1,0 +1,183 @@
+---
+title: The eight stages
+description: The eight moments a hook can listen for, what each one hands over, and one working card for each.
+icon: list-ordered
+---
+
+The eight stages are the eight moments in a run, and nothing else is a moment.
+They are the loop's own event names too, so a hook and a
+[bus event](/events/overview) share one word; [the loop](/concepts/loop) is the
+picture of where each one falls.
+
+| stage | the payload it hands over | what a return replaces |
+| --- | --- | --- |
+| `run.pre` | `Message` — the last message, once, before the first turn | that message |
+| `model.pre` | `list[Message]` — the notebook, before every model call | rebinds `run.messages`, permanently |
+| `model.delta` | `Part` — one streamed piece, before it is folded | the Part, and the new one is folded |
+| `model.post` | `Message` — the reply, after every model call | the reply that gets written down |
+| `tool.pre` | `ToolCall` — before every tool | a `ToolCall` runs instead; a `str` or `Message` skips the tool and *is* its result |
+| `tool.delta` | `Part` — one yielded piece, before it is folded | the Part, and the new one is folded |
+| `tool.post` | `ToolCall, Message` — the call and its result | the result |
+| `run.post` | `Message` — the last message, once, at the very end | nothing; this is teardown |
+
+## One card per stage
+
+Each card below fits its stage and does one useful thing. Every one of them
+takes the payload its row promises, and the ones that need the run take it as
+one extra argument — the rule is on [hooks](/hooks/overview).
+
+### run.pre
+
+Fires once, on the last message in the notebook, before the first turn. A good
+place to put words in the user's mouth.
+
+```python
+from core import Message, hook
+
+
+@hook("run.pre")
+async def house_style(message: Message) -> Message:
+    """Tack the house rule onto the thing that was asked."""
+    return Message("user", f"{message.text}\n\nAnswer in one sentence.")
+```
+
+### model.pre
+
+Fires before every model call, holding the whole notebook. What it returns
+rebinds `run.messages` permanently — this is the stage that edits history.
+
+```python
+from core import Message, hook
+
+
+@hook("model.pre")
+async def trim(messages: list[Message], run) -> list[Message]:
+    """Once the conversation is long, keep the system line and the last twenty."""
+    if run.step <= 3:
+        return messages
+    system = [m for m in messages[:1] if m.role == "system"]
+    return system + messages[-20:]
+```
+
+### model.delta
+
+One streamed `Part`, before it is folded into the reply. The hook lands first,
+so what folds is what you returned.
+
+```python
+from core import Part, hook
+
+SECRET = "sk-live-000"
+
+
+@hook("model.delta")
+async def redact(part: Part) -> Part | None:
+    """Scrub a key out of the stream before anything writes it down."""
+    if part.type != "text" or SECRET not in part.data:
+        return None
+    return Part("text", part.data.replace(SECRET, "[redacted]"))
+```
+
+<Warning>
+  A delta is only a piece. A secret split across two parts is not seen by this
+  card — for a whole-answer rule, use `model.post`.
+</Warning>
+
+### model.post
+
+The finished reply, after every model call, before it goes in the notebook.
+Returning `None` leaves the payload alone, so mutating it in place is the
+lightest way to tag it.
+
+```python
+from core import Message, hook
+
+
+@hook("model.post")
+async def stamp(answer: Message, run) -> None:
+    """Write the turn number onto the reply that is about to be filed."""
+    answer.meta["step"] = run.step
+```
+
+### tool.pre
+
+Before every tool. Return a `ToolCall` and that call runs instead; return a
+`str` or a `Message` and the tool is skipped and your answer *is* its result.
+The first hook that answers ends the ring.
+
+```python
+from core import ToolCall, hook
+
+ALLOWED = {"read", "search"}
+
+
+@hook("tool.pre")
+async def only_reading(call: ToolCall) -> str | None:
+    """Anything off the list is answered for, and never runs."""
+    if call.name in ALLOWED:
+        return None
+    return f"denied: {call.name} is not allowed here"
+```
+
+### tool.delta
+
+One `Part` yielded by a streaming tool, before it folds. Because a hook may
+raise, this is also where a runaway stream can be cut short.
+
+```python
+from core import Part, Stop, hook
+
+CAP = 10_000
+
+
+@hook("tool.delta")
+async def cap(part: Part, run) -> None:
+    """End the run once one tool has streamed past the cap."""
+    if part.type != "text":
+        return None
+    run.extra["streamed"] = run.extra.get("streamed", 0) + len(part.data)
+    if run.extra["streamed"] > CAP:
+        raise Stop
+```
+
+A `Stop` from here ends the run mid-stream, so that tool's result never reaches
+the notebook at all — the last line is the assistant turn that asked for it.
+
+### tool.post
+
+The call and its result, together. What you return replaces the result, and it
+is written down as it is — so carry the `tool_call_id` across yourself.
+
+```python
+from core import Message, ToolCall, hook
+
+LIMIT = 4_000
+
+
+@hook("tool.post")
+async def shorten(call: ToolCall, result: Message) -> Message | None:
+    """Keep a huge result out of the notebook, and say that it was cut."""
+    if len(result.text) <= LIMIT:
+        return None
+    return Message("tool", result.text[:LIMIT] + "\n… truncated",
+                   tool_call_id=result.tool_call_id)
+```
+
+### run.post
+
+Once, at the very end — after a clean finish, after a `Stop`, and after a
+crash. It is teardown: the return changes nothing, though a wrong *type* is
+still a `ContractError`.
+
+```python
+from core import Message, hook
+
+
+@hook("run.post")
+async def done(last: Message, run) -> None:
+    """One line when the errand ends, however it ended."""
+    print(f"{run.id} ended at step {run.step}: {last.text[:60]}")
+```
+
+[Stopping and denying](/hooks/stopping) has the rest of what `run.post`
+guarantees.
