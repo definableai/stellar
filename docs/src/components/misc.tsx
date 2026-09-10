@@ -1,5 +1,8 @@
 /** The frame, the tooltip, and any lucide icon an `icon="…"` prop names. */
-import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic";
+import {
+  Backpack, BookOpen, Bot, Box, Brain, Cable, CircleSlash, Clock, FlaskConical, Folder, Play, Plug, Radio,
+  RadioTower, Repeat, Rocket, Shield, Shuffle, SlidersHorizontal, Sparkles, Star, Workflow, Wrench, type LucideIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 /**
@@ -12,20 +15,20 @@ export const inner = "[&>:first-child]:mt-0! [&>:last-child]:mb-0!";
 
 type IconProps = { icon?: string; size?: number | string; color?: string; className?: string };
 
-const known = new Set<string>(iconNames);
+/** The lucide icons a page may name, by lucide's own kebab name. One line to add one; check.py refuses a name that is not here. */
+export const ICONS: Record<string, LucideIcon> = {
+  backpack: Backpack, "book-open": BookOpen, bot: Bot, box: Box, brain: Brain, cable: Cable,
+  "circle-slash": CircleSlash, clock: Clock, "flask-conical": FlaskConical, folder: Folder, play: Play,
+  plug: Plug, radio: Radio, "radio-tower": RadioTower, repeat: Repeat, rocket: Rocket, shield: Shield,
+  shuffle: Shuffle, "sliders-horizontal": SlidersHorizontal, sparkles: Sparkles, star: Star,
+  workflow: Workflow, wrench: Wrench,
+};
 
-/** A lucide icon by name. A name lucide does not have draws nothing — DynamicIcon would log. */
+/** A lucide icon by name. A name the table does not hold draws nothing. */
 export function Icon({ icon, size = 16, color, className = "" }: IconProps) {
-  if (!icon || !known.has(icon)) return null;
-  return (
-    <DynamicIcon
-      name={icon as IconName}
-      size={size}
-      color={color}
-      aria-hidden
-      className={`inline-block shrink-0 align-[-0.15em] ${className}`}
-    />
-  );
+  const Glyph = icon ? ICONS[icon] : undefined;
+  if (!Glyph) return null;
+  return <Glyph size={size} color={color} aria-hidden className={`inline-block shrink-0 align-[-0.15em] ${className}`} />;
 }
 
 export function Frame({ caption, children, className = "" }: { caption?: ReactNode; children?: ReactNode; className?: string }) {

@@ -729,6 +729,7 @@ models/           one folder per provider: __init__.py, mapping.py, model.py
 hooks/            steps.py, budget.py, permission.py, logging.py
 drivers/          transport.py — sse() and ws_frames() over events.stream()
 tests/            plain python files, assert-based, no pytest
+docs/             the site: docs.json is the table, content/ the pages, src/ the app
 main.py           the front door: one agent, one tool, one card, one radio
 ```
 
@@ -739,6 +740,15 @@ never each other. A provider's own files speak each other with one dot —
 `from .mapping import turn` — and never reach into another provider, so a
 clone subclasses `OpenAI` in your code, not in `models/`. Nothing imports an
 adapter, and `core/` imports none of them.
+
+## The docs
+
+`docs/` is a site of its own — the pages are MDX under `docs/content/`, the
+table of contents is `docs/docs.json`, and a small React app renders them.
+`cd docs && npm install && npm run dev` serves it; `npm run build` writes the
+static files; `python3 docs/check.py` holds every page to the table, every
+link to a page and every python fence to the parser. `docs/README.md` says
+how to add a page.
 
 ## Running the tests
 

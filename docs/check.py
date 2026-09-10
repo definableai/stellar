@@ -4,8 +4,9 @@
 
 Every page docs.json lists has a file under content/; every file is listed,
 unless its frontmatter says `hidden: true`; every page has a title and a
-description; every absolute link points at a page; every ```python fence
-compiles (top-level await allowed; add `nocheck` to a fence to skip it).
+description; every absolute link points at a page; every icon name is one
+misc.tsx can draw; every ```python fence compiles (top-level await allowed;
+add `nocheck` to a fence to skip it).
 One line per problem and exit 1, else one line and exit 0.
 """
 
@@ -21,6 +22,7 @@ CONTENT = HERE / "content"
 FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 FENCE = re.compile(r"^[ \t]*```(\w+)([^\n]*)\n(.*?)^[ \t]*```", re.M | re.S)
 LINK = re.compile(r"\]\(([^)\s]+)\)|href=\"([^\"]+)\"")
+ICON = re.compile(r"icon=\"([a-z0-9-]+)\"")
 NAV_KEYS = ("tabs", "groups", "pages", "anchors", "dropdowns")
 
 
@@ -45,8 +47,16 @@ def frontmatter(text):
     return {k.strip(): v.strip() for k, v in pairs}
 
 
+def icons():
+    """The names the site can draw: the keys of the ICONS table in misc.tsx."""
+    src = (HERE / "src/components/misc.tsx").read_text()
+    table = src[src.index("ICONS"):]
+    return set(re.findall(r'"?([a-z0-9-]+)"?\s*:', table[:table.index("};")]))
+
+
 def problems():
     nav = json.loads((HERE / "docs.json").read_text())["navigation"]
+    drawable = icons()
     listed = list(pages(nav))
     files = {p.relative_to(CONTENT).with_suffix("").as_posix(): p
              for p in sorted(CONTENT.rglob("*.mdx"))} if CONTENT.is_dir() else {}
@@ -79,6 +89,9 @@ def problems():
             target = href.split("#")[0].strip("/") or "introduction"
             if target not in files:
                 yield f"{rel}: link {href!r} points at no page"
+        for m in ICON.finditer(FENCE.sub("", text)):
+            if m.group(1) not in drawable:
+                yield f"{rel}: icon {m.group(1)!r} is not in the ICONS table of src/components/misc.tsx"
         for m in FENCE.finditer(text):
             lang, meta, code = m.groups()
             if lang != "python" or "nocheck" in meta:
