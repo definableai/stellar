@@ -69,7 +69,7 @@ def problems():
                 yield f"{rel}: frontmatter has no {key}"
         if name not in seen and fm.get("hidden") != "true":
             yield f"{rel}: not in docs.json (say `hidden: true` if that is on purpose)"
-        for m in LINK.finditer(text):
+        for m in LINK.finditer(FENCE.sub("", text)):      # a link inside a fence is not a link
             href = m.group(1) or m.group(2)
             if href.startswith(("http://", "https://", "mailto:", "#")):
                 continue
