@@ -1,5 +1,7 @@
 """Compact: the older notebook folded to one line once it outgrows the window."""
 
+from dataclasses import replace
+
 from core import Hooks, Message, Run, hook
 
 PROMPT = "Summarise densely — every fact, decision, file path and open task:\n\n"
@@ -21,7 +23,8 @@ def Compact(max_tokens: int, keep: int = 4):
             return None
         told = "\n".join(f"{m.role}: {m.text} " + " ".join(
             f"{c.name}({c.args})" for c in m.tool_calls) for m in rest[:cut])
-        aside = Run(run.agent, run.id + ".compact",   # its own id on the bus
+        aside = Run(replace(run.agent, tools={}),   # no toolbox: a summary
+                    run.id + ".compact",            # is words; its own id
                     [Message("user", PROMPT + told)], hooks=Hooks(Hooks()))
         summary = await run.agent.model.invoke(aside)   # empty parent: no cards ring
         note = Message("user", "Summary of the conversation so far:\n" + summary.text)

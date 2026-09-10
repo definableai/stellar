@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core import Agent, FakeModel, Message, ToolCall  # noqa: E402
+from core import Agent, FakeModel, Message, ToolCall, tool  # noqa: E402
 from hooks.compact import Compact  # noqa: E402
 
 
@@ -19,9 +19,11 @@ class Spy(FakeModel):
     def __init__(self, script) -> None:
         super().__init__(script)
         self.asked = []
+        self.armed = []           # the toolbox each ask carried
 
     def encode(self, run) -> None:
         self.asked.append(run.messages[-1].text)
+        self.armed.append(sorted(run.agent.tools))
 
 
 def priced(text: str, cost: int) -> Message:
@@ -84,11 +86,27 @@ def test_a_run_under_the_limit_is_untouched() -> None:
     assert len(agent.model.asked) == 1          # one call: nothing was summarised
 
 
+@tool
+def grep(for_: str) -> str:
+    """Look for it."""
+    return "found"
+
+
+def test_the_summary_call_carries_no_toolbox() -> None:
+    history = [Message("user", "one"), priced("first", 10),
+               Message("user", "two"), priced("second", 5000)]
+    agent = Agent(Spy(["the story so far", "done"]), [grep])
+    agent.hooks.attach(Compact(1000, keep=2))
+    asyncio.run(agent.run("three", messages=history))
+    assert agent.model.armed == [[], ["grep"]]   # the summary ask, then the turn
+
+
 if __name__ == "__main__":
     for test in (
         test_a_big_prompt_folds_the_older_notebook,
         test_a_tool_batch_in_the_tail_is_not_split,
         test_a_run_under_the_limit_is_untouched,
+        test_the_summary_call_carries_no_toolbox,
     ):
         test()
         print(f"  ok {test.__name__}")
