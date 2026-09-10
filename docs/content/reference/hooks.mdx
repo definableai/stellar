@@ -1,0 +1,200 @@
+---
+title: Hooks
+description: The rule-card registry, the decorator that tags one, and the eight bells with their payloads.
+icon: bell
+---
+
+The control plane, in `core/contracts.py`. A hook is an async function filed
+under one or more of the eight stage names; it fires inline, and what it returns
+replaces the payload.
+
+## Hooks
+
+```python
+from core import Hooks
+
+class Hooks:
+    def __init__(self, parent: Hooks | None = None) -> None: ...
+```
+
+The rule cards (`Hooks`), filed by stage. Attach order is call order. A registry
+may chain to a parent whose cards ring first — a `Run`'s hooks parent onto its
+`Agent`'s when the run is born, so one bell reaches both.
+
+<ParamField path="parent" type="Hooks | None" default="None">
+  Rings first. A `tool.pre` skip from the parent means this registry's cards
+  never hear that bell.
+</ParamField>
+
+<ResponseField name="parent" type="Hooks | None">
+  The registry above this one. `Run.__post_init__` sets it to `agent.hooks`
+  unless one was already there.
+</ResponseField>
+
+<ResponseField name="fns" type="dict[str, list[tuple[Any, bool]]]">
+  One list per stage name, in attach order. Each card is the function and
+  whether it left room for the run after its payload — sniffed once, at attach.
+</ResponseField>
+
+<Warning>
+  Swap cards with `attach` and `detach`, not by reassigning `agent.hooks`
+  mid-flight: the parent binds when the run is born, and a run already in the
+  air keeps pointing at the registry it was given.
+</Warning>
+
+### Hooks.attach()
+
+```python
+def attach(self, fn: Callable[..., Any], *stages: str) -> Hooks: ...
+```
+
+File one function under the stages named here, else the ones `@hook` tagged. A
+stage named at attach beats the tag, so an untagged function works too.
+
+<ParamField path="fn" type="Callable[..., Any]" required>
+  Filed as-is and left a function. One function may sit on several stages.
+</ParamField>
+
+<ParamField path="stages" type="*str">
+  The bells to file it under — one or more of the eight names. Omit them and
+  `fn.stages` is read instead.
+</ParamField>
+
+<ResponseField name="hooks" type="Hooks">
+  `self`, so attaches chain.
+</ResponseField>
+
+Raises `ContractError` now, not mid-run, when the function names no stage, names
+one that is not a stage, is not `async def`, or does not fit the stage's arity.
+A hook takes exactly what its stage hands over, or one more — and that one is
+the run.
+
+### Hooks.detach()
+
+```python
+def detach(self, fn: Callable[..., Any]) -> Hooks: ...
+```
+
+Unfile it, from every stage it listened to. Matched by identity — the same
+object that was attached. Hands back `self`.
+
+### Hooks.fire()
+
+```python
+async def fire(self, stage: str, run: Run, *payload: Any) -> tuple[Any, ...] | str | Message: ...
+```
+
+Ring one stage: the parent's cards first, then these, in attach order. The loop
+calls this; you call it only when you are driving the loop yourself.
+
+<ParamField path="stage" type="str" required>
+  One of the eight names. Its cards are the ones that ring.
+</ParamField>
+
+<ParamField path="run" type="Run" required>
+  Handed over only to a hook that left room for it after the payload.
+</ParamField>
+
+<ParamField path="payload" type="*Any">
+  The stage's arguments — `PAYLOAD` says the shape it wants.
+</ParamField>
+
+<ResponseField name="payload" type="tuple[Any, ...] | str | Message">
+  The payload back as a tuple. Two overloads narrow it: at `tool.pre` a `str` or
+  a `Message` may come back instead, and at every other stage the tuple is all
+  there is.
+</ResponseField>
+
+What a hook returns is what the next one hears; `None` leaves the payload alone.
+Only the last slot is replaced, which is why a `tool.post` hook returning a
+`Message` changes the result and not the call. At `tool.pre` the first hook that
+answers with a `str` or a `Message` ends the ring — the tool is skipped and that
+answer is its result — and a parent's skip means these cards never hear the bell
+at all. A card attached during a bell waits for the next one.
+
+Raises `ContractError` naming your function, the stage, and what to return
+instead, when a hook hands back the wrong type.
+
+### fold()
+
+```python
+from core.contracts import fold
+
+def fold(message: Message, part: Part) -> None: ...
+```
+
+One streamed `Part` into the growing `Message`, in place — the protocol a
+`model.delta` or `tool.delta` hook is standing in front of. `text` concatenates
+onto the last text part, `tool_call` appends its whole `ToolCall`, `meta` merges
+into `message.meta` with later keys winning, and every other type lands in
+`content` untouched. A `tool_call` part carrying anything but a `ToolCall` is a
+`ContractError`.
+
+## @hook
+
+```python
+from core import hook
+
+def hook(*stages: str) -> Callable[[Any], Any]: ...
+```
+
+Tag a function with the stages it listens for. It stays a function — the tag
+writes `fn.stages` and hands the function straight back — so `attach(fn)` then
+needs no stage names.
+
+<ParamField path="stages" type="*str" required>
+  The bells to listen for, one or more of the eight names.
+</ParamField>
+
+Raises `ContractError` right here, at decoration time, if a stage is misspelled.
+
+```python
+from core import ToolCall, hook
+
+
+@hook("tool.pre")
+async def no_rm(call: ToolCall):
+    if call.name == "rm":
+        return "denied"
+```
+
+## STAGES
+
+```python
+from core import STAGES
+```
+
+The eight bells, in ring order, as a `tuple[str, ...]`: `run.pre`, `model.pre`,
+`model.delta`, `model.post`, `tool.pre`, `tool.delta`, `tool.post`, `run.post`.
+A hook name and an event name are one word, so these are also the eight names
+the loop emits on the bus.
+
+## PAYLOAD
+
+```python
+from core.contracts import PAYLOAD
+```
+
+What each stage hands its hooks, as `dict[str, tuple[type, ...]]`. `attach`
+reads it to sniff arity, and `fire` reads its last entry to grade what a hook
+returned.
+
+| stage | payload | what a return replaces |
+| --- | --- | --- |
+| `run.pre` | `Message` — the last message, once, before the first turn | that message |
+| `model.pre` | `list` — the notebook, before every model call | rebinds `run.messages`, permanently |
+| `model.delta` | `Part` — one streamed piece, before it is folded | the `Part`, and the new one is folded |
+| `model.post` | `Message` — the reply, after every model call | the reply that gets written down |
+| `tool.pre` | `ToolCall` — before every tool | a `ToolCall` runs instead; a `str` or `Message` skips the tool and is its result |
+| `tool.delta` | `Part` — one yielded piece, before it is folded | the `Part`, and the new one is folded |
+| `tool.post` | `ToolCall, Message` — the call and its result | the result, the last slot only |
+| `run.post` | `Message` — the last message, once, at the very end | nothing; this is teardown |
+
+<Note>
+  The arity is sniffed once, at attach — a hook that does not fit its stage is
+  refused there, not at the bell. Positional parameters are counted, so a
+  `tool.post` hook takes two, or three with the run.
+</Note>
+
+See also: [hooks overview](/hooks/overview), [the eight stages](/hooks/stages),
+[stopping a run](/hooks/stopping), [the shipped cards](/hooks/cards).

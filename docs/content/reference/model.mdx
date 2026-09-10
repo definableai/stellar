@@ -1,0 +1,444 @@
+---
+title: Model
+description: The brain contract, the HTTP half under it, and the four Models core ships.
+icon: brain
+---
+
+`Model` and `ProviderModel` are contracts, in `core/contracts.py`. `Provider`,
+`Profile`, `Fallback` and the two exceptions are the HTTP half, in `core/llm.py`
+— the one file in core that speaks httpx. `FakeModel` is in `core/fake.py`. All
+of them come out of `core` in one import.
+
+## Model
+
+```python
+from core import Model
+
+class Model:
+    async def invoke(self, run: Run) -> Message: ...
+```
+
+The brain. Override `invoke` — async — and hand back one assistant message.
+
+<ParamField path="run" type="Run" required>
+  `run.messages` is the notebook; `run.agent` holds the tools and the hooks.
+</ParamField>
+
+<ResponseField name="message" type="Message">
+  One assistant `Message`. Anything else is a `ContractError` from the loop.
+</ResponseField>
+
+Nothing checks ancestry: any object whose own class defines an async
+`invoke(run)` passes `check()`. The base raises
+`NotImplementedError("invoke")`.
+
+## ProviderModel
+
+```python
+from core import ProviderModel
+
+class ProviderModel(Model):
+    def encode(self, run: Run) -> Any: ...
+    def send(self, run: Run, body: Any) -> AsyncIterator[Part]: ...
+    async def invoke(self, run: Run) -> Message: ...
+```
+
+A `Model` in two steps: build the request, send it as a stream of `Part`s.
+`encode` is pure translation, which is what makes it easy to test; `send` owns
+the network, and retries live there.
+
+### ProviderModel.encode()
+
+```python
+def encode(self, run: Run) -> Any: ...
+```
+
+The request body, built from the run — every message plus `run.agent.tools`.
+Pure: `send()` takes it from here and never rebuilds it. Unimplemented, it
+raises `NotImplementedError` carrying the whole provider skeleton to copy.
+
+### ProviderModel.send()
+
+```python
+def send(self, run: Run, body: Any) -> AsyncIterator[Part]: ...
+```
+
+An async generator yielding the reply as `Part`s. A provider that does not
+stream yields the parts off its one response, and core cannot tell the
+difference.
+
+<ParamField path="run" type="Run" required>
+  Whatever the body left out — `run.id`, `run.extra`, the backpack.
+</ParamField>
+
+<ParamField path="body" type="Any" required>
+  Exactly what `encode()` built.
+</ParamField>
+
+### ProviderModel.invoke()
+
+```python
+async def invoke(self, run: Run) -> Message: ...
+```
+
+encode, send, fold. Per `Part` it rings the `model.delta` hooks, folds what
+comes back into the growing message, then emits `model.delta` on the bus with
+`source="loop"`. A `send` that yields something that is not a `Part` raises
+`ContractError`.
+
+## Provider
+
+```python
+from core import Provider
+
+class Provider(ProviderModel):
+    url: ClassVar[str]
+    env: ClassVar[str | None]
+    PROFILES: ClassVar[dict[str, Profile]] = {}
+
+    def __init__(self, model: str, *, api_key: str | None = None,
+                 base_url: str | None = None, profile: Profile | None = None,
+                 **params) -> None: ...
+```
+
+The other half of every adapter: a key, a profile, one client. Set `url`, `env`
+and `PROFILES` on the subclass, then write `headers`, `encode` and `send`.
+
+<ParamField path="model" type="str" required>
+  The model id. Positional and required — one id per instance, no silent
+  default.
+</ParamField>
+
+<ParamField path="api_key" type="str | None" default="None">
+  Beats the environment. Otherwise `os.environ[env]` is read, and `env = None`
+  is a model that wants no key at all.
+</ParamField>
+
+<ParamField path="base_url" type="str | None" default="None">
+  Point the same class at a compatible clone. Defaults to the class's `url`.
+</ParamField>
+
+<ParamField path="profile" type="Profile | None" default="None">
+  Override what this id can do. Defaults to `lookup(model)`.
+</ParamField>
+
+<ParamField path="params" type="**Any">
+  Every extra keyword is kept in `self.params` for `encode` to write into the
+  body — `temperature`, `max_tokens`, whatever the wire takes.
+</ParamField>
+
+Raises `ValueError(f"no API key: pass api_key= or set {env}")` when `env` names
+a variable and neither it nor `api_key=` has one.
+
+<Expandable title="fields">
+  <ResponseField name="url" type="ClassVar[str]">
+    The default base URL for the whole class.
+  </ResponseField>
+  <ResponseField name="env" type="ClassVar[str | None]">
+    The key's environment variable; `None` means no key is needed.
+  </ResponseField>
+  <ResponseField name="PROFILES" type="ClassVar[dict[str, Profile]]" default="{}">
+    The rows off the provider's docs, keyed by id prefix.
+  </ResponseField>
+  <ResponseField name="model" type="str">
+    The id this instance was built with.
+  </ResponseField>
+  <ResponseField name="params" type="dict[str, Any]">
+    The extra keywords, kept for `encode`.
+  </ResponseField>
+  <ResponseField name="key" type="str">
+    The API key that was found. Empty string when `env` is `None`.
+  </ResponseField>
+  <ResponseField name="base_url" type="str">
+    Where requests go — the argument, else the class's `url`.
+  </ResponseField>
+  <ResponseField name="profile" type="Profile">
+    What this id can do; `accept()` asks it before anything is sent.
+  </ResponseField>
+</Expandable>
+
+### Provider.headers()
+
+```python
+def headers(self) -> dict: ...
+```
+
+What every request carries; the key goes in here. Abstract, and
+`NotImplementedError("headers")` until you write it.
+
+### Provider.invoke()
+
+```python
+async def invoke(self, run: Run) -> Message: ...
+```
+
+The gate first, then core's own encode, send and fold: `accept(run)`, then
+`super().invoke(run)`.
+
+### Provider.accept()
+
+```python
+def accept(self, run: Run) -> None: ...
+```
+
+Refuse here what the wire would refuse later, for free — a picture nobody can
+read never costs a round trip.
+
+<ParamField path="run" type="Run" required>
+  Its toolbox and every line you wrote. Assistant messages are skipped: the
+  model's own past is replayed as its wire allows, not graded.
+</ParamField>
+
+Raises `Unsupported` when the toolbox is not empty and `"tools"` is not in the
+profile, and when a content `Part` has a type that is neither in
+`ALWAYS` — the frozen set `text`, `tool_call`, `meta`, which core folds itself —
+nor in the profile.
+
+<Warning>
+  One rule: a feature named after a `Part` type admits that `Part` in what you
+  send. That is the whole of the gate.
+</Warning>
+
+### Provider.lookup()
+
+```python
+@classmethod
+def lookup(cls, model: str) -> Profile: ...
+```
+
+The row for this id: the longest key in `PROFILES` that the id starts with, so
+`gpt-5.6-luna-2026-08-01` finds `gpt-5.6-luna`. An id nobody wrote a row for
+logs a warning and gets `replace(ANY, id=model)` — never an error.
+
+<ResponseField name="profile" type="Profile">
+  The matching row, or `ANY` renamed to the id you asked for.
+</ResponseField>
+
+### Provider.tool_schemas()
+
+```python
+def tool_schemas(self, run: Run) -> list[dict]: ...
+```
+
+The toolbox as plain dicts — one `{"name", "description", "parameters"}` per
+tool. `encode` renames the keys its own wire wants.
+
+### Provider.http
+
+```python
+@property
+def http(self) -> httpx.AsyncClient: ...
+```
+
+One client per instance, opened on first use — and again per event loop, because
+a connection pool does not outlive the loop that made it. The client it replaces
+is closed on the loop that built it, if that loop still runs; a closed loop took
+its sockets down with it, so that one is only dropped. Timeouts are
+`httpx.Timeout(10, read=600)`.
+
+### Provider.aclose()
+
+```python
+async def aclose(self) -> None: ...
+```
+
+Close the client, if one was ever opened. Nothing else holds a socket.
+
+### Provider.post()
+
+```python
+async def post(self, path: str, body: dict) -> dict: ...
+```
+
+One reply as a dict. Three tries; a status in
+`RETRY = {408, 409, 429, 500, 502, 503, 504, 529}` or a dead socket earns
+another go, and `wait(answer, attempt)` reads `retry-after`, falling back to the
+attempt number when nobody said.
+
+<ResponseField name="body" type="dict">
+  The parsed JSON of the first answer under 400.
+</ResponseField>
+
+Raises `ProviderError(status, text[:200])` on a refusal it will not retry, and
+`ProviderError(None, ...)` when the socket never opened after three tries.
+
+### Provider.sse()
+
+```python
+async def sse(self, path: str, body: dict) -> AsyncIterator[dict]: ...
+```
+
+The event stream, one dict per `data:` line — comments, blank lines and
+`[DONE]` skipped. Retried like `post`, but only up to the first chunk: once a
+piece has been yielded there is no asking again without replaying it. A data
+line that is not JSON raises `ProviderError(None, ...)`.
+
+<Note>
+  `post` and `sse` are the seam for tests. Override either to feed an adapter
+  canned traffic; never reach for httpx. See [testing an adapter](/models/testing).
+</Note>
+
+## Profile
+
+```python
+from core import Profile
+
+Profile(id, context, max_output, features=frozenset())
+```
+
+One row off the provider's docs (`Profile`) — what a model id can do. A frozen
+dataclass, so `dataclasses.replace` makes a variant.
+
+<ResponseField name="id" type="str" required>
+  The id this row describes.
+</ResponseField>
+
+<ResponseField name="context" type="int" required>
+  The input window, in tokens.
+</ResponseField>
+
+<ResponseField name="max_output" type="int" required>
+  The default max output tokens `encode` writes, unless a param of yours says
+  otherwise.
+</ResponseField>
+
+<ResponseField name="features" type="frozenset[str]" default="frozenset()">
+  The words. The shipped ones are `image`, `document`, `thinking`, `tools`,
+  `stream`, `tool_stream`, `json` and `system`.
+</ResponseField>
+
+### Profile.\_\_contains\_\_()
+
+```python
+def __contains__(self, feature: str) -> bool: ...
+```
+
+`"image" in profile` is the whole API — a router's question, and the one
+`accept()` asks of every `Part`.
+
+```python
+from core import ANY
+
+assert "image" in ANY
+```
+
+## ANY
+
+```python
+from core import ANY
+```
+
+The profile an unknown id gets, once warned:
+`Profile("unknown", 128_000, 4096, ...)` carrying every one of the eight
+feature words. `lookup()` hands back a copy of it renamed to the id you asked
+for.
+
+## Fallback
+
+```python
+from core import Fallback
+
+class Fallback(Model):
+    def __init__(self, first: Model, *rest: Model) -> None: ...
+```
+
+Ask each in turn; the first that takes the run and answers wins. A `Model` made
+of `Model`s, so it nests and it crosses providers for free.
+
+<ParamField path="first" type="Model" required>
+  One `Model` minimum — the preferred one.
+</ParamField>
+
+<ParamField path="rest" type="*Model">
+  The rest, in preference order.
+</ParamField>
+
+<ResponseField name="models" type="tuple[Model, ...]">
+  `(first, *rest)`, in preference order.
+</ResponseField>
+
+### Fallback.invoke()
+
+```python
+async def invoke(self, run: Run) -> Message: ...
+```
+
+Down the row until one answers. It catches exactly two things — `Unsupported`,
+the gate's no before any byte, and `ProviderError`, the wire's no with its
+retries already spent — and each skip rides the bus as a `model.skip` event
+carrying the refusal's own words, `source=f"model:{name}"`. The last model is
+asked outside the net, so its error reaches you as itself. `ContractError` and
+everything else stay loud.
+
+<Warning>
+  Two ceilings, marked in the source. A provider that is down is retried in
+  full at every step before the next is asked. And a stream that dies after its
+  first delta falls through like any other refusal — the notebook comes out
+  right, but the radio already carried the dead one's deltas.
+</Warning>
+
+## FakeModel
+
+```python
+from core import FakeModel
+
+class FakeModel(ProviderModel):
+    def __init__(self, script: list[Message | str]) -> None: ...
+```
+
+A model that reads its answers off a list you wrote. No network, no key. It is a
+`ProviderModel` on purpose: each scripted reply is taken apart and streamed as
+`Part`s, so tests ride the same fold and `model.delta` path a real adapter uses.
+
+<ParamField path="script" type="list[Message | str]" required>
+  The replies to hand back, one per turn, in order. Copied, so your list is left
+  alone. A `str` becomes an assistant line.
+</ParamField>
+
+<ResponseField name="script" type="list[Message | str]">
+  What is left. `send` pops the front of it per turn.
+</ResponseField>
+
+### FakeModel.send()
+
+```python
+async def send(self, run: Run, body: Any) -> AsyncIterator[Part]: ...
+```
+
+Yields the entry's content parts in order, then one `Part("tool_call", call)`
+per `ToolCall` on it, then one `Part("meta", …)` if it carries any meta.
+`encode` builds nothing and hands back `None`.
+
+Raises `ContractError(f"FakeModel script exhausted after reply {run.step - 1}")`
+when a run asks for one more turn than you wrote.
+
+## ProviderError
+
+```python
+from core import ProviderError
+
+class ProviderError(RuntimeError):
+    def __init__(self, status: int | None, detail: str) -> None: ...
+```
+
+The provider said no. The message reads `f"{status or 'no status'}: {detail}"`.
+
+<ResponseField name="status" type="int | None">
+  The HTTP status, or `None` when there was none to give — a dead socket, a
+  broken chunk, an error event inside a stream.
+</ResponseField>
+
+## Unsupported
+
+```python
+from core import Unsupported
+
+class Unsupported(ValueError): ...
+```
+
+This model cannot do what the run asks — said by `accept()` before the network.
+`Fallback` catches it and moves on; nothing else does.
+
+See also: [models overview](/models/overview), [writing a provider](/models/provider),
+[profiles](/models/profiles), [fallback and routing](/models/fallback),
+[testing an adapter](/models/testing).

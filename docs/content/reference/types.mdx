@@ -1,0 +1,141 @@
+---
+title: Part, ToolCall, Message
+sidebarTitle: Types
+description: The three data nouns, every field, and the reserved words core folds itself.
+icon: box
+---
+
+The floor of the stack, in `core/types.py`. Nothing here imports the rest of
+core, and every other module — the loop, hooks, adapters, drivers — speaks in
+these three. They are plain dataclasses, so `dataclasses.asdict` checkpoints
+one; loading it back is yours, including the `ToolCall`s and `Part`s nested in a
+`Message`.
+
+## Part
+
+```python
+from core import Part
+
+Part(type, data=None)
+```
+
+One piece of a message (`Part`). `type` names the piece and `data` holds it.
+
+<ResponseField name="type" type="str" required>
+  Which piece this is — the word `fold()` and adapters read.
+</ResponseField>
+
+<ResponseField name="data" type="Any" default="None">
+  The payload; its shape is whatever `type` promises.
+</ResponseField>
+
+Three types are reserved words core itself folds into a `Message`:
+
+| type | data | what folding does with it |
+| --- | --- | --- |
+| `text` | `str` | a delta — consecutive text parts concatenate into one |
+| `tool_call` | `ToolCall` | appended to `message.tool_calls`, whole; a `Part("tool_call", …)` carrying anything else is a `ContractError` |
+| `meta` | `dict` | merged into `message.meta`, later keys winning |
+
+One more spelling is shared so adapters agree: `image`, whose data is
+`{"url": …}` or `{"media_type": …, "data": <base64 str>}`. Every other type is
+adapter-defined and lands in `content` untouched — thinking blocks, provider
+extras, whatever comes next.
+
+## ToolCall
+
+```python
+from core import ToolCall
+
+ToolCall(id, name, args={})
+```
+
+The model asking for one tool to run (`ToolCall`).
+
+<ResponseField name="id" type="str" required>
+  The provider's id for this ask; the tool message answers it in
+  `Message.tool_call_id`.
+</ResponseField>
+
+<ResponseField name="name" type="str" required>
+  Which tool to run — the key it is filed under in `agent.tools`.
+</ResponseField>
+
+<ResponseField name="args" type="dict[str, Any]" default="{}">
+  The call's keyword arguments, already parsed. A fresh dict per call
+  (`field(default_factory=dict)`); the loop spreads it as `execute(run, **args)`.
+</ResponseField>
+
+<Note>
+  One convention core reads but does not write: an adapter that could not parse
+  a call's arguments yields an empty `args` and puts the raw string in the
+  assistant message's `meta["invalid_args"][id]`. The loop turns that into the
+  tool's result — `error: tool arguments were not valid JSON: ...` — so the
+  model reads its own mistake instead of a `TypeError`.
+</Note>
+
+## Message
+
+```python
+from core import Message
+
+Message(role, content="", tool_calls=[], tool_call_id=None, meta={})
+```
+
+One line in the agent's notebook (`Message`).
+
+<ResponseField name="role" type='"system" | "user" | "assistant" | "tool"' required>
+  Who the line is from.
+</ResponseField>
+
+<ResponseField name="content" type="str | list[Part]" default='""'>
+  The parts. Always `list[Part]` after construction — see the coercion below.
+</ResponseField>
+
+<ResponseField name="tool_calls" type="list[ToolCall]" default="[]">
+  Assistant only. A fresh list per message.
+</ResponseField>
+
+<ResponseField name="tool_call_id" type="str | None" default="None">
+  Tool role only — the `ToolCall.id` this message answers.
+</ResponseField>
+
+<ResponseField name="meta" type="dict[str, Any]" default="{}">
+  Provider junk. Adapters put usage here as
+  `{"usage": {"input_tokens": …, "output_tokens": …}}`, which is what `Budget`
+  reads, and `meta["model"]` names who answered.
+</ResponseField>
+
+### The str coercion
+
+`__post_init__` runs one rule: a `str` `content` becomes one text part, and the
+empty string becomes the empty list.
+
+```python
+from core import Message, Part
+
+assert Message("user", "hi").content == [Part("text", "hi")]
+assert Message("assistant").content == []
+```
+
+So the branch nobody has to write anymore is gone: past construction there is
+exactly one shape to read, and exactly one to revive from a checkpoint.
+
+### Message.text
+
+```python
+from core import Message
+
+@property
+def text(self) -> str: ...
+```
+
+Every text part, joined. Non-text parts are skipped, so `run.messages[-1].text`
+is the answer whether or not the reply also carried pictures or thinking.
+
+<ResponseField name="text" type="str">
+  The `data` of every `Part` whose type is `text`, concatenated in order.
+</ResponseField>
+
+See also: [the twelve nouns](/concepts/nouns), [what a tool returns](/tools/results),
+[writing a provider](/models/provider), [folding a stream](/reference/hooks).

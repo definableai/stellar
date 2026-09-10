@@ -1,0 +1,92 @@
+---
+title: check_model
+sidebarTitle: Conformance
+description: Three exchanges that say whether an adapter speaks core, and the one thing they cannot see.
+icon: circle-check
+---
+
+`core/conformance.py` holds one public name. It builds a throwaway `Agent`
+around the model under test, talks to it, and reads what landed in the notebook.
+
+## check_model()
+
+```python
+from core.conformance import check_model
+
+def check_model(model: Model) -> None: ...
+```
+
+Grade an adapter; raise if it fails, hand back `None` if it passes.
+
+<ParamField path="model" type="Model" required>
+  Run for real, three times. A live adapter hits the network — point it at
+  canned traffic first.
+</ParamField>
+
+<Warning>
+  It calls `asyncio.run` inside, so call it from sync code only. From inside a
+  running loop, await `core.conformance.exchanges(model)` instead — that is the
+  same grading, without the door.
+</Warning>
+
+### The three calls
+
+Exactly three model calls, always in this order, so a three-entry script lines
+up with them:
+
+<Steps>
+  <Step title="A plain reply">
+    One run of `"Say only the word ok."` with an empty toolbox. One model call.
+  </Step>
+  <Step title="A reply asking for a tool">
+    A second run of `"Call the echo tool with text='hi', then say done."` with
+    the `echo` tool in the toolbox. The model call that asks for it.
+  </Step>
+  <Step title="A reply after the tool result">
+    The same run, one turn later: the goodbye after `echo` answered.
+  </Step>
+</Steps>
+
+`echo` is the tool the second run carries — a `@tool`-built instance whose
+schema is one required `text` string, defined in `core.conformance` beside the
+two prompts, `PLAIN` and `ROUND`. None of the three is in the module's
+`__all__`; `check_model` is.
+
+### What it asserts
+
+- the first reply is an assistant message with text, and it is the only
+  assistant message in that notebook — there was no toolbox, so there was
+  nothing to ask for;
+- some assistant message in the second notebook carries `tool_calls`, and the
+  first call's `args` is a `dict`;
+- a tool message follows it whose `tool_call_id` is that call's `id`;
+- an assistant message follows the tool message, and there are exactly two
+  assistant messages in all — one ask, one answer, one goodbye;
+- what was streamed adds up to what was folded: the text of every `model.delta`
+  `Part`, joined in order, equals the assistant text in the notebook. A model
+  that streams nothing rings no deltas and is excused;
+- if any `meta` Parts were rung, some message carries `meta`.
+
+A failure is a `ContractError` naming the exchange, what it needed, and the roles
+it saw instead:
+
+```text
+exchange 2: expected an assistant message carrying tool_calls — does send yield them as tool_call Parts, and does encode put run.agent.tools in the body?; saw [user, assistant]
+```
+
+### What it cannot see
+
+Whether `encode` built a body your provider will accept. Nothing here reaches
+the wire, so that half is yours: assert directly against `model.encode(run)` in
+your adapter's own tests.
+
+```python
+from core import FakeModel, Message, ToolCall
+from core.conformance import check_model
+
+asks = Message("assistant", "", [ToolCall("c1", "echo", {"text": "hi"})])
+check_model(FakeModel(["ok", asks, "done"]))
+```
+
+See also: [testing an adapter](/models/testing),
+[writing a provider](/models/provider).

@@ -1,0 +1,101 @@
+---
+title: Transports
+sidebarTitle: Drivers
+description: Two serializers over a stream of Events — SSE frames and websocket frames, and nothing else.
+icon: cable
+---
+
+`drivers/transport.py` is framework-free on purpose: an async iterator of
+`Event`s in, strings out. Hand them to FastAPI's `StreamingResponse`, a
+Starlette websocket, aiohttp, whatever you run. stellar ships no server.
+
+The bus does the hard half — one run's events, replayed from `since` and then
+live, ending on that run's `run.post`. These two only frame them.
+
+## sse()
+
+```python
+from drivers.transport import sse
+
+async def sse(events) -> AsyncIterator[str]: ...
+```
+
+Server-Sent Events. One frame per event: an `id:` line carrying the seq, a
+`data:` line carrying the whole record as one JSON object, and the blank line
+that ends a frame.
+
+<ParamField path="events" type="AsyncIterator[Event]" required>
+  Normally `agent.events.stream(run_id=...)`, but anything that yields `Event`s
+  will do.
+</ParamField>
+
+<ResponseField name="frames" type="AsyncIterator[str]">
+  One string per event, each already ending in the blank line SSE wants.
+</ResponseField>
+
+A whole run of `Agent(FakeModel(["ok"]))` under `agent.run("say ok", run_id="r1")`
+is five frames:
+
+```text
+id: 0
+data: {"seq": 0, "name": "run.pre", "data": {"role": "user", "content": [{"type": "text", "data": "say ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314965}
+
+id: 1
+data: {"seq": 1, "name": "model.pre", "data": [{"role": "user", "content": [{"type": "text", "data": "say ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}], "source": "loop", "run_id": "r1", "ts": 1789024047.314974}
+
+id: 2
+data: {"seq": 2, "name": "model.delta", "data": {"type": "text", "data": "ok"}, "source": "loop", "run_id": "r1", "ts": 1789024047.314986}
+
+id: 3
+data: {"seq": 3, "name": "model.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.31499}
+
+id: 4
+data: {"seq": 4, "name": "run.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314991}
+
+```
+
+The event name rides inside the JSON, so there is no `event:` line and every
+frame is a plain `message`.
+
+<Note>
+  The seq is the cursor. A browser that drops hands its last id back as
+  `Last-Event-ID`; reopen with `stream(run_id=rid, since=int(last) + 1)` and the
+  client misses exactly what the drop cost.
+</Note>
+
+## ws_frames()
+
+```python
+from drivers.transport import ws_frames
+
+async def ws_frames(events) -> AsyncIterator[str]: ...
+```
+
+Websocket text frames: one whole event per frame, and nothing around it. The
+same records, minus the `id:` line and the blank one — the frame boundary is the
+websocket's job. The third and fifth frames of the same run:
+
+```text
+{"seq": 2, "name": "model.delta", "data": {"type": "text", "data": "ok"}, "source": "loop", "run_id": "r1", "ts": 1789024047.314986}
+{"seq": 4, "name": "run.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314991}
+```
+
+<ParamField path="events" type="AsyncIterator[Event]" required>
+  The same iterator `sse()` takes.
+</ParamField>
+
+<ResponseField name="frames" type="AsyncIterator[str]">
+  One JSON object per frame, no trailing newline.
+</ResponseField>
+
+Both call `dump(event)`, which is `json.dumps(asdict(event), default=str)` — the
+whole record, nested `Message`s and `Part`s and all, with anything JSON cannot
+hold falling back to its `str`.
+
+<Warning>
+  A ceiling marked in the source: `asdict` deep-copies the payload on every
+  frame. Emit records, not live handles.
+</Warning>
+
+See also: [events over the wire](/events/transport),
+[streaming](/events/streaming), [Events.stream()](/reference/events).
