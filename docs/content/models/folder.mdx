@@ -1,5 +1,5 @@
 ---
-title: Inside a provider
+title: Provider internals
 description: Two files. mapping.py says what crosses the network, model.py does the rest.
 ---
 
@@ -13,7 +13,7 @@ description, and the reply's header.
 `model.py` is the rest. It holds the list of models, the headers, `encode` and
 `send`.
 
-## What the base class gives you
+## The `Provider` base class
 
 ```python
 from models.openai import OpenAI
@@ -38,7 +38,7 @@ for `encode` to use.
 | `await self.aclose()` | close that client, which is the only thing holding a socket |
 | `self.headers()` | yours to write, and what every request carries |
 
-## It retries
+## Retries
 
 `post` and `sse` both try three times. They try again on a dead socket, and on
 these statuses: 408, 409, 429, 500, 502, 503, 504, 529. Anything else raises
@@ -48,7 +48,7 @@ again.
 A stream stops retrying once the first piece is out. There is no way to ask
 again without repeating words the reader already saw.
 
-## One row from the table
+## A mapping row
 
 Here is the picture row, from `models/anthropic/mapping.py`.
 

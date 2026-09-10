@@ -1,5 +1,5 @@
 ---
-title: Write your own provider
+title: Custom providers
 description: encode builds the request, send hands the reply back in pieces, and stellar joins them.
 ---
 
@@ -14,7 +14,7 @@ flowchart TD
   Parts -->|"joined"| Answer["one Message"]
 ```
 
-## What each half does
+## `encode()` and `send()`
 
 `encode(run)` reads `run.messages` and `run.agent.tools` and returns the
 request body. It sends nothing. That is why a test can check it with no
@@ -27,7 +27,7 @@ You do not write `invoke`. Stellar calls both methods, runs the
 [hooks](/hooks/stages) on every piece, and joins the pieces into one assistant
 [`Message`](/reference/types).
 
-## What a piece may be
+## The Part protocol
 
 `send` yields `Part` objects. Five rules cover every one of them.
 
@@ -51,7 +51,7 @@ reads.
 `meta["model"]` names who answered. That is how you tell who won a
 [fallback](/models/fallback).
 
-## Try it
+## Example
 
 This provider hands back three pieces. The listener counts them as they
 arrive.
@@ -89,5 +89,5 @@ A small answer.
 - Each piece went out as a `model.delta` event too, in order.
 - A new vendor feature is a new piece type, never a new method.
 
-Read [inside a provider](/models/folder) next. Then
-[what a model can do](/models/profiles).
+Read [provider internals](/models/folder) next. Then
+[profiles and capabilities](/models/profiles).

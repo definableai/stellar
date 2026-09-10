@@ -1,12 +1,12 @@
 ---
-title: What you write
+title: "Contracts: Model, Tool, hook"
 description: A Model, a Tool, and a hook. Two classes with one method each, and one plain function.
 ---
 
 There are three things you write yourself. All three are async, and all three
 take the run.
 
-## A Model
+## Model
 
 Give it an async `invoke(run)`. It reads `run.messages` and hands back one
 assistant `Message`.
@@ -26,7 +26,7 @@ Hand back anything else and you get a `ContractError` naming your class. For a
 real provider there is a shorter road. [`ProviderModel`](/models/provider)
 splits the job into `encode(run)` and `send(run, body)`.
 
-## A Tool
+## Tool
 
 Give it an async `execute(run, **args)`. The run comes first, then the
 arguments your schema promised, by name.
@@ -48,7 +48,7 @@ Write `execute` as an async generator instead and the tool streams. For a
 plain function, [`@tool`](/tools/functions) builds all of this from the
 signature.
 
-## A hook
+## Hook
 
 A hook is a function. It takes whatever its stage hands over, and the run
 after that if it leaves room for one.
@@ -82,7 +82,7 @@ HELLO THERE.
 - What the hook returns takes the reply's place. Return nothing and the reply
   stands.
 
-## Why everything is async
+## Async by design
 
 The loop awaits your code, so your code has to be awaitable. A sync `invoke`,
 `execute` or hook is refused up front, when you build the agent or attach the
@@ -95,7 +95,7 @@ method, and `@tool` writes even that for you.
   [`stream()`](/events/streaming) instead.
 </Note>
 
-## When you get it wrong
+## ContractError
 
 Forget the `async` on a hook and `attach` says so on the spot.
 

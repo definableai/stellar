@@ -1,5 +1,5 @@
 ---
-title: Run tools together
+title: Parallel tool calls
 description: Two slow tools in one turn, finishing in the time of one.
 ---
 
@@ -44,7 +44,7 @@ results: ['sunny', 'clear']
 both finished in one wait
 ```
 
-## What happened
+## How it works
 
 - `@tool(parallel=True)` says a tool is allowed to run beside other parallel
   tools in the same turn.
@@ -53,6 +53,6 @@ both finished in one wait
 - The results still land in the order the model asked for them, whichever one
   finished first.
 
-## Change it
+## Variations
 
 Drop `parallel=True` from one of the two and the waits go back to back again.

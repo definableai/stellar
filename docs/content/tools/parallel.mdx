@@ -1,5 +1,5 @@
 ---
-title: Run tools at the same time
+title: Parallel tool calls
 description: One keyword lets a tool run beside its neighbours. Everything else runs alone.
 ---
 
@@ -13,7 +13,7 @@ flowchart TD
   Two -->|"then"| Three["read"]
 ```
 
-## The rule
+## Batching rules
 
 Tools marked `parallel=True` that sit next to each other run together. Any
 other tool runs on its own. Everything before it finishes first, then it
@@ -32,7 +32,7 @@ def read(path: str) -> str:
 On a [class](/tools/classes), write `parallel = True` beside the name.
 Nothing runs together until you say so, which is the safe default.
 
-## Inside one batch
+## Batch execution
 
 - Every `tool.pre` hook runs first, in the order the model asked. A refusal
   skips that one call and leaves its neighbours alone.
@@ -40,7 +40,7 @@ Nothing runs together until you say so, which is the safe default.
 - The answers are written down in the order the model asked for them,
   whichever tool finished first. The conversation reads the same every time.
 
-## Try it
+## Example
 
 Two tools that each wait a fifth of a second. Run together they take one
 wait, not two.
@@ -85,7 +85,7 @@ looked at b
 both finished in one wait
 ```
 
-## When something stops the run
+## Stop and ContractError in a batch
 
 A `Stop` or a `ContractError` from one tool waits until the whole batch has
 finished. It is then raised, taking the first one in call order, so nothing
@@ -106,10 +106,10 @@ result, and the tools beside it carry on untouched.
   calls runs fifty at once.
 
 <CardGroup cols={2}>
-  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+  <Card title="Tool results" icon="book-open" href="/tools/results">
     Text, a dict, a picture, or nothing at all.
   </Card>
-  <Card title="Stop a run, skip a tool" icon="circle-slash" href="/hooks/stopping">
+  <Card title="Stopping runs and denying tool calls" icon="circle-slash" href="/hooks/stopping">
     The two signals, and what the loop catches.
   </Card>
 </CardGroup>

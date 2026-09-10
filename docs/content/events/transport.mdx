@@ -1,5 +1,5 @@
 ---
-title: Send events to a browser
+title: SSE and WebSocket transport
 description: sse() and ws_frames() turn a stream of events into strings a web page can read.
 ---
 
@@ -16,7 +16,7 @@ flowchart LR
 
 Both take any stream of events and give back strings. They add nothing else.
 
-## What goes out
+## Frame format
 
 `sse()` writes three lines per event. First an `id:` line with the number.
 Then a `data:` line with the whole event as JSON. Then a blank line. Browsers
@@ -33,7 +33,7 @@ as a plain `message` and the page needs one handler, not one per stage.
 `ws_frames()` writes the same JSON with no wrapping at all. One event, one
 websocket frame.
 
-## Try it
+## Example
 
 ```python run
 import asyncio
@@ -63,7 +63,7 @@ id: 3 model.post
 id: 4 run.post
 ```
 
-## If the browser drops
+## Reconnecting with Last-Event-ID
 
 The browser remembers the last `id:` it saw and sends it back as a
 `Last-Event-ID` header when it reconnects. Start the stream one past that
@@ -74,7 +74,7 @@ last = request.headers.get("Last-Event-ID")
 events = agent.events.stream(run_id=rid, since=int(last) + 1 if last else 0)
 ```
 
-## Put it behind a web server
+## Serving with a web framework
 
 <Note>
   stellar ships no server. `sse()` and `ws_frames()` hand you strings, and any
@@ -95,7 +95,7 @@ Starting the job and reading it are two separate things. The task is where the
 `Run` and any error end up, and keeping hold of it is your job. The stream
 needs nothing from it, and ends on `run.post` either way.
 
-## Good to know
+## Notes
 
 - Each event is copied into JSON when the frame is written. What goes out is a
   snapshot, not a live handle on the conversation.

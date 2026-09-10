@@ -17,7 +17,7 @@ flowchart TD
   Agent -->|"final answer"| You
 ```
 
-## What is in the box
+## Core components
 
 Think of the agent as a robot with a backpack. Inside the backpack:
 
@@ -31,7 +31,7 @@ Think of the agent as a robot with a backpack. Inside the backpack:
 You build the robot once. Then you give it jobs. Each job is a `Run`. It has
 its own conversation, its own step count, and its own id.
 
-## Why people like it
+## Why Stellar
 
 - **Small.** The whole core is under 2000 lines of plain Python. You can
   read it in an afternoon.
@@ -42,7 +42,7 @@ its own conversation, its own step count, and its own id.
 - **Works with any model.** Claude and OpenAI come in the box. Others take a
   few lines.
 
-## Try it in ten seconds
+## Quick example
 
 This runs with no API key. `FakeModel` plays the part of the model and says
 what you tell it to say.
@@ -65,7 +65,7 @@ Hello! I am your agent.
 - `agent.run("Say hello")` gives it a job. The answer comes back in `run`.
 - `run.messages` is the whole conversation. The last message is the answer.
 
-## Where to go next
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/quickstart">

@@ -1,5 +1,5 @@
 ---
-title: Stopping and skipping
+title: "Control flow: Stop and tool.pre"
 description: Two ways to steer the loop from outside. Raise Stop to end the run, or answer for a tool before it runs.
 ---
 
@@ -14,7 +14,7 @@ flowchart LR
   Hook -->|"raise Stop"| Done["end the run"]
 ```
 
-## End the run with Stop
+## Stop: end the run
 
 Raise `Stop` from any hook or any tool. The loop catches it and ends the run
 cleanly. No error reaches your `await`, and the `Run` comes back holding
@@ -72,7 +72,7 @@ left to stop.
   `Budget` writes the reply down itself first, for exactly that reason.
 </Warning>
 
-## Answer for a tool before it runs
+## tool.pre: deny or replace a tool call
 
 The second signal is returned, not raised. A `tool.pre` hook that returns
 something has answered for the tool, and the tool never runs.
@@ -123,7 +123,7 @@ The first rule that answers wins, and the rules behind it never hear that
 stage. `Permission(deny, allow, ask)` is this signal in a uniform, and it
 refuses with plain strings like `denied: rm`.
 
-## What is not a signal
+## Errors are not signals
 
 - **A tool that raises.** The loop catches it, writes
   `error: ValueError: nope` into the conversation, and the model gets another

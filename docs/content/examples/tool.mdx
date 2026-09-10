@@ -1,5 +1,5 @@
 ---
-title: Give the agent a tool
+title: Tool calling
 description: A Python function the model can call, and the result it reads back.
 ---
 
@@ -35,7 +35,7 @@ tool: HELLO
 assistant: I shouted it. It came out HELLO.
 ```
 
-## What happened
+## How it works
 
 - `@tool` turns a plain function into a tool, and its name, docstring and
   parameters become what the model sees.
@@ -44,7 +44,7 @@ assistant: I shouted it. It came out HELLO.
 - Stellar runs the function, writes `HELLO` into the conversation as a `tool`
   line, then asks the model again.
 
-## Change it
+## Variations
 
 Return a number or a dict from `shout`, and stellar turns it into JSON for the
 model.

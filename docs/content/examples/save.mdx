@@ -1,5 +1,5 @@
 ---
-title: Save and continue later
+title: Checkpoint and resume
 description: Pickle a run, load it back, and keep the same conversation going.
 ---
 
@@ -34,7 +34,7 @@ second answer: You asked about my favourite colour.
 same run id: True
 ```
 
-## What happened
+## How it works
 
 - Pickling a `Run` keeps its id, messages, step count and `extra`, and leaves
   the agent behind.
@@ -43,7 +43,7 @@ same run id: True
 - The agent is the one you already had, so its script carries on where the
   first run left off.
 
-## Change it
+## Variations
 
 Write `saved` to disk with `Path("run.pkl").write_bytes(saved)` and load it in
 a program you start tomorrow.

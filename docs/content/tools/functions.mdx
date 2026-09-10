@@ -1,19 +1,19 @@
 ---
-title: A function is a tool
+title: Function tools
 description: Put @tool on a plain Python function, and your agent can call it.
 ---
 
 A tool is one thing your agent can do. Write an ordinary Python function,
 put `@tool` on top of it, and you have one.
 
-## What @tool reads
+## What `@tool` generates
 
 The tool's **name** is the function's name. Its **description** is the
 docstring, which is the sentence the model reads when it decides whether to
 call you. Its arguments come from the signature. An argument with a default
 is optional, and one without is required.
 
-## Try it
+## Example
 
 This needs no API key. `FakeModel` plays the model and says what you told
 it to say. Here it asks for `shout`, then answers.
@@ -67,7 +67,7 @@ HI HI
 - The tool ran, and `HI HI` went back into the conversation for the model
   to read.
 
-## Which type hints the model understands
+## Type hints to JSON Schema
 
 Six of them have a name. Anything else has none, and the model may then
 send what it likes.
@@ -82,7 +82,7 @@ send what it likes.
 | `dict`, `dict[str, int]` | `object` |
 | anything else, or no hint | no type at all |
 
-## Sync, async, or streaming
+## Sync, async, and streaming tools
 
 `@tool` looks at the kind of function you wrote.
 
@@ -92,7 +92,7 @@ send what it likes.
 - An **async generator** streams. Each `Part` it yields goes out the moment
   it happens, and the pieces join into one message at the end.
 
-## Ask for the run
+## The `run` parameter
 
 Name the first argument `run` and the agent fills that one in for you. The
 model never sees it, so it is not in the schema.
@@ -107,7 +107,7 @@ def so_far(run) -> int:
     return len(run.messages)
 ```
 
-## One option only
+## The `parallel` option
 
 `@tool` takes one keyword and no others. `@tool(parallel=True)` lets this
 tool run beside other parallel ones. [Running tools at the same
@@ -123,10 +123,10 @@ For a different name, description or schema, write a
 </Note>
 
 <CardGroup cols={2}>
-  <Card title="A class is a tool" icon="box" href="/tools/classes">
+  <Card title="Class-based tools" icon="box" href="/tools/classes">
     For when the tool has to hold on to something.
   </Card>
-  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+  <Card title="Tool results" icon="book-open" href="/tools/results">
     Text, a dict, a picture, or nothing at all.
   </Card>
 </CardGroup>

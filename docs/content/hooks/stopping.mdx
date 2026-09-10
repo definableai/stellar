@@ -1,12 +1,12 @@
 ---
-title: Stop a run, skip a tool
+title: Stopping runs and denying tool calls
 description: Two signals and no third. Raise Stop to end a run, answer from tool.pre to skip a tool.
 ---
 
 There are exactly two ways to steer a run from the outside. Everything else
 is an ordinary error with ordinary consequences.
 
-## Raise Stop
+## Stopping a run with `Stop`
 
 `raise Stop` from any hook or any tool ends the run cleanly. No error
 reaches whoever called `agent.run(...)`, and the `Run` comes back holding
@@ -51,7 +51,7 @@ print(run.step)
 - `run.step` reads 2 because the agent counts the turn up before your hooks
   run.
 
-## run.post always runs
+## `run.post` always fires
 
 - It runs after a clean finish, after a `Stop`, and after a crash. That
   makes it the place to tidy up.
@@ -61,7 +61,7 @@ print(run.step)
   [stream](/events/streaming) watching one run ends there, instead of
   hanging.
 
-## Skip a tool
+## Denying a tool call
 
 Return a string or a `Message` from a `tool.pre` hook. Your agent skips the
 tool and writes your answer down as the tool's result, stamped with the
@@ -101,7 +101,7 @@ It is sunny in Paris.
 - There is no boolean to return and no third signal. A refusal is just the
   answer you would have got, written by you.
 
-## What the loop catches
+## Exception handling
 
 | raised | what happens |
 | --- | --- |
@@ -113,10 +113,10 @@ Everything else raises. A model that breaks, a hook that breaks, a
 a tool, because a wiring mistake is not something to tell the model about.
 
 <CardGroup cols={2}>
-  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+  <Card title="Built-in hooks" icon="sliders-horizontal" href="/hooks/cards">
     Steps, Budget, Permission and Log.
   </Card>
-  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+  <Card title="Tool results" icon="book-open" href="/tools/results">
     Text, a dict, a picture, or nothing at all.
   </Card>
 </CardGroup>

@@ -1,5 +1,5 @@
 ---
-title: Where things are
+title: Project layout
 description: One small core, three folders built on it, the tests, and the six rules that keep the shape.
 ---
 
@@ -16,7 +16,7 @@ tests/      test_*.py
 docs/       docs.json  content/  check.py
 ```
 
-## What each folder is for
+## Package layout
 
 - `core/` is the engine. The twelve building blocks and the loop, in under
   2000 lines of plain Python.
@@ -38,7 +38,7 @@ from models.anthropic import Anthropic
 from hooks.steps import Steps
 ```
 
-## How to run the tests
+## Running the tests
 
 ```bash
 for f in tests/test_*.py; do uv run python "$f" || exit 1; done
@@ -47,7 +47,7 @@ uv run ruff check .
 
 Each test is an ordinary script. Run one on its own and it prints what passed.
 
-## The rules we keep
+## Architecture rules
 
 - `core/*.py` is 2000 lines all together, at most.
 - `core/` imports the standard library and itself, plus `httpx` in `llm.py`.

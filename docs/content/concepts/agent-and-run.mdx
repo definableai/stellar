@@ -13,7 +13,7 @@ flowchart LR
   Agent -->|"a job"| Run3["Run 3"]
 ```
 
-## What an Agent holds
+## Agent fields
 
 - `model` is the brain. Every run of this agent asks this one.
 - `tools` is the toolbox. Hand in a list and each tool is filed under its name.
@@ -25,7 +25,7 @@ Only `model` is required. Building the agent checks the wiring. A mistake
 shows up on the line that built it, not on the first turn. And there is one
 method, `run()`. There is never a second one.
 
-## What a Run holds
+## Run fields
 
 - `agent` is the agent behind this run.
 - `id` is a hex string, fresh each run, or the one you passed to `run_id=`.
@@ -39,7 +39,7 @@ goes away when the run ends. Pickle a `Run` and you keep `id`, `messages`,
 `step` and `extra`. The wiring is code, so you build that again. See
 [save and continue](/patterns/checkpoint).
 
-## One agent, many jobs
+## One agent, many runs
 
 ```python run
 import asyncio
@@ -70,7 +70,7 @@ A hundred users is that same line. Nothing leaks between them, because each
 agent is the point. One listener on `agent.events` hears all hundred, and
 every event says which run it came from.
 
-## Change parts while it runs
+## Hot-swapping components
 
 ```python
 agent.model = OpenAI("gpt-5.6-luna")

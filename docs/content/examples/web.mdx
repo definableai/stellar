@@ -1,5 +1,5 @@
 ---
-title: Send events to a browser
+title: SSE streaming
 description: One run's events as Server-Sent Events, ready for a web page.
 ---
 
@@ -40,7 +40,7 @@ id: 3 -> model.post
 id: 4 -> run.post
 ```
 
-## What happened
+## How it works
 
 - `agent.events.stream(run_id="a")` gives you one run's events, replayed from
   the start and then live.
@@ -49,7 +49,7 @@ id: 4 -> run.post
 - The `id:` line is the event number, and a browser hands it back to pick up
   after a drop.
 
-## Change it
+## Variations
 
 Hand `sse(...)` to your framework's streaming response and the same lines go
 down the wire.

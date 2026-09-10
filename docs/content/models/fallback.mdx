@@ -1,5 +1,5 @@
 ---
-title: Try one model, then another
+title: Fallback and routing
 description: A list of models, asked in order. The first one that answers wins.
 ---
 
@@ -17,7 +17,7 @@ flowchart LR
 conversation is stellar's own shape, and every provider builds its request
 from that.
 
-## What counts as a no
+## What triggers a fallback
 
 Two things move the run along.
 
@@ -31,7 +31,7 @@ somebody else, and moving on would hide the bug.
 The last model is asked outside the loop. Whatever it raises reaches you
 unchanged.
 
-## Try it
+## Example
 
 The first model always refuses. The second one answers.
 
@@ -65,7 +65,7 @@ I can answer that.
 - The winning [`Message`](/reference/types) carries `meta["model"]`, the name
   of who answered.
 
-## Write your own rule
+## Custom routing
 
 A smarter rule is just a model of your own. This one uses the small model
 until the conversation gets long.

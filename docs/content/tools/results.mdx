@@ -1,5 +1,5 @@
 ---
-title: What a tool can return
+title: Tool results
 description: Anything at all. Whatever comes back is shaped into the one message the model reads.
 ---
 
@@ -7,7 +7,7 @@ A tool owes you no return type. Whatever it hands back becomes one message,
 stamped with the call's id. That message is the next line in the
 conversation.
 
-## The seven shapes
+## Return types
 
 | you return | the model gets |
 | --- | --- |
@@ -21,7 +21,7 @@ conversation.
 
 An empty list is still JSON, so it arrives as `[]` and not as nothing.
 
-## Try it
+## Example
 
 Three tools in one turn. One returns a dict, one returns a picture, and one
 breaks.
@@ -73,7 +73,7 @@ text error: ValueError: nope
 A streaming tool returns nothing at all. Its result is the pieces it
 yielded, joined into one message.
 
-## When a tool fails
+## Error handling
 
 | what happened | what the model reads |
 | --- | --- |
@@ -86,7 +86,7 @@ The model gets another turn and can try again.
 <Note>
   Two exceptions are never turned into an answer. `Stop` ends the run, and
   `ContractError` raises, because a wiring mistake is not something to tell
-  the model about. See [stop a run, skip a tool](/hooks/stopping).
+  the model about. See [stopping runs and denying tool calls](/hooks/stopping).
 </Note>
 
 Your answers are checked before they are sent. A picture handed to a model
@@ -97,7 +97,7 @@ leaves your machine. [Profiles](/models/profiles) has that check.
   <Card title="Hooks" icon="shield" href="/hooks/overview">
     A rule can answer for a tool instead of running it.
   </Card>
-  <Card title="Run tools at the same time" icon="shuffle" href="/tools/parallel">
+  <Card title="Parallel tool calls" icon="shuffle" href="/tools/parallel">
     One keyword, and how a turn is cut into batches.
   </Card>
 </CardGroup>

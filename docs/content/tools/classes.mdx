@@ -1,5 +1,5 @@
 ---
-title: A class is a tool
+title: Class-based tools
 description: Subclass Tool when you want your own name, your own schema, or something to hold on to.
 ---
 
@@ -10,7 +10,7 @@ Reach for a class when the tool has to **hold on to something**. The object
 lives as long as the agent. An open connection, a cache, or a count is still
 there on the next call.
 
-## The four things you set
+## Tool attributes
 
 | you set | what it is |
 | --- | --- |
@@ -24,7 +24,7 @@ then the arguments your schema promised, by name.
 
 Give the agent an instance, not the class.
 
-## Try it
+## Example
 
 ```python run
 import asyncio
@@ -57,7 +57,7 @@ HI
 - A plain `def execute` is refused when you build the agent, and the message
   tells you to do exactly that.
 
-## Streaming
+## Streaming tools
 
 Write `execute` as an async generator and the tool streams. Each `Part` it
 yields goes out the moment it happens, and the pieces join into one message
@@ -99,7 +99,7 @@ once upon a time
 - A tool that breaks halfway sends the error instead, and the pieces it had
   already yielded are dropped.
 
-## One instance for every job
+## Shared instance, per-run state
 
 <Warning>
   One tool object is shared by every job that agent runs, and two jobs can
@@ -108,10 +108,10 @@ once upon a time
 </Warning>
 
 <CardGroup cols={2}>
-  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+  <Card title="Tool results" icon="book-open" href="/tools/results">
     Text, a dict, a picture, or nothing at all.
   </Card>
-  <Card title="Run tools at the same time" icon="shuffle" href="/tools/parallel">
+  <Card title="Parallel tool calls" icon="shuffle" href="/tools/parallel">
     One keyword, and how a turn is cut into batches.
   </Card>
 </CardGroup>

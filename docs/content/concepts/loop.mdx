@@ -1,5 +1,5 @@
 ---
-title: The loop
+title: The agent loop
 description: Ask the model, run the tools it asked for, ask again. The eight moments in between, and what you can change at each.
 ---
 
@@ -67,7 +67,7 @@ first.
 The end, and it always happens: after a clean finish, after a `Stop`, after a
 crash. A hook here gets the last message, and what it returns is ignored.
 
-## How it ends
+## Termination
 
 - **The model asked for no tools.** The ordinary ending.
 - **A hook or a tool raised `Stop`.** No error reaches you, and the `Run` holds
@@ -75,7 +75,7 @@ crash. A hook here gets the last message, and what it returns is ignored.
 - **Something else raised.** It comes out of your `await`, with `run.post`
   already done.
 
-## Watch it go round
+## Observing the loop
 
 Every name is also an event, so a listener can print them as they happen.
 
@@ -123,7 +123,7 @@ run.post
 - The second answer asked for nothing, so the run ends.
 
 <CardGroup cols={2}>
-  <Card title="Stopping and skipping" icon="circle-slash" href="/concepts/control">
+  <Card title="Control flow: Stop and tool.pre" icon="circle-slash" href="/concepts/control">
     The two ways to steer the loop from outside it.
   </Card>
   <Card title="Stages" icon="workflow" href="/hooks/stages">

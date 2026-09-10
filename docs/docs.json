@@ -48,7 +48,7 @@
             ]
           },
           {
-            "group": "How it works",
+            "group": "Concepts",
             "pages": [
               "concepts/loop",
               "concepts/nouns",
@@ -97,7 +97,7 @@
             ]
           },
           {
-            "group": "Recipes",
+            "group": "Patterns",
             "pages": [
               "patterns/sub-agents",
               "patterns/checkpoint",
@@ -110,7 +110,7 @@
         "tab": "Examples",
         "groups": [
           {
-            "group": "Start here",
+            "group": "Basics",
             "pages": [
               "examples/hello",
               "examples/tool",
@@ -119,7 +119,7 @@
             ]
           },
           {
-            "group": "Take control",
+            "group": "Control flow",
             "pages": [
               "examples/permission",
               "examples/stream",
@@ -128,7 +128,7 @@
             ]
           },
           {
-            "group": "Bigger ideas",
+            "group": "Advanced",
             "pages": [
               "examples/save",
               "examples/helper",

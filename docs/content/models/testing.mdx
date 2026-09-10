@@ -1,5 +1,5 @@
 ---
-title: Test a model without the network
+title: Testing providers
 description: Canned replies, check_model, and FakeModel. No key, no socket.
 ---
 
@@ -7,7 +7,7 @@ A provider has two halves, and you test them differently. `encode` builds the
 request and sends nothing, so you check what it built. `send` needs real
 traffic, so you hand it real traffic with the socket taken out.
 
-## Feed it canned replies
+## Canned responses
 
 `post` and `sse` are where tests plug in. Override `post` for the one-request
 path, or `sse` for the live one. Do not reach for `httpx`, because everything
@@ -39,7 +39,7 @@ Copy real replies out of the provider's docs, or off a live call. `Canned`
 keeps every request it was handed in `self.sent`, which is how you check the
 `encode` half afterwards.
 
-## Grade it with `check_model`
+## Conformance testing with `check_model`
 
 `check_model(model)` runs your provider through the real loop three times.
 First a plain reply with no tools. Then a reply asking for the built-in `echo`

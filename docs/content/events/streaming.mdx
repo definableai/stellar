@@ -1,5 +1,5 @@
 ---
-title: Read events as they happen
+title: Streaming events
 description: stream() hands you one job's events, one at a time, from the start and then live.
 ---
 
@@ -10,7 +10,7 @@ event as it lands. When the job ends, the stream ends.
 Use it when your reader has to wait for something, like a web handler or a
 queue. A plain listener cannot, because it is never `async def`.
 
-## Try it
+## Example
 
 Start the job as a task so the stream can read it while it runs. Keep the
 task. It is where the `Run`, and any error, comes back.
@@ -60,7 +60,7 @@ asyncio.run(main())
 - `stream()` takes the same two filters as `listen`: `run_id` picks one job,
   `prefix` picks a family of names.
 
-## The stream always ends
+## Stream termination
 
 The loop writes `run.post` at the very end, whether the job finished, was
 stopped, or raised. That is what closes the stream, so a reader never hangs.
@@ -69,7 +69,7 @@ It closes on `run.post` even when a `prefix` hid every other event.
 A stream with no `run_id` watches the whole agent, and that one has no ending.
 You leave it when you are done.
 
-## Reconnecting costs nothing
+## Replay and reconnection
 
 Open the stream before the job, halfway through, or after it has finished. You
 get the same events in the same order every time, because the replay fills in
@@ -91,7 +91,7 @@ next.
   <Card title="To a browser" icon="cable" href="/events/transport">
     Turn these events into lines a web page can read.
   </Card>
-  <Card title="Many jobs at once" icon="shuffle" href="/patterns/concurrency">
+  <Card title="Concurrent runs" icon="shuffle" href="/patterns/concurrency">
     One agent, three jobs, one event log. How to tell them apart.
   </Card>
 </CardGroup>

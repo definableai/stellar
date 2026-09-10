@@ -1,5 +1,5 @@
 ---
-title: An agent that asks a helper
+title: Sub-agents
 description: A tool that builds a second agent, asks it one question, and hands the answer back.
 ---
 
@@ -15,7 +15,7 @@ flowchart LR
   Tool -->|"one message"| Agent
 ```
 
-## Try it
+## Example
 
 The loop hands every tool the `run` first. `run.agent` is the agent that
 called it, so `run.agent.model` is the model the helper can borrow.
@@ -61,7 +61,7 @@ assistant | The helper says Paris.
   helper take turns from the same list. A real model has no script and no such
   ordering.
 
-## Give the helper less
+## Scoping the sub-agent
 
 Sharing the model is a choice, and so is everything else. Hand the helper a
 smaller toolbox and its own limit, on purpose.
@@ -80,7 +80,7 @@ anything, so all it can do is answer.
   smaller box, a [`Steps`](/hooks/cards) limit, or both.
 </Warning>
 
-## Good to know
+## Notes
 
 - Nothing about the helper is counted by the parent. A budget hook on the
   parent never sees what the helper spent.
@@ -88,10 +88,10 @@ anything, so all it can do is answer.
   by piece, as it is typed. See [tool classes](/tools/classes).
 
 <CardGroup cols={2}>
-  <Card title="Save a run" icon="clock" href="/patterns/checkpoint">
+  <Card title="Checkpoint and resume" icon="clock" href="/patterns/checkpoint">
     Stop in the middle, and pick the same conversation up tomorrow.
   </Card>
-  <Card title="Many jobs at once" icon="shuffle" href="/patterns/concurrency">
+  <Card title="Concurrent runs" icon="shuffle" href="/patterns/concurrency">
     One agent, a hundred conversations, no locks.
   </Card>
 </CardGroup>

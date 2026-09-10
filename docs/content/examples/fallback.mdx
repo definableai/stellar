@@ -1,5 +1,5 @@
 ---
-title: Try one model, then another
+title: Model fallback
 description: A row of models, where the first one that can answer wins.
 ---
 
@@ -39,7 +39,7 @@ skipped model:Picky - Picky reads no pictures
 answer: The second model answered.
 ```
 
-## What happened
+## How it works
 
 - `Fallback` asks each model in turn, and `Unsupported` means this one cannot
   take the job, so ask the next.
@@ -48,7 +48,7 @@ answer: The second model answered.
 - Every skip goes to the event log as `model.skip`, so you can see who was
   passed over.
 
-## Change it
+## Variations
 
 Put a real model first and `FakeModel` last, so your demo still answers when
 the key is missing.

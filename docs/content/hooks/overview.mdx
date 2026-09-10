@@ -19,7 +19,7 @@ flowchart TD
 Those moments are called stages, and there are [eight of
 them](/hooks/stages).
 
-## Try it
+## Example
 
 This rule answers for `rm` instead of letting it run.
 
@@ -57,7 +57,7 @@ ok, I will not
 - That agent has no `rm` tool at all, and it did not matter. The rule
   answered before the toolbox was ever looked at.
 
-## What a hook can return
+## Return values
 
 - **Nothing.** Return `None` and what you were handed is left alone.
 - **A new value of the same kind.** Hand back a `Message` where you were
@@ -69,7 +69,7 @@ ok, I will not
 stringly at model.post returned str; return Message, or None to leave it alone
 ```
 
-## Ask for the run
+## The `run` parameter
 
 A hook may take one argument more than its stage hands over, and that one is
 the run.
@@ -87,7 +87,7 @@ async def trim(messages, run) -> list[Message]:
 That shape is read once, when you attach the hook. A function that does not
 fit its stage is refused right there. So is one that is not async.
 
-## In what order they run
+## Execution order
 
 - First attached, first to run. `attach` hands back the hooks, so attaches
   chain, like `agent.hooks.attach(one).attach(two)`.
@@ -103,10 +103,10 @@ fit its stage is refused right there. So is one that is not async.
 </Note>
 
 <CardGroup cols={2}>
-  <Card title="The eight stages" icon="workflow" href="/hooks/stages">
+  <Card title="Hook stages" icon="workflow" href="/hooks/stages">
     Every moment a hook can listen for, with an example each.
   </Card>
-  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+  <Card title="Built-in hooks" icon="sliders-horizontal" href="/hooks/cards">
     Steps, Budget, Permission and Log.
   </Card>
 </CardGroup>

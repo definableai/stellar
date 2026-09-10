@@ -1,5 +1,5 @@
 ---
-title: Use a real model
+title: Real providers
 description: The first example again, with Claude or GPT instead of FakeModel.
 ---
 
@@ -51,7 +51,7 @@ from core import FakeModel                       # instead of the provider
 agent = Agent(FakeModel(["Hi there, five short words."]))
 ```
 
-## What is different
+## How it works
 
 - The model writes its own answer now, so the words you get back will not match
   this page.
@@ -60,7 +60,7 @@ agent = Agent(FakeModel(["Hi there, five short words."]))
 - Nothing else moves, because the loop, the tools and the hooks never know
   which model they have.
 
-## Change it
+## Variations
 
 Put both models behind `Fallback` and your program still answers when one
 provider is down.

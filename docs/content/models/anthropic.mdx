@@ -23,7 +23,7 @@ print(run.messages[-1].text)
 Any extra keyword, like `temperature` or `max_tokens`, goes on the request. It
 beats the default this provider would have used.
 
-## The models in the box
+## Shipped models
 
 | id | input size | output size | words |
 | --- | --- | --- | --- |
@@ -34,9 +34,9 @@ beats the default this provider would have used.
 
 Every current Claude does everything, so all four share one list. An id
 outside the table takes the longest row it starts with. See
-[what a model can do](/models/profiles).
+[profiles and capabilities](/models/profiles).
 
-## What is different about this API
+## API specifics
 
 - **System messages travel on their own.** Every system
   [`Message`](/reference/types) is lifted out of the conversation and sent in

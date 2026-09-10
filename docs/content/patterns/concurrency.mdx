@@ -1,5 +1,5 @@
 ---
-title: Many jobs at once
+title: Concurrent runs
 description: One agent can run a hundred conversations side by side. Here is what they share.
 ---
 
@@ -7,7 +7,7 @@ An [`Agent`](/reference/agent) holds no conversation of its own. The messages,
 the step count and `extra` all live on the `Run`. So a hundred people is one
 line of `asyncio`.
 
-## Try it
+## Example
 
 Give each job a name with `run_id=` and you can tell them apart in the log.
 The name is fixed before the job starts, which is what lets a reader
@@ -55,7 +55,7 @@ whole thing out afterwards.
   overlap, and the lines above arrive mixed together.
 </Note>
 
-## What they share
+## Shared state
 
 - the model, the toolbox and the agent's hooks
 - `agent.extra` and the event log
@@ -63,7 +63,7 @@ whole thing out afterwards.
 Nothing in core takes a lock. Those last two are the only places one job can
 write where another will see it. Keeping them tidy is yours.
 
-## What is private
+## Per-run state
 
 - `run.messages`, `run.step` and `run.extra`
 - `run.hooks`, this job's own rules, which run after the agent's
@@ -71,7 +71,7 @@ write where another will see it. Keeping them tidy is yours.
 Neither one is an argument to `agent.run`. You reach them from inside the job,
 through the `run` that every hook and every tool is handed.
 
-## Change parts while jobs run
+## Hot-swapping components
 
 Swapping a part is an assignment, and the agent checks all its parts again at
 the top of every step. So you can change the model mid-flight. The next job to

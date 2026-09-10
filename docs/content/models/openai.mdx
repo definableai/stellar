@@ -1,5 +1,5 @@
 ---
-title: OpenAI and look-alikes
+title: OpenAI and compatible APIs
 description: Chat Completions, the API most other vendors copied.
 ---
 
@@ -23,7 +23,7 @@ print(run.messages[-1].text)
 The address is `https://api.openai.com/v1` unless `base_url=` says otherwise.
 Extra keywords are kept and put on the request, and yours win.
 
-## The models in the box
+## Shipped models
 
 | id | input size | output size | words |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ and `system`. There is no `document` and no `thinking`, because this API has
 no shape for either. The [check](/models/profiles) refuses them before
 anything is sent.
 
-## What is different about this API
+## API specifics
 
 - **The reply has no block types.** Text arrives as a plain string, and tool
   calls arrive in a list beside it.
@@ -51,7 +51,7 @@ anything is sent.
   the run. A profile word promised that part, so dropping it in silence would
   be a lie. The model's own past reply is the one exception.
 
-## Other providers that copy this API
+## OpenAI-compatible providers
 
 Three lines, in your own code.
 

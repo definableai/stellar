@@ -17,7 +17,7 @@ flowchart TD
 The rules ([hooks](/hooks/overview)) get asked before something happens, and
 they can change it. Events are told after, and they change nothing.
 
-## What an event is
+## The Event object
 
 | field | what it is |
 | --- | --- |
@@ -28,7 +28,7 @@ they can change it. Events are told after, and they change nothing.
 | `run_id` | which job it belongs to, or `None` if it belongs to no job. |
 | `ts` | the time it happened. |
 
-## Listen
+## Listeners
 
 Give `listen` a function that takes one event. It gets called every time an
 event lands. Listeners are plain functions, never `async def`, because writing
@@ -57,13 +57,13 @@ asyncio.run(agent.run("hello", run_id="a"))
 - If your listener raises, the error goes to the `core.events` logger and the
   next listener still hears the event.
 
-## Hear less
+## Filtering by prefix and run
 
 `agent.events.listen(fn, "tool")` hears `tool.pre`, `tool.delta` and
 `tool.post`, and nothing else. A name is cut at the dot, so `"tool"` never
 hears `toolbox.x`. `agent.events.listen(fn, run_id=run.id)` hears one job.
 
-## What the agent writes
+## Built-in events
 
 | name | what came with it |
 | --- | --- |
@@ -78,13 +78,13 @@ hears `toolbox.x`. `agent.events.listen(fn, run_id=run.id)` hears one job.
 
 Each one is written after its hooks have run, so you see what they agreed on.
 
-## Write your own
+## Custom events
 
 `run.emit("cache.hit", key)` puts your own event on the same list, stamped
 with that job's id. Nothing checks the name, so your names count for as much
 as the eight above.
 
-## Good to know
+## Notes
 
 - `model.pre` carries a copy of the messages. The conversation keeps growing,
   and the event log must not grow with it.

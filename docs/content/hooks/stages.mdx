@@ -1,5 +1,5 @@
 ---
-title: The eight stages
+title: Hook stages
 description: The eight moments a hook can listen for, what each one hands you, and a working rule for each.
 ---
 
@@ -184,10 +184,10 @@ async def done(last: Message, run) -> None:
 ```
 
 <CardGroup cols={2}>
-  <Card title="Stop a run, skip a tool" icon="circle-slash" href="/hooks/stopping">
+  <Card title="Stopping runs and denying tool calls" icon="circle-slash" href="/hooks/stopping">
     The two signals, and what the loop catches.
   </Card>
-  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+  <Card title="Built-in hooks" icon="sliders-horizontal" href="/hooks/cards">
     Steps, Budget, Permission and Log.
   </Card>
 </CardGroup>

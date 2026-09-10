@@ -102,7 +102,7 @@ Four steps from an empty folder to an agent that answers you.
   </Step>
 </Steps>
 
-## No key? Use FakeModel
+## Running without an API key
 
 `FakeModel` says what you tell it to say, one entry per turn. No network, no
 key, and the same loop underneath.
@@ -137,7 +137,7 @@ HELLO, shouted.
 The first entry asks for the tool, the second answers. Ask for one more turn
 than you wrote and you get a `ContractError` naming the reply it ran out on.
 
-## What you get back
+## The Run object
 
 `agent.run(...)` hands you the `Run`. Four things on it are worth knowing.
 

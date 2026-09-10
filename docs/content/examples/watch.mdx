@@ -1,5 +1,5 @@
 ---
-title: See every step
+title: Event listeners
 description: A listener that prints the name of everything the agent does.
 ---
 
@@ -40,7 +40,7 @@ model.post
 run.post
 ```
 
-## What happened
+## How it works
 
 - `agent.events.listen(fn)` hands every event to your function the moment it
   happens.
@@ -49,6 +49,6 @@ run.post
 - There are eight names in all, and `tool.delta` is missing because `shout`
   answers in one go.
 
-## Change it
+## Variations
 
 Pass `"tool"` as a second argument to `listen` and you hear the tool lines only.

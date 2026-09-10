@@ -1,5 +1,5 @@
 ---
-title: Stop after a few steps
+title: Step limits
 description: A rule that gives the agent three turns with the model, and no more.
 ---
 
@@ -40,7 +40,7 @@ replies: 3
 run.step: 4
 ```
 
-## What happened
+## How it works
 
 - `Nagger` asks for the tool every time, so nothing in the conversation would
   ever end this run on its own.
@@ -49,7 +49,7 @@ run.step: 4
 - `run.step` reads 4 because the count goes up before the check, so only three
   replies landed.
 
-## Change it
+## Variations
 
 Swap `Steps` for `Budget` from `hooks/budget.py` to cap what a run spends
 instead of how long it goes.

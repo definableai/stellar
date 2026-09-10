@@ -153,7 +153,7 @@ Raises `ContractError` on a function whose signature has `*args` or `**kwargs`.
 A signature nobody can read is no schema. It raises on anything with no
 `__name__`, because the function's name is the tool's.
 
-### The run parameter
+### The `run` parameter
 
 A first parameter spelled exactly `run` is filled in by the loop. It is kept out
 of the schema, so the model never sees it. Only the first one counts, because
@@ -176,7 +176,7 @@ print(history.parameters)
 {'type': 'object', 'properties': {}, 'required': []}
 ```
 
-### The schema it builds
+### Schema generation
 
 `schema(fn)` reads the signature with `eval_str=True`, so a module's
 `from __future__ import annotations` strings resolve too. A hint the table knows

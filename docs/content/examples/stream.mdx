@@ -1,5 +1,5 @@
 ---
-title: Watch words arrive
+title: Streaming responses
 description: Each piece of a reply as it lands, and the one message they make.
 ---
 
@@ -37,7 +37,7 @@ piece: 'a time.'
 joined: Once upon a time.
 ```
 
-## What happened
+## How it works
 
 - A real model sends its answer in pieces, and `FakeModel` sends the `Part`
   list you wrote the same way.
@@ -46,7 +46,7 @@ joined: Once upon a time.
 - Stellar joins the text pieces into one message for you, and the quotes show
   where the spaces sat.
 
-## Change it
+## Variations
 
 Print `event.data.data` without `repr` and with `end=""` to watch the sentence
 type itself out.

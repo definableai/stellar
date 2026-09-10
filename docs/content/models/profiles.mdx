@@ -1,5 +1,5 @@
 ---
-title: What a model can do
+title: Profiles and capabilities
 description: A short list per model, checked before anything leaves your computer.
 ---
 
@@ -18,7 +18,7 @@ Every [provider](/models/folder) you build carries exactly one profile, picked
 by the model id you named. You ask a profile one question, and it looks like
 `"image" in model.profile`.
 
-## The eight words
+## Capability flags
 
 | word | what it means |
 | --- | --- |
@@ -35,13 +35,13 @@ The first three name a kind of part. The next three are read by the two
 providers in the box. Nothing here reads `json` or `system` yet. They are
 there for a model picker of your own to ask about.
 
-## The one rule
+## The capability rule
 
 A word that names a kind of part means you may send that part. Only what you
 wrote is checked, because the model's own past replies go back to it as they
 came.
 
-## Try it
+## Example
 
 This profile has no `image` word, so the picture never leaves your computer.
 
@@ -70,7 +70,7 @@ gpt-5.6-luna reads no 'image' part; it reads system, tools
 - Under a [fallback](/models/fallback), that free no moves you to the next
   model.
 
-## Good to know
+## Notes
 
 - Three kinds are never checked, because stellar handles them itself. They are
   `text`, `tool_call` and `meta`.

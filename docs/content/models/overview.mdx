@@ -15,7 +15,7 @@ flowchart LR
 
 All three end up doing the same job. Pick the smallest one that fits.
 
-## Write `invoke`
+## Subclass `Model`
 
 Subclass `Model` and write one method. It is handed the `Run`, and it gives
 back one assistant [`Message`](/reference/types). The conversation so far is
@@ -44,7 +44,7 @@ HELLO
 - The reply is one `Message` with the role `assistant`.
 - `invoke` has to be `async`. Wrap a blocking library in `asyncio.to_thread`.
 
-## Any object with `invoke`
+## Duck-typed models
 
 There is no base class you must inherit. Any object whose own class writes an
 async `invoke` passes the [check](/concepts/contracts) and runs.
@@ -68,7 +68,7 @@ print(run.messages[-1].text)
 you said: hello
 ```
 
-## `encode` plus `send`
+## `ProviderModel`: `encode` and `send`
 
 Real models answer over HTTP. Subclass `ProviderModel` and write two small
 methods instead of one big one. `encode` builds the request. `send` makes the
@@ -101,25 +101,25 @@ Stellar joins the pieces into one message for you. So you write a live view
 once, and it works with every model.
 
 <CardGroup cols={2}>
-  <Card title="Write your own provider" icon="plug" href="/models/provider">
+  <Card title="Custom providers" icon="plug" href="/models/provider">
     What `encode` and `send` each do, and what a piece may be.
   </Card>
-  <Card title="Inside a provider" icon="folder" href="/models/folder">
+  <Card title="Provider internals" icon="folder" href="/models/folder">
     The two files a real provider is made of.
   </Card>
-  <Card title="What a model can do" icon="sliders-horizontal" href="/models/profiles">
+  <Card title="Profiles and capabilities" icon="sliders-horizontal" href="/models/profiles">
     A short list per model, checked before anything is sent.
   </Card>
   <Card title="Anthropic" icon="sparkles" href="/models/anthropic">
     Claude, and the four models that come in the box.
   </Card>
-  <Card title="OpenAI and look-alikes" icon="bot" href="/models/openai">
+  <Card title="OpenAI and compatible APIs" icon="bot" href="/models/openai">
     GPT, plus the vendors that copied its API.
   </Card>
-  <Card title="Try one model, then another" icon="shuffle" href="/models/fallback">
+  <Card title="Fallback and routing" icon="shuffle" href="/models/fallback">
     A list of models. The first one that answers wins.
   </Card>
-  <Card title="Test a model" icon="flask-conical" href="/models/testing">
+  <Card title="Testing providers" icon="flask-conical" href="/models/testing">
     Canned replies, `check_model`, and `FakeModel`.
   </Card>
 </CardGroup>

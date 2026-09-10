@@ -1,5 +1,5 @@
 ---
-title: Say no to a tool
+title: Tool permissions
 description: A rule that blocks one tool, and the words the model gets instead.
 ---
 
@@ -36,7 +36,7 @@ the model was told: denied: delete
 the answer: I was not allowed to delete it.
 ```
 
-## What happened
+## How it works
 
 - `Permission` is a hook on `tool.pre`, so it answers before the tool is ever
   reached.
@@ -45,7 +45,7 @@ the answer: I was not allowed to delete it.
 - Whatever the hook returns becomes the tool's result, so the model reads
   `denied: delete` and answers around it.
 
-## Change it
+## Variations
 
 Pass `allow=` instead of `deny=` and every tool that is not on the list is
 refused.

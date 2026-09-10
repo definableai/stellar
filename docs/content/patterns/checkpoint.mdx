@@ -1,5 +1,5 @@
 ---
-title: Save a run and continue later
+title: Checkpoint and resume
 description: A Run pickles down to four things. Hand them back and the same conversation carries on.
 ---
 
@@ -24,7 +24,7 @@ What gets saved:
 What does not: the agent, its hooks and its event log. Those are code you
 build again at start-up, and a save file has no business holding your program.
 
-## Try it
+## Example
 
 ```python run
 import asyncio
@@ -65,7 +65,7 @@ You asked about my favourite colour.
   its values, hand them to `agent.run`, and use the `Run` you get back.
 </Note>
 
-## What starts empty again
+## What a resumed run resets
 
 `agent.run` always builds a brand new `Run`. The messages and the id come
 across, but the step count starts at 0 and `extra` starts empty. So a
@@ -81,7 +81,7 @@ async def seed(message, run) -> None:
     run.extra.update(saved.extra)
 ```
 
-## Saving it as JSON
+## JSON serialization
 
 For a database column, or any other process, take each message apart with
 `dataclasses.asdict`. Building it back is yours, and there is only one shape

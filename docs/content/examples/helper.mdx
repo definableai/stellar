@@ -1,5 +1,5 @@
 ---
-title: An agent that asks a helper
+title: Sub-agent as a tool
 description: A tool that runs a second agent and hands its answer back.
 ---
 
@@ -42,7 +42,7 @@ the helper said: Paris.
 the parent said: My helper says Paris.
 ```
 
-## What happened
+## How it works
 
 - A tool is only a function, so it can build an `Agent` and await its `run`
   like any other code.
@@ -51,7 +51,7 @@ the parent said: My helper says Paris.
 - Whatever the tool returns becomes the tool result the parent's model reads
   next.
 
-## Change it
+## Variations
 
 Give the helper a cheaper model and a `Steps` hook, so a child that runs away
 cannot cost you much.
