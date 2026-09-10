@@ -13,6 +13,7 @@ import asyncio
 import inspect
 import json
 from collections.abc import Callable, Iterator, Mapping
+from dataclasses import replace
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
 from core.contracts import ContractError, Model, Stop, Tool, fold, wrong
@@ -176,6 +177,25 @@ def _batches(
         yield held
 
 
+def _pending(
+    said: Annotated[list[Message], "the notebook as handed in, oldest line first"],
+) -> Message | None:
+    """The answer a resumed notebook left half-run, trimmed to the calls it owes.
+
+    Walks back over the tool messages at the end; the line before them, if it
+    still asks for anything none of them answered, comes back carrying only
+    those calls — its content and its meta ride along untouched.
+    """
+    end = len(said)
+    while end and said[end - 1].role == "tool":
+        end -= 1
+    if not end:
+        return None
+    answered = {message.tool_call_id for message in said[end:]}
+    owed = [call for call in said[end - 1].tool_calls if call.id not in answered]
+    return replace(said[end - 1], tool_calls=owed) if owed else None
+
+
 async def run(
     run: Annotated[
         Run, "arrives with at least one message — run.pre rings on the last one"],
@@ -188,6 +208,8 @@ async def run(
     try:
         [run.messages[-1]] = await run.hooks.fire("run.pre", run, run.messages[-1])
         run.emit("run.pre", run.messages[-1], source="loop")
+        if (owed := _pending(run.messages)) is not None:
+            await act(run, owed)                 # a resume pays its debt first
         while True:
             check(run.agent)                     # the wiring may have changed
             run.step += 1
