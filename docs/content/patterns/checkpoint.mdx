@@ -1,0 +1,96 @@
+---
+title: Checkpoint and resume
+description: A checkpoint is the Run with the wiring taken out — four fields that survive a restart, and what you have to put back.
+icon: save
+---
+
+A [`Run`](/reference/agent) is a conversation: an id, a notebook, a step count
+and a spare pocket. It is also the checkpoint, because that is all `__getstate__`
+keeps:
+
+```python
+def __getstate__(self) -> dict[str, Any]:
+    """The checkpoint: everything except the wiring."""
+    return {"id": self.id, "messages": self.messages, "step": self.step,
+            "extra": self.extra}
+```
+
+The agent, its rule cards and its bus are dropped on purpose. Wiring is code you
+build again at start-up; a pickle of it would be a pickle of your whole
+application.
+
+## Freeze and thaw
+
+```python
+import pickle
+
+from core import Agent, FakeModel
+
+agent = Agent(FakeModel(["one", "two"]))
+run = await agent.run("hello")
+
+frozen = pickle.dumps(run)                          # four fields, no wiring
+saved = pickle.loads(frozen)
+again = await agent.run("and now?", messages=saved.messages, run_id=saved.id)
+```
+
+`messages=` opens the notebook — copied, so your list is left alone — and
+`run_id=` keeps the same name, so a stream watching that id sees one continuous
+conversation across the restart. The prompt is appended after the saved messages.
+
+<Note>
+  What comes back from `pickle.loads` is a checkpoint, not a live run. It has no
+  `agent` and no `hooks` at all — reading either raises `AttributeError`. Read its
+  four fields, hand them to `agent.run`, and use the fresh `Run` you get back.
+</Note>
+
+## What resumes empty
+
+`agent.run` mints a new `Run`, and a new `Run` starts with `step = 0` and an
+empty `extra`. The notebook and the id come across; nothing else does. That
+matters for [the cards](/hooks/cards) that keep their state there — `Budget`
+totals into `run.extra["budget.tokens"]`, and `Steps` counts on `run.step`, so a
+resumed run gets a fresh purse and a fresh ration unless you say otherwise.
+
+Putting a total back is a one-line hook:
+
+```python
+from core import hook
+
+
+@hook("run.pre")
+async def seed(message, run) -> None:
+    run.extra.update(saved.extra)
+```
+
+## Somewhere that is not a pickle
+
+For JSON, or a database column, or anything a different process has to read,
+take each `Message` apart with `dataclasses.asdict`. Reading it back is yours,
+and there is exactly one shape to rebuild: `content` is always a list of parts,
+`tool_calls` always a list of calls.
+
+```python
+from core import Message, Part, ToolCall
+
+
+def revive(d: dict) -> Message:
+    return Message(**{
+        **d,
+        "content": [Part(**p) for p in d["content"]],
+        "tool_calls": [ToolCall(**c) for c in d["tool_calls"]],
+    })
+```
+
+That round-trips a whole notebook, tool calls and `meta` included. A folded
+message keeps only text and adapter-defined parts in `content` — a tool call
+lands in `tool_calls`, and `meta` merges into `meta` — so `Part.data` is a string
+unless an adapter put something else there. If it did, that something is yours to
+serialize.
+
+<Warning>
+  Never keep a callable in `extra` that has to survive a checkpoint.
+  `extra["ui.ask"]` — the channel `Permission(ask=True)` asks a human through —
+  is a live connection to a process that will not exist when you thaw. Rebuild
+  live things at start-up and put only data in the pocket.
+</Warning>

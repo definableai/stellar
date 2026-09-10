@@ -1,0 +1,107 @@
+---
+title: Many runs at once
+description: One Agent, one backpack, a hundred conversations — what they share, what stays private, and what a mid-flight swap does.
+icon: layers
+---
+
+An [`Agent`](/reference/agent) holds no conversation. The notebook, the step
+count and the spare pocket live on the `Run`, so a hundred users is one line:
+
+```python
+done = await asyncio.gather(*(agent.run(p) for p in prompts))
+```
+
+Every run borrows the same brain, the same toolbox and the same rule cards, and
+keeps its own notebook, step count and pocket. There is no lock anywhere in core:
+what a run writes is its own, and the two things that genuinely are shared —
+`agent.extra` and the event bus — are yours to keep honest.
+
+## Name a run so a stream can find it
+
+`run_id=` fixes the id up front, instead of waiting for the `Run` to come back at
+the end. That is what makes [a live stream](/events/streaming) possible: the
+reader knows the name before there is anything to read.
+
+```python
+import asyncio
+
+from core import Agent, FakeModel
+
+agent = Agent(FakeModel(["sun", "moon", "stars"]))
+agent.events.listen(lambda e: print(e.run_id, e.name))
+
+done = await asyncio.gather(*(
+    agent.run(p, run_id=p) for p in ("sun", "moon", "stars")))
+print([r.messages[-1].text for r in done])
+```
+
+```text
+sun run.pre
+sun model.pre
+sun model.delta
+sun model.post
+sun run.post
+moon run.pre
+...
+stars run.post
+['sun', 'moon', 'stars']
+```
+
+The bus is shared: three runs, one numbering, one log. Filter on the way in —
+`agent.events.listen(fn, run_id=rid)` or `agent.events.stream(run_id=rid)` —
+rather than sorting the whole log afterwards.
+
+<Note>
+  Those three finished in order because [`FakeModel`](/models/testing) never
+  awaits anything: with nothing to wait for, `gather` runs each to completion
+  before starting the next. Put a real provider behind it and the socket is the
+  await point — the three runs interleave, and the names above arrive shuffled.
+</Note>
+
+## The private lane
+
+`run.hooks` and `run.extra` belong to one conversation. `run.hooks` is chained
+onto the agent's, so the agent's cards ring first and then the run's; a
+`tool.pre` denial from the agent means the run's cards never hear that bell at
+all.
+
+Neither is an argument to `agent.run` — both are reached from inside the run,
+through the `run` a hook or a tool is handed:
+
+```python
+from core import hook
+
+
+@hook("run.pre")
+async def per_run(message, run) -> None:
+    run.extra["started"] = message.text
+
+    @hook("model.post")
+    async def only_here(answer) -> None:
+        ...                                  # rings for this conversation only
+
+    run.hooks.attach(only_here)
+```
+
+## Swapping parts while runs are in the air
+
+Composition is by assignment, and [`check()`](/concepts/contracts) reads the whole
+backpack again at the top of every step. So a swap mid-flight is legal and it is
+checked: assign a broken model and the next run to take a step raises
+`ContractError` naming what to type instead, before it asks anything.
+
+`agent.hooks.attach(card)` reaches every run already running, at its next bell of
+that stage — the registry is read fresh each time it fires. A card added while a
+stage is already ringing waits for the next one.
+
+<Warning>
+  `attach` and `detach`, not reassignment. A `Run` binds `run.hooks.parent` to
+  `agent.hooks` when it is born, so replacing `agent.hooks` wholesale leaves every
+  run in the air still chained to the old registry.
+</Warning>
+
+<Note>
+  One agent, one event bus, one `asyncio` loop. `agent.events.log` grows with
+  every run in the process and nothing prunes it — the ceiling that matters first
+  when many runs share one agent for a long time.
+</Note>

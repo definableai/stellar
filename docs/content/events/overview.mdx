@@ -1,0 +1,99 @@
+---
+title: Events
+description: The data plane — everything that happened, numbered, named, and stamped with the run it belongs to.
+icon: radio
+---
+
+Every stage [the loop](/concepts/loop) rings is also an `Event` on the agent's
+bus (`agent.events`), and so is anything you put there yourself. The bus numbers
+what it is told, keeps it in a list, and hands it to whoever is listening.
+
+<Info>
+  Two planes, one bell. A [hook](/hooks/overview) can rewrite the payload or stop
+  the run; a listener can only watch. If you want to change something, you want
+  the control plane.
+</Info>
+
+## What an event carries
+
+| field | what it is |
+| --- | --- |
+| `seq` | per bus, monotonic, starts at 0 — and the cursor a reader resumes from |
+| `name` | the dotted name: one of the loop's eight, or anything you emit |
+| `data` | whatever rode along, stored as-is — usually a [`Message`, `Part` or `ToolCall`](/reference/types) |
+| `source` | who said it: `"loop"`, a tool's name, a model's, yours |
+| `run_id` | the run it belongs to, or `None` for a bus-wide event |
+| `ts` | when it was stamped, as `time.time()` |
+
+## Listening
+
+```python
+agent.events.listen(print)                      # everything
+agent.events.listen(watch, "tool")              # tool.pre, tool.delta, tool.post
+agent.events.listen(watch, run_id=run.id)       # one conversation
+```
+
+A prefix stops at a dot: `"tool"` hears `tool.pre`, never `toolbox.x`. Both
+filters compose, and `listen` hands the function back, so it also decorates.
+`agent.events.detach(fn)` unfiles it from every prefix and run it had; detaching
+a stranger does nothing.
+
+Listeners are sync, because `emit()` never awaits. An `async def` is refused at
+`listen()` with a `ContractError` that points you at
+[`stream()`](/events/streaming). A listener that raises is logged to the
+`core.events` logger and swallowed — the next listener still hears the event,
+and the code that emitted hears nothing of it.
+
+`agent.events.log` is the whole list, in `seq` order, across every run this agent
+has ever taken.
+
+## What the loop says
+
+The loop emits each stage *after* its hooks have run, so a listener sees what the
+rule cards agreed on. Every one of them is `source="loop"`, except a streaming
+tool's deltas, which carry the tool's own name.
+
+| name | `data` | `source` |
+| --- | --- | --- |
+| `run.pre` | the `Message` the run opens on | `"loop"` |
+| `model.pre` | a copy of the message list about to be sent | `"loop"` |
+| `model.delta` | one `Part` off the reply, as it arrives | `"loop"` |
+| `model.post` | the assistant `Message`, folded whole | `"loop"` |
+| `tool.pre` | the `ToolCall` about to run | `"loop"` |
+| `tool.delta` | one `Part` off a streaming tool | the tool's name |
+| `tool.post` | the tool result `Message` that lands in the notebook | `"loop"` |
+| `run.post` | the last `Message` in the notebook — streams end here | `"loop"` |
+
+`model.pre` carries a copy of the list on purpose: the notebook keeps growing,
+and the log must not grow with it.
+
+Two more names come from outside the loop. [`Fallback`](/models/fallback) emits
+`model.skip` with the error as a string and `source="model:<name>"` each time it
+gives up on a provider and asks the next one. An adapter whose
+[profile](/models/profiles) has `tool_stream` emits `tool.args` for each fragment
+of a tool call's arguments — `data` is `{"id", "name", "delta"}`, `source` is
+`"model:<model id>"`.
+
+## Anything can emit anything
+
+```python
+run.emit("cache.hit", key)
+```
+
+`run.emit(name, data, source)` stamps the event with that run's id and puts it on
+the agent's bus, where it travels with the rest. `agent.events.emit(...)` is the
+same door with `run_id` left to you. Names are free-form and nothing validates
+them: the eight the loop rings get no privilege here that `cache.hit` does not
+also have.
+
+For a readable line per event rather than a raw record, the
+[`Log` card](/hooks/cards) is a listener: `agent.events.listen(Log())`.
+
+<CardGroup>
+  <Card title="Streaming events" icon="radio-tower" href="/events/streaming">
+    `stream()` for an async consumer: the log replayed from a cursor, then live.
+  </Card>
+  <Card title="Events over the wire" icon="cable" href="/events/transport">
+    `sse()` and `ws_frames()` turn one run's events into strings.
+  </Card>
+</CardGroup>

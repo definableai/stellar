@@ -1,0 +1,99 @@
+---
+title: Streaming events
+description: One run's events for an async consumer — the log replayed from a cursor, then live, with no gap and no doubles.
+icon: radio-tower
+---
+
+A [listener](/events/overview) is sync, because `emit()` never awaits. An async
+consumer — a web handler, a queue writer, a terminal that redraws — takes the
+stream instead:
+
+```python
+async for event in agent.events.stream(run_id=rid, since=cursor):
+    ...
+```
+
+`stream()` replays `agent.events.log` from `since` (inclusive), then goes live,
+in `seq` order with no gap and no doubles. It takes the same two filters as
+`listen`: `run_id` picks one conversation, `prefix` picks a family of names.
+
+The live listener goes on the bus *before* the log is read, so an event born
+while the replay is still running waits in a queue instead of falling between the
+two halves. `since` trims the replay and never the live tail: a cursor past the
+end of the log replays nothing and still hears everything that happens next.
+
+## It ends on its own
+
+Given a `run_id`, the stream returns after that run's `run.post` — the bell the
+loop rings in a `finally`, so it lands whether the run finished, stopped or
+raised. That holds with a `prefix` too: `prefix="tool"` yields only the tool
+bells, but `run.post` still ends it. A reader never hangs on a finished run.
+
+Without a `run_id` there is no ending. `stream()` on the whole bus runs until you
+leave it.
+
+## A run, streamed
+
+Start the run as a task so the stream can read it while it happens. Hold on to
+the task: it is where the `Run` — and any exception — comes back.
+
+```python
+import asyncio
+from uuid import uuid4
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+
+
+@tool
+async def shout(word: str) -> str:
+    """Shout a word."""
+    return word.upper()
+
+
+async def main() -> None:
+    agent = Agent(FakeModel([
+        Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})]),
+        Message("assistant", "done"),
+    ]), [shout])
+    rid = uuid4().hex
+    task = asyncio.create_task(agent.run("shout hi", run_id=rid))
+    async for event in agent.events.stream(run_id=rid):
+        print(event.seq, event.name)
+    await task                      # the stream ended on run.post; collect the Run
+
+
+asyncio.run(main())
+```
+
+```text
+0 run.pre
+1 model.pre
+2 model.delta
+3 model.post
+4 tool.pre
+5 tool.post
+6 model.pre
+7 model.delta
+8 model.post
+9 run.post
+```
+
+Opening the stream after the run started — or after it finished — prints exactly
+the same ten lines. The replay is why the race does not matter, and why
+[a reconnect over the wire](/events/transport) costs nothing.
+
+## Two ceilings
+
+<Warning>
+  The event log and the stream queues are both unbounded: one bus per agent, one
+  process, nobody dropping anything. A long-lived agent grows in memory, and a
+  consumer slower than the loop grows a queue. Cap them when that stops being
+  true for you.
+</Warning>
+
+<Note>
+  Leaving a stream early with a bare `break` does not unfile its queue — the
+  cleanup sits in the generator's `finally`, which runs at close. If you stop
+  reading before the run ends, `await stream.aclose()` on a stream you kept a
+  name for.
+</Note>

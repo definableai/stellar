@@ -1,0 +1,85 @@
+---
+title: A sub-agent is a tool
+description: No feature for it, and none needed — a tool that builds a child agent, runs it, and hands back what it said.
+icon: git-branch
+---
+
+There is no `SubAgent` class in core, and none is needed. A
+[tool](/tools/classes)'s `execute` is already an async method the loop hands the
+run; an [`Agent`](/reference/agent) is already something you build in one line.
+Put the two together and the pattern falls out:
+
+```python
+from core import Agent, Tool
+
+
+class Research(Tool):
+    name = "research"
+    description = "Ask a helper agent one question."
+    parameters = {"type": "object", "properties": {"question": {"type": "string"}}}
+
+    async def execute(self, run, question) -> str:
+        helper = await Agent(run.agent.model).run(question)
+        return helper.messages[-1].text
+```
+
+The loop calls `execute(run, **args)`, so `run` arrives first whatever else the
+schema promised, and `run.agent` is the whole backpack behind it — the brain, the
+toolbox, the rule cards, the bus. That is how the child borrows the parent's
+model with nothing passed in from outside.
+
+## What the child does not inherit
+
+Building a fresh `Agent` gives the child its own notebook, its own bus and its own
+spare pocket. Nothing crosses back except the string you return, which the loop
+turns into one tool message in the parent's notebook. The parent's listeners never
+hear the child's `model.delta`; the parent's budget card never sees its usage.
+
+That isolation is the point, and it is also the bill. Give the child what it
+should have, deliberately:
+
+```python
+async def execute(self, run, question) -> str:
+    helper = Agent(run.agent.model, [Search()])     # fewer tools than the parent
+    helper.hooks.attach(Steps(3))                   # and its own ceiling
+    return (await helper.run(question)).messages[-1].text
+```
+
+An agent with no toolbox at all is the cheapest sub-agent there is: it cannot
+call anything, so it can only answer.
+
+<Tip>
+  Write `execute` as an async generator and the child's answer arrives in the
+  parent as it is typed. Each `Part` yielded rings `tool.delta` on the parent's
+  bus under the tool's own name, and folds into the tool message that lands in
+  the notebook:
+
+  ```python
+  async def execute(self, run, question):
+      helper = Agent(run.agent.model)
+      rid = uuid4().hex
+      task = asyncio.create_task(helper.run(question, run_id=rid))
+      async for event in helper.events.stream(run_id=rid):
+          if event.name == "model.delta" and event.data.type == "text":
+              yield Part("text", event.data.data)
+      await task
+  ```
+
+  The child's stream ends on its own `run.post`, so the generator ends with it.
+</Tip>
+
+## Why a pattern and not a feature
+
+A feature would have to decide things this does not: how deep it may nest, whose
+budget pays, what comes back, whether the child's events belong on the parent's
+bus. Every one of those is a line in your `execute`, and every one of them is
+different per application. Recursion is free — a sub-agent whose toolbox holds a
+`Research` of its own nests as far as your ceilings allow — and so is the
+alternative, which is not nesting at all.
+
+<Warning>
+  Nothing stops a child from being handed the parent's own toolbox, including the
+  tool that spawns it. Give it a smaller box, or a [`Steps`](/hooks/cards) card,
+  or both. A runaway sub-agent looks exactly like a working one until the bill
+  arrives.
+</Warning>

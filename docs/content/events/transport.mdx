@@ -1,0 +1,76 @@
+---
+title: Events over the wire
+description: sse() and ws_frames() — two serializers over a stream of events, and the seq that makes a reconnect free.
+icon: cable
+---
+
+[The bus](/events/streaming) already does the hard half: one run's events, in
+order, replayed from a cursor and then live, ending on that run's `run.post`.
+`drivers/transport.py` only frames them. Both take any async iterator of events
+and give back an async iterator of strings.
+
+```python
+from drivers.transport import sse, ws_frames
+```
+
+## Server-Sent Events
+
+`sse()` writes two lines and a blank one per event: `id:` carrying the `seq`, and
+one `data:` line holding the whole record as JSON — nested `Message`s and `Part`s
+and all. The event name rides inside the JSON, so every frame is a plain
+`message` and a browser needs no `addEventListener` per stage.
+
+Two frames off a real run, a tool call and its answer:
+
+```text
+id: 4
+data: {"seq": 4, "name": "tool.pre", "data": {"id": "c1", "name": "shout", "args": {"word": "hi"}}, "source": "loop", "run_id": "r1", "ts": 1789024034.397145}
+
+id: 5
+data: {"seq": 5, "name": "tool.post", "data": {"role": "tool", "content": [{"type": "text", "data": "HI"}], "tool_calls": [], "tool_call_id": "c1", "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024034.3972218}
+```
+
+`ws_frames()` writes the same records with no framing at all: one JSON object per
+websocket text frame.
+
+## Reconnecting costs nothing
+
+The `seq` is the cursor. A browser that drops hands its last id back as
+`Last-Event-ID`; reopen the stream one past it and the client misses exactly
+nothing:
+
+```python
+last = request.headers.get("Last-Event-ID")
+events = agent.events.stream(run_id=rid, since=int(last) + 1 if last else 0)
+```
+
+The same replay is why the race at the start does not matter. A reader that opens
+the stream after the run began — or after it ended — still gets the whole run, in
+order, and then the `run.post` that closes it.
+
+## Where they go is yours
+
+<Note>
+  stellar ships no server. `sse()` and `ws_frames()` are strings; the sketch below
+  is a fragment for one framework, not something core imports. Any ASGI framework,
+  or none, will do.
+</Note>
+
+```python nocheck
+rid = uuid4().hex
+task = asyncio.create_task(agent.run(ask, run_id=rid))
+running.add(task)                          # hold it; a bare task can be collected
+task.add_done_callback(running.discard)
+return StreamingResponse(sse(agent.events.stream(run_id=rid)),
+                         media_type="text/event-stream")
+```
+
+Starting the run and reading it are two jobs, and the framing does not join them:
+the task is where the `Run` and any exception end up, and holding a reference to
+it is yours. The stream needs nothing from it — it ends on `run.post` either way.
+
+Two details worth knowing before you put this behind a load balancer. Every
+payload is deep-copied into JSON at frame time, so what goes out is a record and
+not a live handle on the notebook. And `seq` is numbered **per bus**, not per
+run — a shared agent's ids climb past the events any one reader sees, which is
+correct for a cursor and wrong for a progress bar.
