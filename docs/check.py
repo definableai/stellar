@@ -82,6 +82,9 @@ def problems():
         for key in ("title", "description"):
             if not fm.get(key):
                 yield f"{rel}: frontmatter has no {key}"
+        for key, value in fm.items():
+            if ": " in value and value[0] not in "\"'":           # YAML reads that as a nested map
+                yield f"{rel}: frontmatter {key} holds a colon; put the value in quotes"
         if name not in seen and fm.get("hidden") != "true":
             yield f"{rel}: not in docs.json (say `hidden: true` if that is on purpose)"
         for m in LINK.finditer(FENCE.sub("", text)):      # a link inside a fence is not a link

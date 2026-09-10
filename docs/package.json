@@ -8,8 +8,7 @@
     "build": "tsc -b && vite build",
     "postbuild": "cp dist/index.html dist/404.html",
     "preview": "vite preview",
-    "check": "python3 check.py --run",
-    "check:diagrams": "node scripts/mermaid-check.mjs"
+    "check": "python3 check.py --run && node scripts/mermaid-check.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

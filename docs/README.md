@@ -9,9 +9,7 @@ server.
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # tsc + vite, into dist/ (postbuild copies index.html to 404.html)
-npm run check    # python3 check.py --run — nav, links, icons, fences; every `run` example runs
-npm run check    # python3 check.py — nav, links, frontmatter, python fences
-npm run check:diagrams   # every ```mermaid fence parses
+npm run check    # check.py --run (nav, links, icons, every `run` example) and every mermaid fence parses
 ```
 
 ## Adding a page

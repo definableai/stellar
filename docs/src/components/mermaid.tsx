@@ -45,6 +45,7 @@ const DRAWN = "flex justify-center [&_svg]:h-auto [&_svg]:max-w-full";
 export function Mermaid({ chart }: { chart: string }) {
   const id = "mermaid" + useId().replace(/\W/g, "");   // mermaid puts the id in a CSS selector
   const [svg, setSvg] = useState("");
+  const [floor, setFloor] = useState(0);   // the least width the picture may shrink to
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -63,6 +64,10 @@ export function Mermaid({ chart }: { chart: string }) {
       try {
         const drawn = await mermaid.render(id, chart);
         if (!live) return;
+        // Mermaid scales the picture down to fit; below 72% of its natural width the labels
+        // stop being readable, so from there the box scrolls instead.
+        const natural = Number(/viewBox="[\d.]+ [\d.]+ ([\d.]+)/.exec(drawn.svg)?.[1] ?? 0);
+        setFloor(Math.round(natural * 0.72));
         setSvg(drawn.svg);
         setError("");
       } catch (e) {
@@ -89,5 +94,9 @@ export function Mermaid({ chart }: { chart: string }) {
       </div>
     );
   }
-  return <div className={`${BOX} ${DRAWN} ${svg ? "" : "min-h-32"}`} dangerouslySetInnerHTML={{ __html: svg }} />;
+  return (
+    <div className={`${BOX} ${DRAWN} ${svg ? "" : "min-h-32"}`}>
+      <div className="max-w-full" style={{ minWidth: floor }} dangerouslySetInnerHTML={{ __html: svg }} />
+    </div>
+  );
 }

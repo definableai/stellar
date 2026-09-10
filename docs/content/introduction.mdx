@@ -8,13 +8,13 @@ the model use tools, and keeps going until the job is done. Stellar is the
 small engine that runs this loop for you.
 
 ```mermaid
-flowchart LR
+flowchart TD
   You([You]) -->|"a question"| Agent
-  Agent -->|"the conversation so far"| Model
-  Model -->|"an answer, or 'use this tool'"| Agent
+  Agent -->|"the messages"| Model
+  Model -->|"answer or tool call"| Agent
   Agent -->|"runs it"| Tool
   Tool -->|"the result"| Agent
-  Agent -->|"the final answer"| You
+  Agent -->|"final answer"| You
 ```
 
 ## What is in the box
