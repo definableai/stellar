@@ -177,7 +177,12 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
 
 <Info>`from core import ...` also gives you `ProviderModel`, `FakeModel` and `Fallback`.</Info>
 
-<Warning>There are no sync twins and no bridges: sync code is one `asyncio.to_thread` line you write inside the async method.</Warning>
+<Warning>
+  There are no sync twins and no bridges: sync code is one `asyncio.to_thread`
+  line you write inside the async method.
+
+  Two code paths is two bugs, so core ships one — see [the loop](/concepts/loop).
+</Warning>
 
 <Check>Everything that happens goes out over the radio, in order, with a sequence number.</Check>
 
@@ -189,13 +194,22 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
   <Card title="The loop" icon="repeat" href="/kitchen-sink">
     Eight stages, in one order, on every step.
   </Card>
-  <Card title="The nouns" icon="box" href="/kitchen-sink" horizontal>
+  <Card title="The nouns" icon="box" href="/kitchen-sink">
     Twelve of them, and nothing else.
   </Card>
   <Card title="The contracts" icon="plug" href="/kitchen-sink" arrow cta="Read the three">
     A Model, a Tool, a hook. That is the whole extension surface.
   </Card>
 </CardGroup>
+
+<Columns cols={2}>
+  <Card title="Everything is async" icon="clock" href="https://docs.python.org/3/library/asyncio.html" horizontal>
+    The second book to keep open. Opens in a new tab.
+  </Card>
+  <Card title="No link at all" icon="circle-slash">
+    A card with no `href` is a plain box: nothing to click.
+  </Card>
+</Columns>
 
 <AccordionGroup>
   <Accordion title="Why one backpack?" icon="backpack">
@@ -204,12 +218,15 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
   <Accordion title="Why no sync twins?" description="Asked more than once">
     Two code paths is two bugs. `asyncio.to_thread` is one line.
   </Accordion>
+  <Accordion title="Why twelve nouns?" defaultOpen>
+    Because the thirteenth would have to earn its place, and none has.
+  </Accordion>
 </AccordionGroup>
 
 <Tabs>
-  <Tab title="Anthropic">Blocks in, blocks out; a thinking block lands whole.</Tab>
-  <Tab title="OpenAI">One user line carries the pictures a tool sent back.</Tab>
-  <Tab title="Fake">`FakeModel` answers from a list, with no key and no network.</Tab>
+  <Tab title="Anthropic" icon="sparkles">Blocks in, blocks out; a thinking block lands whole.</Tab>
+  <Tab title="OpenAI" icon="bot">One user line carries the pictures a tool sent back.</Tab>
+  <Tab title="Fake" icon="flask-conical">`FakeModel` answers from a list, with no key and no network.</Tab>
 </Tabs>
 
 <Steps>
@@ -221,6 +238,9 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
   </Step>
   <Step title="Read the notebook">
     `run.messages[-1].text` is the answer; `run.step` is how many turns it took.
+  </Step>
+  <Step title="Stop at eight, if you like" stepNumber={8}>
+    `Steps(8)` buys eight replies, then raises `Stop` — the number is the card's, not the list's.
   </Step>
 </Steps>
 
@@ -249,11 +269,11 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
   Read from the environment unless you pass `api_key=`.
 </ParamField>
 
-<ResponseField name="messages" type="list[Message]">
+<ResponseField name="messages" type="list[Message]" required>
   The whole conversation, in order.
 </ResponseField>
 
-<ResponseField name="step" type="int">
+<ResponseField name="step" type="int" default="0">
   How many turns the errand took.
 </ResponseField>
 
