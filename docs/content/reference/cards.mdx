@@ -1,20 +1,13 @@
 ---
-title: The shipped cards
-sidebarTitle: Cards
-description: Steps, Budget, Permission and Log — four factories, one file each, outside core.
+title: Steps, Budget, Permission and Log
+sidebarTitle: Ready-made hooks
+description: Four hooks that ship with stellar, one file each, outside core.
 ---
 
-Each card is a factory: it hands back the function, and the function is what you
-attach. Nothing is kept inside the card — `Steps` counts on `run.step`, `Budget`
-totals into `run.extra` — so one card on the agent gives every run its own
-ration, its own purse, its own answer.
-
-```python
-from hooks.budget import Budget
-from hooks.logging import Log
-from hooks.permission import Permission
-from hooks.steps import Steps
-```
+Each one is a factory. It hands you a function, and the function is what you
+attach. Nothing is kept inside the factory itself. `Steps` counts on `run.step`
+and `Budget` adds up into `run.extra`. So one of these on the agent gives every
+run its own count, its own total, and its own answer.
 
 ## Steps
 
@@ -24,20 +17,20 @@ from hooks.steps import Steps
 def Steps(n: int): ...
 ```
 
-A ration of model calls. `Steps(3)` buys exactly three replies.
+A limit on model calls. `Steps(3)` buys exactly three replies.
 
 <ParamField path="n" type="int" required>
   How many model turns this run may take.
 </ParamField>
 
-<ResponseField name="ration" type="Callable">
-  An async hook tagged `model.pre`, taking two arguments — the notebook and the
-  run. Attach it with `agent.hooks.attach(Steps(3))`.
+<ResponseField name="hook" type="Callable">
+  An async function tagged `model.pre`, taking two arguments, the conversation
+  and the run. Attach it with `agent.hooks.attach(Steps(3))`.
 </ResponseField>
 
-The step number goes up before the `model.pre` bell, so the card counts the turn
-it is about to buy: past the ration it raises `Stop`, and the run ends cleanly
-with everything written down so far.
+The step number goes up before the `model.pre` stage, so the hook counts the
+turn it is about to take. Past the limit it raises `Stop`, and the run ends
+cleanly with everything written down so far.
 
 ## Budget
 
@@ -47,25 +40,26 @@ from hooks.budget import Budget
 def Budget(max_tokens: int): ...
 ```
 
-Adds up what every reply cost; ends the run once the total goes past `max`.
+Adds up what every reply cost, and ends the run once the total goes past the
+limit.
 
 <ParamField path="max_tokens" type="int" required>
   The ceiling for `input_tokens + output_tokens` across the whole run.
 </ParamField>
 
-<ResponseField name="spend" type="Callable">
-  An async hook tagged `model.post`, taking two arguments — the reply and the
+<ResponseField name="hook" type="Callable">
+  An async function tagged `model.post`, taking two arguments, the reply and the
   run.
 </ResponseField>
 
-It reads `answer.meta["usage"]`, summing the two keys `input_tokens` and
-`output_tokens`, and keeps the running total in `run.extra["budget.tokens"]` —
-per conversation, and it rides along in the checkpoint. A reply with no usage
+It reads `answer.meta["usage"]` and adds up the two keys `input_tokens` and
+`output_tokens`. The running total lives in `run.extra["budget.tokens"]`, so it
+is per conversation and it rides along in the checkpoint. A reply with no usage
 meta costs nothing, because not every adapter counts.
 
 <Note>
-  Past the limit it appends the reply to `run.messages` itself before raising
-  `Stop` — you paid for it, so you keep it. The loop's own append is the one
+  Past the limit it appends the reply to `run.messages` itself, before raising
+  `Stop`. You paid for it, so you keep it. The loop's own append is the one
   being skipped, so the message lands exactly once.
 </Note>
 
@@ -77,41 +71,40 @@ from hooks.permission import Permission
 def Permission(deny=None, allow=None, ask: bool = False): ...
 ```
 
-The guard at the tool gate, answering before a tool runs.
+The guard on your tools. It answers before a tool runs.
 
 <ParamField path="deny" type="set[str] | Callable[[Run, ToolCall], bool] | None" default="None">
-  A set of tool names, or a predicate `(run, call) -> bool`. `None` matches
-  nothing.
+  A set of tool names, or a test `(run, call) -> bool`. `None` matches nothing.
 </ParamField>
 
 <ParamField path="allow" type="set[str] | Callable[[Run, ToolCall], bool] | None" default="None">
-  The same two shapes. Present, it becomes the only way through.
+  The same two shapes. If you pass one, it becomes the only way through.
 </ParamField>
 
 <ParamField path="ask" type="bool" default="False">
   `True` puts the question to a human, through `extra["ui.ask"]`.
 </ParamField>
 
-<ResponseField name="guard" type="Callable">
-  An async hook tagged `tool.pre`, taking two arguments — the call and the run.
-  A returned `str` is the refusal: the tool never runs, and that string is its
-  result for the model to read.
+<ResponseField name="hook" type="Callable">
+  An async function tagged `tool.pre`, taking two arguments, the call and the
+  run. A returned `str` is the refusal. The tool never runs, and that string is
+  its result for the model to read.
 </ResponseField>
 
-The precedence, in order, first match wins:
+Which rule wins, first match first:
 
-1. `deny` matches — denied, `f"denied: {call.name}"`.
-2. `allow` is not `None` — it settles it alone: a match passes, anything else is
-   denied. `ask` is never reached.
-3. `ask=True` — the human is asked. No callable under `extra["ui.ask"]` denies
-   with `"denied: no ui.ask channel"`, because a guard with no voice says no.
+1. `deny` matches, so the call is denied with `f"denied: {call.name}"`.
+2. `allow` is not `None`, so it settles the question alone. A match passes and
+   anything else is denied. `ask` is never reached.
+3. `ask=True`, so the human is asked. With nothing callable under
+   `extra["ui.ask"]` the call is denied with `"denied: no ui.ask channel"`.
    Otherwise `ask(f"Allow {call.name}({call.args})?", ["allow", "deny"])` is
    awaited, and anything but `"allow"` denies.
-4. Nothing matched — the tool runs.
+4. Nothing matched, so the tool runs.
 
-`extra["ui.ask"]` is looked up in the run's pocket first and the agent's after,
-so one channel can serve every conversation or each one can bring its own. It is
-a live channel, never saved state: keep it out of anything you checkpoint.
+`extra["ui.ask"]` is looked up on the run first and the agent after. One channel
+can serve every conversation, or each one can bring its own. It is a live
+channel and never saved state. Keep it out of anything you checkpoint.
 
 ## Log
 
@@ -121,30 +114,27 @@ from hooks.logging import Log
 def Log(write=print): ...
 ```
 
-Every event on the bus, as one line a person can read. A listener, not a hook —
-it changes nothing, so it rides the data plane.
+Every event, as one line a person can read. It is a listener and not a hook, so
+it changes nothing.
 
 <ParamField path="write" type="Callable[[str], Any]" default="print">
   Where each line goes. `Log(lines.append)` collects them instead.
 </ParamField>
 
-<ResponseField name="say" type="Callable[[Event], None]">
+<ResponseField name="listener" type="Callable[[Event], None]">
   A sync listener of one `Event`, for `agent.events.listen(...)`. It writes
   `f"{event.name}: {says(event.data)}"`.
 </ResponseField>
 
-`says` puts one payload in a few words: a `Message` is its text plus its tool
-calls, a `ToolCall` is `name(args)`, a text `Part` is its text and any other
-`Part` is its type in angle brackets, a list is `"3 messages"`, and `None` is
+`says` puts one payload in a few words. A `Message` is its text plus its tool
+calls. A `ToolCall` is `name(args)`. A text `Part` is its text, and any other
+`Part` is its type in angle brackets. A list is `"3 messages"`, and `None` is
 nothing at all.
 
 ```python
-from hooks.logging import Log
-
 agent.events.listen(Log())                        # everything, to print
-agent.events.listen(Log(lines.append), "tool")    # only the tool bells
+agent.events.listen(Log(lines.append), "tool")    # only the tool events
 agent.events.listen(Log(), run_id=run.id)         # one conversation of many
 ```
 
-See also: [the shipped cards](/hooks/cards), [stopping a run](/hooks/stopping),
-[events overview](/events/overview).
+See also: [the hooks stellar ships](/hooks/cards).

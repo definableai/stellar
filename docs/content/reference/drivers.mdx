@@ -1,15 +1,16 @@
 ---
 title: Transports
 sidebarTitle: Drivers
-description: Two serializers over a stream of Events — SSE frames and websocket frames, and nothing else.
+description: Turn a stream of events into SSE frames or websocket frames, and nothing else.
 ---
 
-`drivers/transport.py` is framework-free on purpose: an async iterator of
-`Event`s in, strings out. Hand them to FastAPI's `StreamingResponse`, a
-Starlette websocket, aiohttp, whatever you run. stellar ships no server.
+`drivers/transport.py` takes an async iterator of `Event`s and gives you
+strings. It knows no framework. Hand the strings to FastAPI's
+`StreamingResponse`, a Starlette websocket, aiohttp, whatever you run. stellar
+ships no server of its own.
 
-The bus does the hard half — one run's events, replayed from `since` and then
-live, ending on that run's `run.post`. These two only frame them.
+The event log does the hard half. One run's events, replayed from `since` and
+then live, ending on that run's `run.post`. These two only wrap them.
 
 ## sse()
 
@@ -19,9 +20,9 @@ from drivers.transport import sse
 async def sse(events) -> AsyncIterator[str]: ...
 ```
 
-Server-Sent Events. One frame per event: an `id:` line carrying the seq, a
-`data:` line carrying the whole record as one JSON object, and the blank line
-that ends a frame.
+Server-Sent Events. One frame per event. An `id:` line carries the seq. A
+`data:` line carries the whole record as one JSON object. A blank line ends the
+frame.
 
 <ParamField path="events" type="AsyncIterator[Event]" required>
   Normally `agent.events.stream(run_id=...)`, but anything that yields `Event`s
@@ -32,33 +33,52 @@ that ends a frame.
   One string per event, each already ending in the blank line SSE wants.
 </ResponseField>
 
-A whole run of `Agent(FakeModel(["ok"]))` under `agent.run("say ok", run_id="r1")`
-is five frames:
+A whole run of `Agent(FakeModel(["ok"]))` is five frames. Here is the `id:` line
+of each one, with the event name read out of its JSON.
+
+```python run
+import asyncio
+import json
+
+from core import Agent, FakeModel
+from drivers.transport import sse
+
+
+async def main():
+    agent = Agent(FakeModel(["ok"]))
+    frames = sse(agent.events.stream(run_id="r1"))
+    job = asyncio.create_task(agent.run("say ok", run_id="r1"))
+    async for frame in frames:
+        head, data = frame.splitlines()[:2]
+        print(head, json.loads(data[5:])["name"])
+    await job
+
+
+asyncio.run(main())
+```
+
+```text output
+id: 0 run.pre
+id: 1 model.pre
+id: 2 model.delta
+id: 3 model.post
+id: 4 run.post
+```
+
+The third frame, whole:
 
 ```text
-id: 0
-data: {"seq": 0, "name": "run.pre", "data": {"role": "user", "content": [{"type": "text", "data": "say ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314965}
-
-id: 1
-data: {"seq": 1, "name": "model.pre", "data": [{"role": "user", "content": [{"type": "text", "data": "say ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}], "source": "loop", "run_id": "r1", "ts": 1789024047.314974}
-
 id: 2
 data: {"seq": 2, "name": "model.delta", "data": {"type": "text", "data": "ok"}, "source": "loop", "run_id": "r1", "ts": 1789024047.314986}
 
-id: 3
-data: {"seq": 3, "name": "model.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.31499}
-
-id: 4
-data: {"seq": 4, "name": "run.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314991}
-
 ```
 
-The event name rides inside the JSON, so there is no `event:` line and every
-frame is a plain `message`.
+The event name rides inside the JSON. There is no `event:` line, and every frame
+is a plain `message`.
 
 <Note>
   The seq is the cursor. A browser that drops hands its last id back as
-  `Last-Event-ID`; reopen with `stream(run_id=rid, since=int(last) + 1)` and the
+  `Last-Event-ID`. Reopen with `stream(run_id=rid, since=int(last) + 1)` and the
   client misses exactly what the drop cost.
 </Note>
 
@@ -70,31 +90,26 @@ from drivers.transport import ws_frames
 async def ws_frames(events) -> AsyncIterator[str]: ...
 ```
 
-Websocket text frames: one whole event per frame, and nothing around it. The
-same records, minus the `id:` line and the blank one — the frame boundary is the
-websocket's job. The third and fifth frames of the same run:
-
-```text
-{"seq": 2, "name": "model.delta", "data": {"type": "text", "data": "ok"}, "source": "loop", "run_id": "r1", "ts": 1789024047.314986}
-{"seq": 4, "name": "run.post", "data": {"role": "assistant", "content": [{"type": "text", "data": "ok"}], "tool_calls": [], "tool_call_id": null, "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024047.314991}
-```
+Websocket text frames. One whole event per frame and nothing around it. The same
+records, without the `id:` line and without the blank one, because the frame
+boundary is the websocket's job. What follows `data: ` above is one whole
+websocket frame.
 
 <ParamField path="events" type="AsyncIterator[Event]" required>
   The same iterator `sse()` takes.
 </ParamField>
 
 <ResponseField name="frames" type="AsyncIterator[str]">
-  One JSON object per frame, no trailing newline.
+  One JSON object per frame, with no trailing newline.
 </ResponseField>
 
-Both call `dump(event)`, which is `json.dumps(asdict(event), default=str)` — the
-whole record, nested `Message`s and `Part`s and all, with anything JSON cannot
-hold falling back to its `str`.
+Both call `dump(event)`, which is `json.dumps(asdict(event), default=str)`. That
+is the whole record, nested `Message`s and `Part`s and all. Anything JSON cannot
+hold falls back to its `str`.
 
 <Warning>
-  A ceiling marked in the source: `asdict` deep-copies the payload on every
-  frame. Emit records, not live handles.
+  A ceiling marked in the source. `asdict` copies the payload on every frame, all
+  the way down. Write records to the log, not live handles.
 </Warning>
 
-See also: [events over the wire](/events/transport),
-[streaming](/events/streaming), [Events.stream()](/reference/events).
+See also: [sending events to a browser](/events/transport).

@@ -1,12 +1,12 @@
 ---
 title: ContractError and Stop
 sidebarTitle: Signals
-description: The two control signals — one says you wired it wrong, the other ends the run cleanly.
+description: Two exceptions. One says you wired it wrong, the other ends the run cleanly.
 ---
 
 Two exceptions, both in `core/contracts.py`, both out of `core`. There are no
-others: the loop catches exactly two things, a `Stop` and a tool's own
-exception, and everything else propagates.
+others. The loop catches exactly two things, a `Stop` and a tool's own
+exception, and everything else is raised.
 
 ## ContractError
 
@@ -19,9 +19,9 @@ class ContractError(Exception): ...
 You implemented it wrong. The message says what to type instead.
 
 Most of them are built by `core.contracts.wrong(kind, problem)`, which glues the
-complaint to a skeleton — the whole shape to copy, from
-`core.contracts.SKELETONS`, keyed `model`, `provider`, `tool` or `hook`. So the
-text is one sentence naming what is wrong, a blank line, and then the code:
+complaint to a skeleton. The skeletons are in `core.contracts.SKELETONS`, keyed
+`model`, `provider`, `tool` or `hook`. So the text is one sentence naming what
+is wrong, a blank line, and then the code to copy.
 
 ```text
 tool 'shout'.execute must be async — sync code is one asyncio.to_thread line inside it
@@ -37,30 +37,29 @@ class MyTool(Tool):
 # or decorate a plain function with @tool — sync, async, or async generator
 ```
 
-Where it comes from:
+Where each one comes from:
 
-- `Agent.run()` — no prompt and no messages.
-- `check()` — a model that is not one, a sync `invoke`, a toolbox that is not a
-  mapping, a tool with no name or the wrong key or no `execute` or a sync one.
-- `Agent.__post_init__` — two tools answering to one name.
-- `Hooks.attach()` — a hook that is not async, names no stage, names one that is
-  not a stage, or does not fit the stage's arity.
-- `@hook` — a misspelled stage, at decoration time.
-- `Hooks.fire()` — a hook that returned the wrong type.
-- `core.loop.run` — an `invoke` that handed back something that is not a
-  `Message`.
-- `ProviderModel.invoke()` — a `send` that yielded something that is not a
-  `Part`; `fold()` — a `tool_call` part that is not carrying a whole `ToolCall`.
-- `@tool` — a function with `*args` or `**kwargs`, or with no `__name__`.
-- `Events.listen()` — an `async def` listener.
-- `FakeModel.send()` — the script ran out; `core.conformance` — an exchange that
-  did not add up.
+| raised by | when |
+| --- | --- |
+| `Agent.run()` | no prompt and no messages |
+| `Agent.__post_init__` | two tools answering to one name |
+| `check()` | a model that is not one, a sync `invoke`, tools that are not a dict, a tool with no name or the wrong key or no `execute` or a sync one |
+| `Hooks.attach()` | a hook that is not async, names no stage, names one that is not a stage, or takes the wrong number of arguments |
+| `@hook` | a misspelled stage, at decoration time |
+| `Hooks.fire()` | a hook that returned the wrong type |
+| `core.loop.run` | an `invoke` that handed back something that is not a `Message` |
+| `ProviderModel.invoke()` | a `send` that yielded something that is not a `Part` |
+| `fold()` | a `tool_call` part that is not carrying a whole `ToolCall` |
+| `@tool` | a function with `*args` or `**kwargs`, or with no `__name__` |
+| `Events.listen()` | an `async def` listener |
+| `FakeModel.send()` | the script ran out |
+| `core.conformance` | an exchange that did not add up |
 
 <Warning>
-  Nothing catches it. A tool that raises normally has its exception turned into
-  the tool's result for the model to read — `error: ValueError: nope` — but a
-  `ContractError` from a tool is re-raised instead, because a broken contract is
-  a bug to fix, not an answer to send.
+  Nothing catches it. A tool that raises has its exception turned into the
+  tool's result for the model to read, as `error: ValueError: nope`. A
+  `ContractError` from a tool is raised instead. A broken contract is a bug to
+  fix, not an answer to send.
 </Warning>
 
 ## Stop
@@ -72,28 +71,29 @@ class Stop(Exception): ...
 ```
 
 End the run cleanly. Raise it from any hook or any tool. No traceback reaches
-the caller: you get the `Run` back holding everything written down so far.
+the caller. You get the `Run` back, holding everything written down so far.
 
-Who raises it: your own code, and two of the shipped cards —
-[`Steps(n)`](/reference/cards) once the ration is spent, and
-[`Budget(max_tokens)`](/reference/cards) once the total goes past the limit.
+Who raises it. Your own code, and two of the hooks stellar ships.
+[`Steps(n)`](/reference/cards) stops the run once it has taken its `n` turns.
+[`Budget(max_tokens)`](/reference/cards) stops it once the total goes past the
+limit.
 
 Who catches it:
 
-- `core.loop.run` — one `except Stop: pass` around the whole loop.
-- `core.loop.run` again, around the `run.post` bell alone, where a `Stop` is
-  swallowed because it is too late to stop anything.
-- `core.loop._attempt` re-raises it rather than turning it into a tool result,
-  and `act()` raises it only once the whole batch has finished — first in call
-  order, so nothing is cancelled mid-write.
+- `core.loop.run`, in one `except Stop: pass` around the whole loop.
+- `core.loop.run` again, around the `run.post` hooks alone, where a `Stop` is
+  dropped because it is too late to stop anything.
+- `core.loop._attempt` raises it on rather than turning it into a tool result.
+  `act()` raises it only once the whole batch has finished, first in call order,
+  so nothing is cancelled halfway through.
 
 <Note>
-  `run.post` always fires — after a clean finish, after a `Stop`, and after a
-  crash — because it is a `finally`. Any other exception out of `run.post`
-  propagates the ordinary way, with whatever was already in flight attached as
-  `__context__`, and the bus's own `run.post` event is emitted from an inner
+  The `run.post` hooks always run. After a clean finish, after a `Stop`, and
+  after a crash, because they sit in a `finally`. Any other exception out of
+  `run.post` propagates the ordinary way, with whatever was already in flight
+  attached as `__context__`. The `run.post` event is written from an inner
   `finally` even then, so a stream still ends.
 </Note>
 
-See also: [stopping a run](/hooks/stopping), [the contracts](/concepts/contracts),
-[what a tool returns](/tools/results).
+See also: [stopping a run](/hooks/stopping) and
+[the contracts](/concepts/contracts).

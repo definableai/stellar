@@ -1,12 +1,12 @@
 ---
 title: Agent and Run
 sidebarTitle: Agent
-description: The backpack you build once, the errand it starts each time, and the loop behind both.
+description: The agent you build once, the run it starts each time, and the loop behind both.
 ---
 
-The agent is the wiring, built once and shared; the run is one conversation, and
-nothing of it leaks into another. Both live in `core/agent.py`. The loop's own
-`run` and `check` live in `core/loop.py` and come out of `core` too.
+You build one `Agent` and then give it jobs. Each job is a `Run` with its own
+conversation. Both live in `core/agent.py`. The loop's own `run` and `check`
+live in `core/loop.py`, and all four come out of `core`.
 
 ## Agent
 
@@ -16,48 +16,44 @@ from core import Agent
 Agent(model, tools=(), hooks=Hooks(), events=Events(), extra={})
 ```
 
-A robot with one backpack (`Agent`) — a brain, a toolbox, rule cards, a radio and
-one spare pocket. It is a dataclass, so any part is swapped by assignment, even
-mid-run: `check()` reads the whole backpack again at the top of every step.
+Everything your agent needs, in one object. It is a dataclass, so you can swap
+any part by assignment, even while a run is going. `check()` reads the whole
+agent again at the top of every step.
 
 <ParamField path="model" type="Model" required>
-  The brain. Every run of this agent asks this one.
+  The model the agent asks. Every run of this agent asks this one.
 </ParamField>
 
 <ParamField path="tools" type="Iterable[Tool] | Mapping[str, Tool]" default="()">
-  The toolbox. Hand it either — `__post_init__` keys an iterable by each tool's
-  `name`, and after that it is always the mapping. A tool with no `name` files
-  under `None`, and `check()` says so a moment later.
+  The tools it can use. Hand it a list or a dict. A list is keyed by each tool's
+  `name` while the agent is built. After that it is always the dict.
 </ParamField>
 
 <ParamField path="hooks" type="Hooks" default="Hooks()">
-  The control plane. A fresh registry per agent
-  (`field(default_factory=Hooks)`); every run's own registry chains onto it.
+  The rules. Every agent gets its own set, and each run chains onto it.
 </ParamField>
 
 <ParamField path="events" type="Events" default="Events()">
-  The data plane. A fresh bus per agent, carrying every run this agent starts.
+  The event log. Every agent gets its own, and every run it starts writes there.
 </ParamField>
 
 <ParamField path="extra" type="dict[str, Any]" default="{}">
-  The spare pocket, shared by every run. Namespaced keys, like
-  `extra["ui.ask"]`.
+  A dict for anything else, shared by every run. Use names with a dot in them,
+  like `extra["ui.ask"]`.
 </ParamField>
 
 <ResponseField name="tools" type="Mapping[str, Tool]">
-  After `__post_init__`, always the mapping of name to tool — whichever of the
-  two shapes you handed in.
+  A dict of name to tool once the agent is built, whichever of the two shapes
+  you handed in.
 </ResponseField>
-
-`__post_init__` keys the toolbox and then calls `check(self)`, so a bad backpack
-fails at construction rather than at the first step.
 
 <Note>
   `Agent` has one method, `run()`. There is never a second one.
 </Note>
 
 Raises `ContractError` when two tools answer to one name, and whatever
-[`check()`](/reference/agent#check) refuses.
+[`check()`](/reference/agent#check) refuses. Both happen while you build the
+agent, not at the first step.
 
 ### Agent.run()
 
@@ -73,24 +69,25 @@ async def run(
 ) -> Run: ...
 ```
 
-Ask, act, repeat. Builds the `Run` and hands it to `core.loop.run`.
+Give the agent a job. It builds the `Run` and hands it to `core.loop.run`.
 
 <ParamField path="prompt" type="str | Message | None" default="None">
-  A `str` becomes a user `Message`; a `Message` is taken as it is, images and
-  all. Appended after `messages=`. `None` only if `messages=` says enough.
+  A `str` becomes a user `Message`. A `Message` is taken as it is, pictures and
+  all. It goes after `messages=`. Pass `None` only if `messages=` says enough.
 </ParamField>
 
 <ParamField path="messages" type="list[Message] | None" default="None">
-  The notebook to open on. Copied at the door, so your list is left alone.
+  The conversation to start from. It is copied, so your own list is left alone.
 </ParamField>
 
 <ParamField path="run_id" type="str | None" default="None">
-  Reuse one to resume that run — and to find its stream. `None` mints a fresh
-  `uuid4().hex`.
+  Pass an old id to carry that run on, and to find its events. `None` makes a
+  fresh `uuid4().hex`.
 </ParamField>
 
 <ResponseField name="run" type="Run">
-  The same `Run` the loop filled in — its notebook, its step count, its id.
+  The `Run` the loop filled in. It holds the conversation, the step count, and
+  the id.
 </ResponseField>
 
 Raises `ContractError("run needs a prompt or messages")` when both are empty.
@@ -103,38 +100,39 @@ from core import Run
 Run(agent, id, messages, step=0, hooks=Hooks(), extra={})
 ```
 
-One errand (`Run`): its own notebook (`run.messages`), its own id, its own rule
-cards. `Agent.run()` builds one for you; build it yourself only to drive
+One job. It has its own conversation (`run.messages`), its own id, and its own
+hooks. `Agent.run()` builds one for you. Build one yourself only to drive
 `core.loop.run` by hand.
 
 <ParamField path="agent" type="Agent" required>
-  The backpack behind this run. Dropped from the checkpoint.
+  The agent behind this run. It is left out of the checkpoint.
 </ParamField>
 
 <ParamField path="id" type="str" required>
-  Hex, minted per run — or the one you handed in to resume.
+  Hex, made fresh per run, or the one you handed in to carry a run on.
 </ParamField>
 
 <ParamField path="messages" type="list[Message]" required>
-  The notebook, in order. The loop appends to it, and `model.pre` may rebind it.
+  The conversation, in order. The loop appends to it, and a `model.pre` hook can
+  replace it.
 </ParamField>
 
 <ParamField path="step" type="int" default="0">
-  Model turns taken. The loop counts up before each `invoke`, so a `model.pre`
-  hook already sees the turn it is about to buy.
+  Model turns taken. The loop counts up before each `invoke`. A `model.pre` hook
+  already sees the turn it is about to take.
 </ParamField>
 
 <ParamField path="hooks" type="Hooks" default="Hooks()">
-  This run's own lane, which nobody else sees.
+  Rules for this run alone. No other run sees them.
 </ParamField>
 
 <ParamField path="extra" type="dict[str, Any]" default="{}">
-  The spare pocket for this run alone. `Budget` keeps its total here.
+  A dict for this run alone. `Budget` keeps its total here.
 </ParamField>
 
 <ResponseField name="hooks.parent" type="Hooks">
-  `__post_init__` chains this run's registry onto `agent.hooks`, unless one was
-  already set, so one bell reaches both.
+  When the run is built, its hooks chain onto `agent.hooks` unless a parent was
+  already set. One stage then runs both sets.
 </ResponseField>
 
 ### Run.emit()
@@ -145,19 +143,18 @@ from core import Run
 def emit(self, name: str, data: Any = None, source: str | None = None) -> Event: ...
 ```
 
-Say one thing on the agent's bus, stamped with this run's id. Never blocks and
-never raises.
+Write one event, stamped with this run's id. It never blocks and never raises.
 
 <ParamField path="name" type="str" required>
-  Dotted event name — the loop uses the eight stage names, you use anything.
+  A dotted name. The loop uses the eight stage names. You can use anything.
 </ParamField>
 
 <ParamField path="data" type="Any" default="None">
-  Whatever should ride along; stored as-is.
+  Whatever should go with it, stored as it is.
 </ParamField>
 
 <ParamField path="source" type="str | None" default="None">
-  Who is speaking — `"loop"`, a tool's name, or yours.
+  Who is speaking. `"loop"`, a tool's name, or yours.
 </ParamField>
 
 <ResponseField name="event" type="Event">
@@ -172,9 +169,10 @@ from core import Run
 def __getstate__(self) -> dict[str, Any]: ...
 ```
 
-The checkpoint: `id`, `messages`, `step`, `extra`, and nothing else. The agent,
-its hooks and its bus are dropped, because the wiring is code you build again —
-`agent.run(messages=..., run_id=...)` picks the conversation back up.
+What a checkpoint keeps. `id`, `messages`, `step`, `extra`, and nothing else.
+The agent, its hooks and its event log are dropped, because you build those in
+code again. Then `agent.run(messages=..., run_id=...)` picks the conversation
+back up.
 
 ## The loop's run()
 
@@ -184,32 +182,33 @@ from core import run
 async def run(run: Run) -> Run: ...
 ```
 
-The loop itself, which `Agent.run()` calls. It rings `run.pre` on the last
-message, then repeats: `check(run.agent)`, `step += 1`, `model.pre`, the model's
-`invoke`, `model.post`, the answer into the notebook — and if the answer asked
-for tools, `act()`. It ends when an answer asks for no tools.
+The loop itself, which `Agent.run()` calls. First it runs the `run.pre` hooks on
+the last message. Then it repeats five things. `check(run.agent)`, `step += 1`,
+the `model.pre` hooks, the model's `invoke`, the `model.post` hooks. The answer
+goes into the conversation, and if it asked for tools, `act()` runs them. The
+loop ends when an answer asks for no tools.
 
 <ParamField path="run" type="Run" required>
-  Arrives with at least one message; `run.pre` rings on the last one.
+  Arrives with at least one message. The `run.pre` hooks run on the last one.
 </ParamField>
 
 <ResponseField name="run" type="Run">
-  The same object, its notebook filled in.
+  The same object, with the conversation filled in.
 </ResponseField>
 
-`Stop` from any hook or tool ends it cleanly. `run.post` fires either way — it
-is a `finally` — and the bus's `run.post` event is emitted last, which is what
-ends a stream. An `invoke` that hands back something that is not a `Message` is
-a `ContractError`.
+`Stop` from any hook or tool ends the loop cleanly. The `run.post` hooks run
+either way, because they sit in a `finally`. The `run.post` event is written
+last, and that is what ends a stream. An `invoke` that hands back something
+other than a `Message` raises `ContractError`.
 
-Three helpers in `core.loop` do the work a hook author will meet:
+Three helpers in `core.loop` do the work a hook author will meet.
 
-- `coerce(result, call) -> Message` — whatever a tool returned, shaped into one
-  tool message. See [what a tool returns](/tools/results).
-- `use(run, tool, call) -> Message | Any` — runs one tool. An async generator
-  streams, ringing `tool.delta` per `Part`.
-- `act(run, answer) -> None` — runs everything one answer asked for, batch by
-  batch. A serial tool is a barrier; see [parallel tools](/tools/parallel).
+- `coerce(result, call) -> Message` turns whatever a tool returned into one tool
+  message. See [what a tool returns](/tools/results).
+- `use(run, tool, call) -> Message | Any` runs one tool. An async generator
+  streams, and every `Part` runs the `tool.delta` hooks.
+- `act(run, answer) -> None` runs everything one answer asked for, batch by
+  batch. See [parallel tools](/tools/parallel).
 
 ## check()
 
@@ -219,28 +218,28 @@ from core import check
 def check(agent: Agent) -> None: ...
 ```
 
-Read the wiring and say what a dev got wrong, before it runs. Called at
-construction and again at the top of every step, so a hot swap is checked too.
+Reads the agent and says what you wired wrong, before it runs. It runs when you
+build the agent, and again at the top of every step. A part you swapped mid-run
+is checked too.
 
 <ParamField path="agent" type="Agent" required>
-  The whole backpack — its model, and every tool in its toolbox.
+  The whole agent. Its model, and every tool it holds.
 </ParamField>
 
-Raises `ContractError` with the code to type instead. The refusals, in order:
+Raises `ContractError`. What it refuses, in this order:
 
-- the model's own class defines no `invoke` — "is not a Model: subclass Model
-  and write an async invoke, or ProviderModel and write encode + send"
-- `invoke` is not async — "must be async — sync code is one asyncio.to_thread
-  line inside it"
-- `agent.tools` is not a mapping — "the constructor keys an iterable for you, so
-  hand it one"
-- a tool with no `name`; a tool "filed under" a key that is not its name; a tool
-  whose `parameters` is not a dict; a tool that "defines no execute"; an
-  `execute` that is not async.
+- a model whose own class writes no `invoke`
+- an `invoke` that is not async
+- an `agent.tools` that is not a dict
+- a tool with no `name`
+- a tool filed under a key that is not its name
+- a tool whose `parameters` is not a dict
+- a tool that writes no `execute`
+- an `execute` that is not async
 
-Ancestry is never checked: any object whose own class writes an async
-`invoke(run)` passes.
+Each message names the problem and then prints the code to type instead.
 
-See also: [the loop](/concepts/loop), [Agent and Run](/concepts/agent-and-run),
-[checkpoint and resume](/patterns/checkpoint),
-[concurrency](/patterns/concurrency).
+It never asks what your class inherits from. Any object whose own class writes
+an async `invoke(run)` is a model.
+
+See also: [the loop](/concepts/loop) and [saving a run](/patterns/checkpoint).

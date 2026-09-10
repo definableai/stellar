@@ -1,14 +1,14 @@
 ---
 title: Part, ToolCall, Message
 sidebarTitle: Types
-description: The three data nouns, every field, and the reserved words core folds itself.
+description: The three data types, every field, and the three part types core handles itself.
 ---
 
-The floor of the stack, in `core/types.py`. Nothing here imports the rest of
-core, and every other module — the loop, hooks, adapters, drivers — speaks in
-these three. They are plain dataclasses, so `dataclasses.asdict` checkpoints
-one; loading it back is yours, including the `ToolCall`s and `Part`s nested in a
-`Message`.
+Three plain dataclasses, in `core/types.py`. Every other part of stellar talks
+in these three, and nothing here imports the rest of core.
+
+`dataclasses.asdict` turns one into a dict you can save. Building it back is
+your job, including the `ToolCall`s and `Part`s inside a `Message`.
 
 ## Part
 
@@ -18,28 +18,30 @@ from core import Part
 Part(type, data=None)
 ```
 
-One piece of a message (`Part`). `type` names the piece and `data` holds it.
+One piece of a message. `type` names the piece and `data` holds it. A model
+that streams sends its reply as a series of `Part`s.
 
 <ResponseField name="type" type="str" required>
-  Which piece this is — the word `fold()` and adapters read.
+  Which piece this is. `fold()` and the adapters read this word.
 </ResponseField>
 
 <ResponseField name="data" type="Any" default="None">
-  The payload; its shape is whatever `type` promises.
+  The payload. Its shape is whatever `type` promises.
 </ResponseField>
 
-Three types are reserved words core itself folds into a `Message`:
+Core handles three types itself when it joins parts into a message:
 
-| type | data | what folding does with it |
+| type | data | what core does with it |
 | --- | --- | --- |
-| `text` | `str` | a delta — consecutive text parts concatenate into one |
-| `tool_call` | `ToolCall` | appended to `message.tool_calls`, whole; a `Part("tool_call", …)` carrying anything else is a `ContractError` |
+| `text` | `str` | text next to more text joins into one part |
+| `tool_call` | `ToolCall` | added whole to `message.tool_calls`, and anything else raises `ContractError` |
 | `meta` | `dict` | merged into `message.meta`, later keys winning |
 
-One more spelling is shared so adapters agree: `image`, whose data is
-`{"url": …}` or `{"media_type": …, "data": <base64 str>}`. Every other type is
-adapter-defined and lands in `content` untouched — thinking blocks, provider
-extras, whatever comes next.
+One more type is spelled the same way everywhere, so adapters agree. An `image`
+part carries `{"url": …}` or `{"media_type": …, "data": <base64 str>}`.
+
+Every other type belongs to an adapter and lands in `content` untouched. That is
+where thinking blocks and provider extras go.
 
 ## ToolCall
 
@@ -49,28 +51,29 @@ from core import ToolCall
 ToolCall(id, name, args={})
 ```
 
-The model asking for one tool to run (`ToolCall`).
+The model asking for one tool to run. The loop turns each one into a tool
+message.
 
 <ResponseField name="id" type="str" required>
-  The provider's id for this ask; the tool message answers it in
+  The provider's id for this ask. The tool message answers it in
   `Message.tool_call_id`.
 </ResponseField>
 
 <ResponseField name="name" type="str" required>
-  Which tool to run — the key it is filed under in `agent.tools`.
+  Which tool to run. It is the key the tool is filed under in `agent.tools`.
 </ResponseField>
 
 <ResponseField name="args" type="dict[str, Any]" default="{}">
-  The call's keyword arguments, already parsed. A fresh dict per call
-  (`field(default_factory=dict)`); the loop spreads it as `execute(run, **args)`.
+  The call's keyword arguments, already parsed. A fresh dict per call. The loop
+  spreads it as `execute(run, **args)`.
 </ResponseField>
 
 <Note>
-  One convention core reads but does not write: an adapter that could not parse
-  a call's arguments yields an empty `args` and puts the raw string in the
-  assistant message's `meta["invalid_args"][id]`. The loop turns that into the
-  tool's result — `error: tool arguments were not valid JSON: ...` — so the
-  model reads its own mistake instead of a `TypeError`.
+  Core reads one convention it never writes. An adapter that could not parse a
+  call's arguments hands back empty `args`. It puts the raw string in the
+  assistant message's `meta["invalid_args"][id]`. The loop makes that the tool's
+  result, `error: tool arguments were not valid JSON: ...`. The model reads its
+  own mistake instead of a `TypeError`.
 </Note>
 
 ## Message
@@ -81,44 +84,50 @@ from core import Message
 Message(role, content="", tool_calls=[], tool_call_id=None, meta={})
 ```
 
-One line in the agent's notebook (`Message`).
+One line in the conversation. A list of these is what your agent sends, and
+what comes back.
 
 <ResponseField name="role" type='"system" | "user" | "assistant" | "tool"' required>
   Who the line is from.
 </ResponseField>
 
 <ResponseField name="content" type="str | list[Part]" default='""'>
-  The parts. Always `list[Part]` after construction — see the coercion below.
+  The parts. Always `list[Part]` once the message is built.
 </ResponseField>
 
 <ResponseField name="tool_calls" type="list[ToolCall]" default="[]">
-  Assistant only. A fresh list per message.
+  Assistant messages only. A fresh list per message.
 </ResponseField>
 
 <ResponseField name="tool_call_id" type="str | None" default="None">
-  Tool role only — the `ToolCall.id` this message answers.
+  Tool messages only. It is the `ToolCall.id` this message answers.
 </ResponseField>
 
 <ResponseField name="meta" type="dict[str, Any]" default="{}">
-  Provider junk. Adapters put usage here as
+  Anything the provider sent along. Adapters put usage here as
   `{"usage": {"input_tokens": …, "output_tokens": …}}`, which is what `Budget`
   reads, and `meta["model"]` names who answered.
 </ResponseField>
 
-### The str coercion
+### A string becomes one text part
 
-`__post_init__` runs one rule: a `str` `content` becomes one text part, and the
-empty string becomes the empty list.
+You can pass a plain string as `content`. It becomes one text part while the
+message is built, and the empty string becomes an empty list.
 
-```python
-from core import Message, Part
+```python run
+from core import Message
 
-assert Message("user", "hi").content == [Part("text", "hi")]
-assert Message("assistant").content == []
+print(Message("user", "hi").content)
+print(Message("assistant").content)
 ```
 
-So the branch nobody has to write anymore is gone: past construction there is
-exactly one shape to read, and exactly one to revive from a checkpoint.
+```text output
+[Part(type='text', data='hi')]
+[]
+```
+
+So there is one shape to read everywhere, and one shape to load back from a
+checkpoint.
 
 ### Message.text
 
@@ -129,12 +138,12 @@ from core import Message
 def text(self) -> str: ...
 ```
 
-Every text part, joined. Non-text parts are skipped, so `run.messages[-1].text`
-is the answer whether or not the reply also carried pictures or thinking.
+Every text part, joined. Other parts are skipped, so `run.messages[-1].text` is
+the answer even when the reply also carried pictures or thinking.
 
 <ResponseField name="text" type="str">
-  The `data` of every `Part` whose type is `text`, concatenated in order.
+  The `data` of every `Part` whose type is `text`, joined in order.
 </ResponseField>
 
-See also: [the twelve nouns](/concepts/nouns), [what a tool returns](/tools/results),
-[writing a provider](/models/provider), [folding a stream](/reference/hooks).
+See also: [what a tool returns](/tools/results) and
+[writing a provider](/models/provider).

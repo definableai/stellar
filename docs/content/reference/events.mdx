@@ -1,13 +1,13 @@
 ---
 title: Event and Events
 sidebarTitle: Events
-description: One thing that happened, and the bus that keeps every one of them in order.
+description: One thing that happened, and the log that keeps every one of them in order.
 ---
 
-The data plane, in `core/events.py`. Emitting never blocks and never fails — a
-listener that raises is logged to the `core.events` logger and the next one
-still hears the event. A hook can change the run or stop it; a listener can only
-watch.
+Everything that happens, written down in order, in `core/events.py`. Writing an
+event never blocks and never fails. A listener that raises is logged to the
+`core.events` logger, and the next listener still hears the event. A hook can
+change a run or stop it. A listener can only watch.
 
 ## Event
 
@@ -17,33 +17,33 @@ from core import Event
 Event(seq, name, data=None, source=None, run_id=None, ts=time.time())
 ```
 
-One thing that happened: numbered, named, stamped. A dataclass, so
+One thing that happened, numbered and named and stamped. It is a dataclass, so
 `dataclasses.asdict` puts one on a wire.
 
 <ResponseField name="seq" type="int" required>
-  Per-bus, monotonic, starts at 0. This is the cursor a dropped reader hands
-  back.
+  Counts up from 0, one count per log. This is the cursor a reader that dropped
+  hands back.
 </ResponseField>
 
 <ResponseField name="name" type="str" required>
-  The dotted name — the loop's eight, or anything you emit.
+  The dotted name. One of the loop's eight, or anything you write.
 </ResponseField>
 
 <ResponseField name="data" type="Any" default="None">
-  Whatever rode along; stored as-is, not copied.
+  Whatever went along with it, stored as it is, not copied.
 </ResponseField>
 
 <ResponseField name="source" type="str | None" default="None">
-  Who said it: `"loop"`, a tool's name, you.
+  Who said it. `"loop"`, a tool's name, you.
 </ResponseField>
 
 <ResponseField name="run_id" type="str | None" default="None">
-  The run it belongs to, or `None` for bus-wide.
+  The run it belongs to, or `None` when it belongs to no run.
 </ResponseField>
 
 <ResponseField name="ts" type="float">
-  When it was stamped, as `time.time()` — a fresh reading per event
-  (`field(default_factory=time.time)`), and `emit()` passes its own.
+  When it was stamped, from `time.time()`. A fresh reading per event, and
+  `emit()` passes its own.
 </ResponseField>
 
 ## Events
@@ -55,26 +55,26 @@ class Events:
     def __init__(self) -> None: ...
 ```
 
-The radio (`Events`). Emit into it, listen to it, stream it. Takes no arguments;
-one bus per agent, and every run that agent starts rides it.
+The event log. Write to it, listen to it, stream it. It takes no arguments.
+Every agent has one, and every run that agent starts writes there.
 
 <ResponseField name="seq" type="int">
   The next sequence number, counting from 0.
 </ResponseField>
 
 <ResponseField name="log" type="list[Event]">
-  Every event this bus ever carried, in order. `stream()` replays out of it.
+  Every event this log ever carried, in order. `stream()` replays out of it.
 </ResponseField>
 
 <ResponseField name="listeners" type="list[tuple[Callable[[Event], Any], str, str | None]]">
-  One entry per listener: the function, the prefix it hears, and the one
+  One entry per listener. The function, the prefix it hears, and the one
   `run_id` it wants or `None`.
 </ResponseField>
 
 <Warning>
-  The log and the stream queues are unbounded — one bus per agent, one process.
-  Both are marked as ceilings in the source; cap them when that stops being
-  true.
+  The log and the stream queues have no limit. There is one log per agent, in
+  one process. Both are marked as ceilings in the source. Cap them when that
+  stops being enough.
 </Warning>
 
 ### Events.emit()
@@ -89,28 +89,27 @@ def emit(
 ) -> Event: ...
 ```
 
-Stamp it, keep it, tell everyone. Never blocks, never raises — a listener's sins
-stay its own.
+Stamp it, keep it, tell everyone. It never blocks and never raises.
 
 <ParamField path="name" type="str" required>
-  Dotted event name. The loop uses the eight stage names; you use anything.
+  A dotted name. The loop uses the eight stage names. You can use anything.
 </ParamField>
 
 <ParamField path="data" type="Any" default="None">
-  Whatever should ride along; stored as-is.
+  Whatever should go with it, stored as it is.
 </ParamField>
 
 <ParamField path="source" type="str | None" default="None">
-  Who is speaking — `"loop"`, a tool's name, or yours.
+  Who is speaking. `"loop"`, a tool's name, or yours.
 </ParamField>
 
 <ParamField path="run_id" type="str | None" default="None">
-  Pin the event to one run, or `None` for bus-wide. `Run.emit()` fills this in
-  with its own id, which is the usual way in.
+  Pin the event to one run, or `None` for the whole log. `Run.emit()` fills this
+  in with its own id, which is the usual way in.
 </ParamField>
 
 <ResponseField name="event" type="Event">
-  The `Event`, already numbered and already appended to `log`.
+  The `Event`, already numbered and already added to `log`.
 </ResponseField>
 
 ### Events.listen()
@@ -124,10 +123,10 @@ def listen(
 ) -> Callable[[Event], Any]: ...
 ```
 
-Hear every matching event, synchronously.
+Hear every matching event, the moment it happens.
 
 <ParamField path="fn" type="Callable[[Event], Any]" required>
-  Any sync callable of one `Event`; what it returns is dropped.
+  Any sync callable of one `Event`. What it returns is dropped.
 </ParamField>
 
 <ParamField path="prefix" type="str" default='""'>
@@ -136,15 +135,15 @@ Hear every matching event, synchronously.
 </ParamField>
 
 <ParamField path="run_id" type="str | None" default="None">
-  The one run it wants, or `None` to hear the whole bus.
+  The one run it wants, or `None` to hear the whole log.
 </ParamField>
 
 <ResponseField name="fn" type="Callable[[Event], Any]">
   The same function, so `listen` decorates.
 </ResponseField>
 
-Raises `ContractError` on an `async def`: `emit()` never awaits. An async
-consumer takes `stream()` instead.
+Raises `ContractError` on an `async def`, because `emit()` never awaits. An
+async consumer takes `stream()` instead.
 
 ### Events.detach()
 
@@ -152,8 +151,8 @@ consumer takes `stream()` instead.
 def detach(self, fn: Callable[[Event], Any]) -> None: ...
 ```
 
-Stop telling `fn` anything, from every prefix and run it was filed under.
-Matched by equality. Never was listening? Then nothing happens.
+Stop telling `fn` anything, on every prefix and run it was filed under. Matched
+by equality. If it was never listening, nothing happens.
 
 ### Events.stream()
 
@@ -166,34 +165,33 @@ async def stream(
 ) -> AsyncIterator[Event]: ...
 ```
 
-The log from `since`, then live — no gap, no doubles, in seq order. The live
-listener goes on before the log is read, so an event landing mid-replay waits in
-a queue instead of falling between the two.
+The log from `since`, then live. No gap, no doubles, in seq order. The live
+listener goes on before the log is read. An event landing mid-replay waits in a
+queue instead of falling between the two.
 
 <ParamField path="run_id" type="str | None" default="None">
-  `None` watches the whole bus; an id watches that one run only.
+  `None` watches the whole log. An id watches that one run only.
 </ParamField>
 
 <ParamField path="prefix" type="str" default='""'>
-  `""` hears everything, `"tool"` hears `tool.*` — in the replay and live alike.
+  `""` hears everything, `"tool"` hears `tool.*`, in the replay and live alike.
 </ParamField>
 
 <ParamField path="since" type="int" default="0">
-  The first `seq` worth replaying; `0` is the whole log. It trims the replay,
-  never the live tail.
+  The first `seq` worth replaying, and `0` is the whole log. It trims the
+  replay, never the live tail.
 </ParamField>
 
 <ResponseField name="events" type="AsyncIterator[Event]">
   An async iterator. Given a `run_id` it hears that whole run and ends on its
-  `run.post`, prefix or no prefix, so a reader never hangs on a finished run.
+  `run.post`, prefix or no prefix. A reader never hangs on a finished run.
   Without one it never ends.
 </ResponseField>
 
 <Note>
-  The replay is why the race does not matter — a reader that opens the stream
-  after the run started, or after it finished, still gets the whole run in
-  order.
+  The replay is why the race does not matter. A reader can open the stream after
+  the run started, or after it finished. It still gets the whole run in order.
 </Note>
 
-See also: [events overview](/events/overview), [streaming](/events/streaming),
-[over the wire](/events/transport), [Run.emit()](/reference/agent).
+See also: [events overview](/events/overview) and
+[sending events to a browser](/events/transport).

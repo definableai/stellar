@@ -1,9 +1,9 @@
 ---
 title: Tool
-description: The class every tool is, and the one decorator that builds one from a function.
+description: The Tool class, and the one decorator that builds a tool from a function.
 ---
 
-One thing the agent can do. The contract is in `core/contracts.py`, the shortcut
+One thing the agent can do. The class is in `core/contracts.py`, the shortcut is
 in `core/tool.py`, and both come out of `core`.
 
 ## Tool
@@ -20,8 +20,8 @@ class Tool:
     async def execute(self, run: Run, **args: Any) -> Any: ...
 ```
 
-A class is the answer whenever the tool holds something. Write `execute` as an
-async generator and the tool streams instead.
+Write a class whenever the tool has to hold something, like a client or a cache.
+Write `execute` as an async generator and the tool streams instead.
 
 <ResponseField name="name" type="str" default='""'>
   The key the model asks for, and the key it is filed under in `agent.tools`.
@@ -34,14 +34,15 @@ async generator and the tool streams instead.
 
 <ResponseField name="parameters" type="dict[str, Any]">
   The JSON schema of the call, `{"type": "object", "properties": {}}` by
-  default. Read-only: it is a class attribute shared by every instance, so give
-  a subclass its own rather than mutating this one. `check()` refuses anything
-  that is not a dict.
+  default. It is a class attribute shared by every instance, so give a subclass
+  its own instead of changing this one. `check()` refuses anything that is not a
+  dict.
 </ResponseField>
 
 <ResponseField name="parallel" type="bool" default="False">
   `True` lets this tool run beside other parallel tools in one batch. The
-  default is a barrier — see [parallel tools](/tools/parallel).
+  default makes the calls around it wait. See
+  [parallel tools](/tools/parallel).
 </ResponseField>
 
 ### Tool.execute()
@@ -54,7 +55,7 @@ Do the thing. `check()` refuses an `execute` that is not async, and one the
 class never wrote at all.
 
 <ParamField path="run" type="Run" required>
-  The first argument, always — the loop fills that one in.
+  The first argument, always. The loop fills that one in.
 </ParamField>
 
 <ParamField path="args" type="**Any">
@@ -62,21 +63,21 @@ class never wrote at all.
 </ParamField>
 
 <ResponseField name="result" type="Any">
-  Anything at all. `coerce()` shapes it into the tool message: a `str` is the
-  content, a `Part` or a list of them is the content, a `Message` is used as it
-  is with its role forced to `tool`, and anything else arrives as JSON. See
+  Anything at all. `coerce()` shapes it into the tool message. A `str` becomes
+  the content. A `Part`, or a list of them, becomes the content. A `Message` is
+  used as it is, with its role set to `tool`. Anything else arrives as JSON. See
   [what comes back](/tools/results).
 </ResponseField>
 
 <Note>
-  The base declares `execute(self, *args, **kwargs)` on purpose, so an override
-  may name the parameters its schema promises without a type-checker complaint.
-  The real shape the loop calls is `execute(run, **call.args)`.
+  The base declares `execute(self, *args, **kwargs)`, so an override can name
+  the parameters its schema promises without a type checker complaining. The
+  loop always calls `execute(run, **call.args)`.
 </Note>
 
-An exception from `execute` becomes the tool's result — the model reads
-`error: ValueError: nope` and gets another turn. The two that stay loud are
-`Stop` and `ContractError`.
+An exception from `execute` becomes the tool's result. The model reads
+`error: ValueError: nope` and gets another turn. `Stop` and `ContractError` are
+the two that are raised instead.
 
 ## The @tool decorator
 
@@ -91,12 +92,10 @@ def tool(
 ) -> Tool | Callable[[Callable[..., Any]], Tool]: ...
 ```
 
-A plain function becomes a `Tool`: its name, its docstring, its signature. Two
-overloads say which half you get — bare, it hands back the `Tool`; with
-`parallel=`, it hands back the decorator that will. Both forms work because `fn`
-is positional-only and `parallel` is keyword-only.
+A plain function becomes a `Tool`. It takes the function's name, its docstring
+and its signature.
 
-```python
+```python run
 from core import tool
 
 
@@ -110,58 +109,78 @@ def shout(word: str) -> str:
 def read(path: str) -> str:
     """Read a file."""
     return open(path).read()
+
+
+print(shout.name, shout.description)
+print(read.name, read.parallel)
 ```
 
+```text output
+shout Shout a word.
+read True
+```
+
+Used bare, `@tool` hands back the `Tool` itself. Used as `@tool(parallel=True)`,
+it hands back a decorator that makes one. Both forms work because `fn` is
+positional-only and `parallel` is keyword-only.
+
 <ParamField path="fn" type="Callable[..., Any] | None" default="None">
-  Called as it is, never bound — the wrapper's `self` goes unused. `None` is the
-  `@tool(parallel=…)` form, which comes back for the function as a `partial`.
+  Called as it is, never bound. `None` is the `@tool(parallel=…)` form, which
+  comes back for the function as a `partial`.
 </ParamField>
 
 <ParamField path="parallel" type="bool" default="False">
-  Keyword-only. Becomes the new class's `parallel` attribute.
+  Keyword-only. It becomes the new class's `parallel` attribute.
 </ParamField>
 
 <ResponseField name="tool" type="Tool">
-  An instance, ready for `Agent(model, [that])` — a new subclass of `Tool` whose
-  `name` is `fn.__name__`, whose `description` is `inspect.getdoc(fn) or ""`,
-  and whose `parameters` is `schema(fn)`.
+  An instance, ready for `Agent(model, [that])`. It is a new subclass of `Tool`.
+  Its `name` is `fn.__name__`, its `description` is `inspect.getdoc(fn) or ""`,
+  and its `parameters` is `schema(fn)`.
 </ResponseField>
 
 A sync function runs in a thread (`asyncio.to_thread`), an async one is awaited,
-and an async generator streams — every `Part` it yields rings `tool.delta` and
-folds into the tool message.
+and an async generator streams. Every `Part` it yields runs the `tool.delta`
+hooks and joins into the tool message.
 
 <Note>
-  `@tool` takes one keyword, `parallel=`, and nothing else on purpose. For a
-  different name, description or schema, write a `Tool` subclass — that is what
-  the class is for.
+  `@tool` takes one keyword, `parallel=`, and nothing else. For a different
+  name, description or schema, write a `Tool` subclass. That is what the class
+  is for.
 </Note>
 
-Raises `ContractError` on a function whose signature has `*args` or `**kwargs`,
-because an unreadable signature is no schema, and on anything with no
+Raises `ContractError` on a function whose signature has `*args` or `**kwargs`.
+A signature nobody can read is no schema. It raises on anything with no
 `__name__`, because the function's name is the tool's.
 
 ### The run parameter
 
-A first parameter spelled exactly `run` is filled in by the loop and kept out of
-the schema, so the model never sees it. Only the first one counts — `takes_run`
-reads the first name in the signature and nothing else.
+A first parameter spelled exactly `run` is filled in by the loop. It is kept out
+of the schema, so the model never sees it. Only the first one counts, because
+`takes_run` reads the first name in the signature.
 
-```python
+```python run
 from core import tool
 
 
 @tool
-def notebook(run) -> int:
-    """How many lines the notebook holds."""
+def history(run) -> int:
+    """How many messages the conversation holds."""
     return len(run.messages)
+
+
+print(history.parameters)
+```
+
+```text output
+{'type': 'object', 'properties': {}, 'required': []}
 ```
 
 ### The schema it builds
 
 `schema(fn)` reads the signature with `eval_str=True`, so a module's
 `from __future__ import annotations` strings resolve too. A hint the table knows
-becomes a JSON type; anything else becomes an empty schema, which means
+becomes a JSON type. Anything else becomes an empty schema, which means
 anything. A parameter with no default is required.
 
 | hint | JSON type |
@@ -174,11 +193,11 @@ anything. A parameter with no default is required.
 | `dict` | `object` |
 
 A generic is read through its origin, so `list[str]` is an `array`. An
-`Annotated` hint contributes twice: its base type picks the JSON type, and its
-first note, when that note is a `str`, becomes the property's `description` —
-which is the line the model actually reads.
+`Annotated` hint does two jobs. Its base type picks the JSON type. Its first
+note becomes the property's `description`, which is the line the model reads.
+The note has to be a string.
 
-```python
+```python run
 from typing import Annotated
 
 from core import tool
@@ -188,10 +207,13 @@ from core import tool
 def grep(pattern: Annotated[str, "a regular expression"], limit: int = 20) -> list:
     """Search the repo."""
     return []
+
+
+print(grep.parameters)
 ```
 
-That builds
-`{"type": "object", "properties": {"pattern": {"type": "string", "description": "a regular expression"}, "limit": {"type": "integer"}}, "required": ["pattern"]}`.
+```text output
+{'type': 'object', 'properties': {'pattern': {'type': 'string', 'description': 'a regular expression'}, 'limit': {'type': 'integer'}}, 'required': ['pattern']}
+```
 
-See also: [a function](/tools/functions), [a class](/tools/classes),
-[parallel tools](/tools/parallel), [what comes back](/tools/results).
+See also: [a function](/tools/functions) and [a class](/tools/classes).
