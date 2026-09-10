@@ -39,11 +39,15 @@ class Event:
 
 
 class Events:
-    """Emit into it, listen to it, stream it. Emitting never blocks."""
+    """Emit into it, listen to it, stream it. Emitting never blocks.
 
-    def __init__(self) -> None:
+    The log keeps the last `keep` events and no more, so a replay starts
+    wherever the log now begins: since=0 is the whole log, not all of history.
+    """
+
+    def __init__(self, keep: Annotated[int, "events the log holds"] = 10_000) -> None:
         self.seq = 0
-        self.log: list[Event] = []       # ponytail: unbounded, cap it later
+        self.log: deque[Event] = deque(maxlen=keep)
         # one listener is (fn, prefix it hears, the one run_id it wants or None)
         self.listeners: list[tuple[Callable[[Event], Any], str, str | None]] = []
 

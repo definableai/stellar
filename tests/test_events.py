@@ -36,7 +36,7 @@ def test_events_are_numbered_and_stamped() -> None:
     assert (first.source, first.run_id) == ("loop", "r1")
     assert before <= first.ts <= second.ts
     assert (second.data, second.source, second.run_id) == (None, None, None)
-    assert bus.log == [first, second]
+    assert list(bus.log) == [first, second]
     assert Events().seq == 0                 # the numbering is per bus
 
 
