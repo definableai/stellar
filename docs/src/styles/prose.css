@@ -1,0 +1,192 @@
+/* The article's typography. Light is written first, dark swaps the same tokens. */
+
+.prose {
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--color-gray-700);
+}
+.dark .prose {
+  color: var(--color-gray-400);
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose p {
+  margin: 20px 0;
+}
+
+.prose a {
+  font-weight: 500;
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in oklab, var(--color-primary-dark) 40%, transparent);
+}
+.prose a:hover {
+  text-decoration-color: var(--color-primary-dark);
+}
+.dark .prose a {
+  color: var(--color-primary-light);
+  text-decoration-color: color-mix(in oklab, var(--color-primary-light) 40%, transparent);
+}
+.dark .prose a:hover {
+  text-decoration-color: var(--color-primary-light);
+}
+
+.prose :is(h2, h3, h4) {
+  color: var(--color-gray-900);
+}
+.dark .prose :is(h2, h3) {
+  color: #fff;
+}
+.dark .prose h4 {
+  color: var(--color-gray-200);
+}
+
+.prose h2 {
+  margin: 36px 0 18px;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 500;
+  letter-spacing: -0.6px;
+  scroll-margin-top: 88px;
+}
+
+.prose h3 {
+  margin: 32px 0 12px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  scroll-margin-top: 88px;
+}
+
+.prose h4 {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+/* rehype-autolink-headings appends an empty <a class="anchor">; the # is ours. */
+.prose :is(h2, h3) > a.anchor {
+  margin-left: 8px;
+  color: var(--color-gray-500);
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+}
+.prose :is(h2, h3) > a.anchor::after {
+  content: "#";
+}
+.prose :is(h2, h3):hover > a.anchor {
+  opacity: 1;
+}
+
+.prose :not(pre) > code {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--color-gray-100);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-gray-800);
+}
+.dark .prose :not(pre) > code {
+  background: rgb(255 255 255 / 0.05);
+  color: var(--color-gray-200);
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+.dark .prose strong {
+  color: var(--color-gray-200);
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.dark .prose kbd {
+  border-color: var(--color-gray-700);
+}
+
+.prose :is(ul, ol) {
+  margin: 20px 0;
+  padding-left: 24px;
+}
+.prose ul {
+  list-style: disc;
+}
+.prose ol {
+  list-style: decimal;
+}
+.prose li {
+  margin: 8px 0;
+}
+.prose li::marker {
+  color: var(--color-gray-500);
+}
+.prose li > :is(ul, ol) {
+  margin: 8px 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-gray-200);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+.dark .prose th {
+  border-bottom-color: var(--color-gray-800);
+  color: var(--color-gray-200);
+}
+.prose td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+.dark .prose td {
+  border-bottom-color: color-mix(in oklab, var(--color-gray-800) 60%, transparent);
+}
+
+.prose blockquote {
+  margin: 20px 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-gray-300);
+  color: var(--color-gray-500);
+  font-style: italic;
+}
+.dark .prose blockquote {
+  border-left-color: var(--color-gray-700);
+  color: var(--color-gray-400);
+}
+
+.prose hr {
+  margin: 32px 0;
+  border: 0;
+  border-top: 1px solid var(--color-gray-200);
+}
+.dark .prose hr {
+  border-top-color: var(--color-gray-800);
+}
+
+.prose img {
+  margin: 24px 0;
+  border-radius: 12px;
+}

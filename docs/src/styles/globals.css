@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* docs.json owns these three; main.tsx writes them onto :root at startup. */
+  --color-primary: #d9a62e;
+  --color-primary-light: #f5c451;
+  --color-primary-dark: #b8891f;
+
+  --color-background-dark: #0a0d0d;
+  --color-background-light: #ffffff;
+  --color-codeblock: #0b0c0e;
+
+  --color-gray-50: #f3f6f4;
+  --color-gray-100: #eef1ef;
+  --color-gray-200: #dfe1e0;
+  --color-gray-300: #ced1cf;
+  --color-gray-400: #9fa1a0;
+  --color-gray-500: #707371;
+  --color-gray-600: #585a59;
+  --color-gray-700: #3f4140;
+  --color-gray-800: #262827;
+  --color-gray-900: #171a18;
+  --color-gray-950: #0a0d0c;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    scrollbar-color: var(--color-gray-800) transparent;
+  }
+
+  body {
+    @apply bg-background-light font-sans text-gray-900 antialiased dark:bg-background-dark dark:text-gray-200;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+  }
+}
