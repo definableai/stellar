@@ -192,8 +192,7 @@ def test_the_reasoning_goes_back_whole_and_first() -> None:
     thought = Part("thinking", {"type": "thinking", "thinking": "Two halves."})
     other = encoded(Responses("gpt-5.6-luna"), [
         Message("assistant", [thought, Part("text", "half")])])["input"]
-    assert other == [{"type": "message", "role": "assistant", "content": [
-        {"type": "output_text", "text": "half"}]}]           # another wire's: dropped
+    assert other == [{"role": "assistant", "content": "half"}]   # another wire's: dropped
 
 
 def test_a_tools_pictures_follow_the_run_of_tool_lines() -> None:

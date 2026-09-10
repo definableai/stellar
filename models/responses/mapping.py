@@ -88,9 +88,8 @@ def turn(m: Message) -> list[dict]:
     # ponytail: only reasoning replays whole — another wire's thinking block
     # cannot be said here, and a hosted-tool item is not ours to replay
     items = [p.data for p in content if p.type == "reasoning"]
-    if m.text:
-        items.append({"type": "message", "role": "assistant",
-                      "content": [{"type": "output_text", "text": m.text}]})
+    if m.text:                          # the plain shape: no item id to invent
+        items.append({"role": "assistant", "content": m.text})
     return items + [function(c) for c in m.tool_calls]
 
 
