@@ -1,32 +1,41 @@
 ---
-title: What a tool returns
-description: Anything at all. One function shapes whatever came back into the one tool message the model reads.
+title: What a tool can return
+description: Anything at all. Whatever comes back is shaped into the one message the model reads.
 ---
 
-A tool owes no return type. Whatever `execute` hands back — a string, a dict,
-a picture, nothing — is shaped into a single tool message stamped with the
-call's id, and that message is the next line in the notebook (`run.messages`).
+A tool owes you no return type. Whatever it hands back becomes one message,
+stamped with the call's id. That message is the next line in the
+conversation.
 
 ## The seven shapes
 
 | you return | the model gets |
 | --- | --- |
 | a `str` | that text |
-| a `Part` | that one part as the content — a picture with no words |
-| a `list[Part]`, every item a `Part` | all of them, in order — text and a picture together |
-| a `Message` | the message itself, its role forced to `tool` |
-| a `dict`, any other `list`, number, `bool` | `json.dumps` of it |
-| `None` | `null`, because that is the JSON for it |
-| nothing JSON can hold | `str()` of whatever would not serialise |
+| a `Part` | that one piece, so a picture with no words |
+| a list of `Part`s | all of them in order, so words and a picture together |
+| a `Message` | your message, with its role set to `tool`, and an id if it had none |
+| a `dict`, a list, a number, `True` | the JSON for it |
+| `None` | `null`, which is the JSON for nothing |
+| anything JSON cannot hold | the `str()` of it |
 
-An empty list is still JSON, so it arrives as `[]` and not as empty content.
-A `Message` you build yourself keeps its own `tool_call_id` if it has one, and
-is stamped with the call's otherwise — everything else is always stamped.
+An empty list is still JSON, so it arrives as `[]` and not as nothing.
 
-```python
+## Try it
+
+Three tools in one turn. One returns a dict, one returns a picture, and one
+breaks.
+
+```python run
 import asyncio
 
 from core import Agent, FakeModel, Message, Part, ToolCall, tool
+
+
+@tool
+def bag() -> dict:
+    """Hand back a dict."""
+    return {"n": 1}
 
 
 @tool
@@ -36,75 +45,59 @@ def pic() -> Part:
 
 
 @tool
-def bag() -> dict:
-    """Hand back a dict."""
-    return {"n": 1}
+def boom() -> str:
+    """Always breaks."""
+    raise ValueError("nope")
 
 
-two = Message("assistant", "", [ToolCall("c1", "pic"), ToolCall("c2", "bag")])
-run = asyncio.run(Agent(FakeModel([two, "done"]), [pic, bag]).run("go"))
-told = [m for m in run.messages if m.role == "tool"]
-assert told[0].content == [Part("image", {"url": "https://example.com/a.png"})]
-assert told[1].text == '{"n": 1}'
+asked = Message("assistant", "", [ToolCall("c1", "bag"), ToolCall("c2", "pic"),
+                                  ToolCall("c3", "boom")])
+run = asyncio.run(Agent(FakeModel([asked, "done"]), [bag, pic, boom]).run("go"))
+for message in run.messages:
+    if message.role == "tool":
+        for part in message.content:
+            print(part.type, part.data)
 ```
 
-A streaming tool — an async generator `execute` — does not return at all. Its
-result is the **fold** of the parts it yielded: consecutive text parts join
-into one, a `meta` part merges into the message's meta, and everything else
-lands in the content untouched. That is the same fold a streaming model's
-reply goes through.
-
-## The gate grades a result
-
-A tool's result is something you wrote, so a provider grades it before the
-next request leaves. An image part on a model whose [profile](/models/profiles)
-does not have the word `image` raises `Unsupported` — before the network, at no
-cost. The message names the profile and what it can actually read:
-
-```text
-Unsupported: texty reads no 'image' part; it reads stream, tools
+```text output
+text {"n": 1}
+image {'url': 'https://example.com/a.png'}
+text error: ValueError: nope
 ```
 
-The model's own past turns are replayed as they came and never graded. Yours —
-user lines, tool results — are.
+- The dict came back as JSON text. The model reads `{"n": 1}`.
+- The picture stayed a picture. Nothing turned it into words.
+- The tool that broke did not break the run. Its mistake is just another
+  answer.
 
-## When a tool goes wrong
+A streaming tool returns nothing at all. Its result is the pieces it
+yielded, joined into one message.
 
-Run-time mistakes are answers, not crashes. Each of these becomes the tool's
-result and the model gets another turn:
+## When a tool fails
 
 | what happened | what the model reads |
 | --- | --- |
-| the tool raised | `error: ValueError: nope` |
-| the model asked for a tool that is not in the toolbox | `error: unknown tool: ghost` |
-| the provider could not parse the call's arguments | `error: tool arguments were not valid JSON: {oops` |
+| your tool raised | `error: ValueError: nope` |
+| the model asked for a tool you do not have | `error: unknown tool: ghost` |
+| the model's arguments were not valid JSON | `error: tool arguments were not valid JSON: {oops` |
 
-A streaming tool that raises halfway is answered for the same way: the error is
-the whole result, and the parts it had already yielded are dropped from the
-notebook — though each of them rang `tool.delta` on the way past, so anyone
-watching [the bus](/events/overview) saw them.
+The model gets another turn and can try again.
 
 <Note>
-  Exactly two exceptions are not turned into results. `Stop` ends the run
-  cleanly, and `ContractError` stays loud — a wiring mistake is never something
-  to tell the model about. See [stopping and denying](/hooks/stopping).
+  Two exceptions are never turned into an answer. `Stop` ends the run, and
+  `ContractError` raises, because a wiring mistake is not something to tell
+  the model about. See [stop a run, skip a tool](/hooks/stopping).
 </Note>
 
-## A hook can answer instead
+Your answers are checked before they are sent. A picture handed to a model
+that cannot read pictures raises `Unsupported` at no cost, before anything
+leaves your machine. [Profiles](/models/profiles) has that check.
 
-A [`tool.pre`](/hooks/stages) hook that returns a `str` or a `Message` skips
-the tool and *is* its result — same shaping, same id, same next line in the
-notebook. That is the whole deny path, and a `Message` means a denial can carry
-parts too:
-
-```python
-from core import Message, Part, ToolCall, hook
-
-
-@hook("tool.pre")
-async def no_rm(call: ToolCall) -> Message | None:
-    """Answer for rm instead of running it."""
-    if call.name == "rm":
-        return Message("tool", [Part("text", "denied — ask a human first")])
-    return None
-```
+<CardGroup cols={2}>
+  <Card title="Hooks" icon="shield" href="/hooks/overview">
+    A rule can answer for a tool instead of running it.
+  </Card>
+  <Card title="Run tools at the same time" icon="shuffle" href="/tools/parallel">
+    One keyword, and how a turn is cut into batches.
+  </Card>
+</CardGroup>

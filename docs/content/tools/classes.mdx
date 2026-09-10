@@ -1,14 +1,35 @@
 ---
-title: Tools as classes
-description: Subclass Tool when the tool needs its own name, its own schema, or something to hold on to.
+title: A class is a tool
+description: Subclass Tool when you want your own name, your own schema, or something to hold on to.
 ---
 
-`@tool` reads a function and gives you no say in what it read. Subclass `Tool`
-and every part is yours: the name, the description, the schema the model sees,
-and whether the tool may run beside others.
+`@tool` reads your function and gives you no say in what it read. Subclass
+`Tool` and every part is yours.
 
-```python
-from core import Tool
+Reach for a class when the tool has to **hold on to something**. The object
+lives as long as the agent. An open connection, a cache, or a count is still
+there on the next call.
+
+## The four things you set
+
+| you set | what it is |
+| --- | --- |
+| `name` | what the model asks for. An empty one fails the check before the first turn |
+| `description` | the sentence the model reads when it decides whether to call you |
+| `parameters` | JSON Schema, sent as it is. The default is an object with no arguments |
+| `parallel` | `True` lets this tool run beside other parallel ones. See [running tools at the same time](/tools/parallel) |
+
+`execute` is the one method and it is always async. It takes the run first,
+then the arguments your schema promised, by name.
+
+Give the agent an instance, not the class.
+
+## Try it
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, Tool, ToolCall
 
 
 class Shout(Tool):
@@ -18,83 +39,34 @@ class Shout(Tool):
 
     async def execute(self, run, word) -> str:
         return word.upper()
+
+
+asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
+run = asyncio.run(Agent(FakeModel([asked, "done"]), [Shout()]).run("shout hi"))
+print(next(m.text for m in run.messages if m.role == "tool"))
 ```
 
-Hand the instance over — `Agent(model, [Shout()])` — not the class.
-
-## The four attributes and the one method
-
-| attribute | what it is |
-| --- | --- |
-| `name` | what the model asks for, and the key the [agent](/reference/agent) files it under. An empty one fails `check()` before the first turn |
-| `description` | the sentence the model reads when it decides whether to call you |
-| `parameters` | JSON Schema, sent as it is. Defaults to an object with no properties |
-| `parallel` | `True` lets this tool ride in a batch with other parallel tools; the default is a barrier — see [parallel tools](/tools/parallel) |
-
-Write `parameters` on your own subclass rather than mutating the base class
-default: that dict is shared by every tool that does not replace it.
-
-`execute` is the one method, and it is always async. Its real shape is
-`execute(self, run, **args)` — the run first, then the parameters your schema
-promised, by name, off the call. The base class types it loosely so an override
-may spell those parameters out, the way `Shout` spells `word`.
-
-Sync work is one line inside it, never a sync `execute`:
-
-```python
-import asyncio
-
-from core import Tool
-
-
-class Shout(Tool):
-    name = "shout"
-    description = "Shout a word."
-    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
-
-    async def execute(self, run, word) -> str:
-        return await asyncio.to_thread(str.upper, word)
+```text output
+HI
 ```
 
-A sync `execute` is refused when the agent is built, with that same `to_thread`
-line in the message — the loop cannot await it, so it never gets the chance to
-try.
-
-## A class holds something
-
-That is the reason to reach for one. The instance lives as long as the agent,
-so anything it keeps is there on the next call:
-
-```python
-from core import Tool
-
-
-class Counter(Tool):
-    name = "count"
-    description = "Count up, and say where the count got to."
-    parameters = {"type": "object", "properties": {}}
-
-    def __init__(self) -> None:
-        self.n = 0
-
-    async def execute(self, run) -> str:
-        self.n += 1
-        return str(self.n)
-```
-
-<Warning>
-  One instance is shared by every run of that agent. Per-conversation state
-  belongs in `run.extra`, not on the tool.
-</Warning>
+- Write `parameters` on your own class. The one on the base class is shared
+  by every tool that does not replace it.
+- Slow work goes inside `execute`, in one line, like
+  `await asyncio.to_thread(str.upper, word)`.
+- A plain `def execute` is refused when you build the agent, and the message
+  tells you to do exactly that.
 
 ## Streaming
 
-Write `execute` as an async generator and the tool streams. Each yielded
-`Part` rings [`tool.delta`](/hooks/stages) and folds into the tool message,
-exactly as a streaming model's parts fold into its reply:
+Write `execute` as an async generator and the tool streams. Each `Part` it
+yields goes out the moment it happens, and the pieces join into one message
+at the end.
 
-```python
-from core import Part, Tool
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, Part, Tool, ToolCall
 
 
 class Teller(Tool):
@@ -103,43 +75,43 @@ class Teller(Tool):
     parameters = {"type": "object", "properties": {}}
 
     async def execute(self, run):
-        yield Part("text", "once upon ")
+        yield Part("text", "once ")
+        yield Part("text", "upon ")
         yield Part("text", "a time")
-        yield Part("meta", {"lines": 2})
+
+
+pieces = []
+asked = Message("assistant", "", [ToolCall("c1", "tell")])
+agent = Agent(FakeModel([asked, "done"]), [Teller()])
+agent.events.listen(lambda event: pieces.append(event.data.data), "tool.delta")
+run = asyncio.run(agent.run("tell me a story"))
+print(pieces)
+print(next(m.text for m in run.messages if m.role == "tool"))
 ```
 
-The folded message reads `once upon a time` and carries `{"lines": 2}` in its
-meta. A tool that raises halfway is answered for instead: the error is the
-whole result, and the parts it had already yielded are dropped — though they
-did reach anyone watching the bus. [What a tool
-returns](/tools/results) has the rules.
-
-## The toolbox is a mapping
-
-`agent.tools` is a mapping of name to tool. Hand the constructor an iterable
-and it keys one for you; hand it the mapping and it is used as it is.
-
-```python
-from core import Agent, FakeModel, Tool
-
-
-class Shout(Tool):
-    name = "shout"
-    description = "Shout a word."
-    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
-
-    async def execute(self, run, word) -> str:
-        return word.upper()
-
-
-shout = Shout()
-assert Agent(FakeModel([]), [shout]).tools == {"shout": shout}
-assert Agent(FakeModel([]), {"shout": shout}).tools == {"shout": shout}
+```text output
+['once ', 'upon ', 'a time']
+once upon a time
 ```
 
-One name, one tool: two tools answering to `shout` is a `ContractError` saying
-`two tools answer to 'shout'`, and a key that is not the tool's own name is
-`tool 'shout' is filed under 'yell'`. Both come from `check()`, which runs at
-construction *and* at the top of every step — so a tool filed into
-`agent.tools` mid-run under the wrong key is caught at the next step, like
-every other bad swap.
+- Three pieces went out one at a time. Anyone watching saw them arrive.
+- The model reads one message, `once upon a time`.
+- A tool that breaks halfway sends the error instead, and the pieces it had
+  already yielded are dropped.
+
+## One instance for every job
+
+<Warning>
+  One tool object is shared by every job that agent runs, and two jobs can
+  run at once. Anything that belongs to one conversation goes in
+  `run.extra`, not on the tool.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+    Text, a dict, a picture, or nothing at all.
+  </Card>
+  <Card title="Run tools at the same time" icon="shuffle" href="/tools/parallel">
+    One keyword, and how a turn is cut into batches.
+  </Card>
+</CardGroup>

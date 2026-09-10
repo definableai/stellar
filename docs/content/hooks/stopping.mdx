@@ -1,19 +1,19 @@
 ---
-title: Stopping and denying
-description: Two control signals, and no third — raise Stop to end a run, return a result from tool.pre to skip a tool.
+title: Stop a run, skip a tool
+description: Two signals and no third. Raise Stop to end a run, answer from tool.pre to skip a tool.
 ---
 
-There are exactly two ways to steer a run from the outside: `raise Stop`, and a
-result returned from a [`tool.pre`](/hooks/stages) hook. Everything else is an
-ordinary exception with ordinary consequences.
+There are exactly two ways to steer a run from the outside. Everything else
+is an ordinary error with ordinary consequences.
 
-## Stop
+## Raise Stop
 
-`raise Stop` from any hook or any tool ends the run cleanly. No traceback
-reaches the caller; `agent.run(...)` returns the `Run` holding everything that
-was written down before the signal.
+`raise Stop` from any hook or any tool ends the run cleanly. No error
+reaches whoever called `agent.run(...)`, and the `Run` comes back holding
+everything written down before the signal. Where the `Stop` came from
+decides what that is.
 
-```python
+```python run
 import asyncio
 
 from core import Agent, FakeModel, Message, Stop, ToolCall, hook, tool
@@ -36,92 +36,87 @@ asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
 agent = Agent(FakeModel([asked, "never asked for"]), [shout])
 agent.hooks.attach(once)
 run = asyncio.run(agent.run("go"))
-assert [m.role for m in run.messages] == ["user", "assistant", "tool"]
-assert run.step == 2               # the second turn ended at model.pre
+print([m.role for m in run.messages])
+print(run.step)
 ```
 
-The model was asked once, the tool it wanted ran, and the second turn stopped
-before it reached the model. The second scripted reply was never spent.
+```text output
+['user', 'assistant', 'tool']
+2
+```
 
-Where the `Stop` came from decides what is in the notebook. A `Stop` at
-`model.pre` means the turn never happened. A `Stop` from a tool running on its
-own means the assistant turn that asked for it is the last line — that tool's
-result never lands. A card that wants to keep something writes it down before it raises,
-which is exactly what [`Budget`](/hooks/cards) does with the reply you already
-paid for.
+- The model was asked once, and the tool it wanted ran.
+- The second turn stopped at `model.pre`, before the model was asked, so the
+  second scripted reply was never spent.
+- `run.step` reads 2 because the agent counts the turn up before your hooks
+  run.
 
-Inside a batch of [parallel tools](/tools/parallel), a `Stop` waits: every tool
-in the batch finishes, then the first signal in call order is raised. Nothing
-is cancelled mid-write.
+## run.post always runs
 
-## run.post always fires
-
-`run()` is one `try` around the whole loop. `except Stop: pass` swallows the
-signal; then a `finally` fires [`run.post`](/hooks/stages) inside a `try` of
-its own, with `except Stop: pass` — and its own nested `finally` emits the
-`run.post` event on the bus. So:
-
-- **After a clean finish, after a `Stop`, and after a crash**, `run.post` runs.
-  Teardown is the one thing you can count on.
-- A `Stop` raised *inside* `run.post` is ignored. It is too late to stop
+- It runs after a clean finish, after a `Stop`, and after a crash. That
+  makes it the place to tidy up.
+- A `Stop` raised inside `run.post` is ignored. It is too late to stop
   anything.
-- Any other exception from `run.post` propagates the ordinary way, with
-  whatever was already in flight attached as its `__context__`. A model that
-  raised `RuntimeError("kaboom")` and a teardown hook that then raised
-  `ValueError` gives you the `ValueError`, with the `RuntimeError` as its
-  context.
-- The `run.post` event reaches the bus last, always — which is why a
-  [stream](/events/streaming) pinned to one run ends there instead of hanging.
+- Its event is always the last one written. That is why a
+  [stream](/events/streaming) watching one run ends there, instead of
+  hanging.
 
-## What the loop catches
+## Skip a tool
 
-Exactly two things:
+Return a string or a `Message` from a `tool.pre` hook. Your agent skips the
+tool and writes your answer down as the tool's result, stamped with the
+call's id. The model reads it on the next turn and carries on.
 
-| raised | what happens |
-| --- | --- |
-| `Stop`, from anywhere | the run ends cleanly and the `Run` comes back |
-| any exception inside a tool | it becomes that tool's result: `error: ValueError: nope`, and the model gets another turn |
-
-Everything else propagates: a model that raises, a hook that raises, a
-`ContractError` from a bad return. `ContractError` is deliberately loud even
-when it happens inside a tool — a wiring mistake is not something to tell the
-model about.
-
-## Denying a tool
-
-Return a `str` or a `Message` from a `tool.pre` hook. The loop skips the tool
-and writes your answer down as its result, stamped with the call's id, for the
-model to read on the next turn.
-
-```python
+```python run
 import asyncio
 
 from core import Agent, FakeModel, Message, ToolCall, hook
 
 
 @hook("tool.pre")
-async def no_rm(call: ToolCall) -> str | None:
-    """rm is answered for, never run."""
-    return f"denied: {call.name}" if call.name == "rm" else None
+async def cached(call: ToolCall) -> str | None:
+    """Answer the weather from what we already know."""
+    if call.name == "weather":
+        return "sunny, 21 degrees"
+    return None
 
 
-asked = Message("assistant", "", [ToolCall("c1", "rm", {"path": "/"})])
-agent = Agent(FakeModel([asked, "done"]))
-agent.hooks.attach(no_rm)
-run = asyncio.run(agent.run("go"))
-assert [m.text for m in run.messages if m.role == "tool"] == ["denied: rm"]
+asked = Message("assistant", "", [ToolCall("c1", "weather", {"city": "Paris"})])
+agent = Agent(FakeModel([asked, "It is sunny in Paris."]))
+agent.hooks.attach(cached)
+run = asyncio.run(agent.run("what is the weather in Paris?"))
+print(next(m.text for m in run.messages if m.role == "tool"))
+print(run.messages[-1].text)
 ```
 
-That agent has no `rm` tool at all, and it does not matter: the hook answers
-before the toolbox is ever consulted.
+```text output
+sunny, 21 degrees
+It is sunny in Paris.
+```
 
-<Note>
-  That is the whole deny path. There is no boolean to return, no `skip=True`,
-  no third signal — a denial is just the result you would have got, written by
-  you instead of by the tool.
-</Note>
+- That agent has no `weather` tool at all. The hook answered before the
+  toolbox was ever looked at.
+- The first hook to answer ends it, so the hooks behind it never hear about
+  that call.
+- There is no boolean to return and no third signal. A refusal is just the
+  answer you would have got, written by you.
 
-The first hook to answer ends the ring, so the cards behind it never hear that
-bell — and because the agent's cards ring before the run's, an agent-level
-denial is one a run cannot talk its way past. `Permission` on [the four shipped
-cards](/hooks/cards) is this path, packaged.
+## What the loop catches
+
+| raised | what happens |
+| --- | --- |
+| `Stop`, from anywhere | the run ends cleanly and the `Run` comes back |
+| any error inside a tool | it becomes that tool's answer, and the model gets another turn |
+
+Everything else raises. A model that breaks, a hook that breaks, a
+`ContractError` from a wrong return. `ContractError` raises even from inside
+a tool, because a wiring mistake is not something to tell the model about.
+
+<CardGroup cols={2}>
+  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+    Steps, Budget, Permission and Log.
+  </Card>
+  <Card title="What a tool can return" icon="book-open" href="/tools/results">
+    Text, a dict, a picture, or nothing at all.
+  </Card>
+</CardGroup>

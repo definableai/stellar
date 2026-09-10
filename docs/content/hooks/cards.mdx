@@ -1,121 +1,140 @@
 ---
-title: The four shipped cards
-description: Steps, Budget, Permission and Log — four small files outside core that show what a rule card looks like.
+title: The four rules that come in the box
+description: Steps, Budget, Permission and Log. Four small files you can read, copy and change.
 ---
 
-Four cards ship with stellar, in `hooks/`. Three are hooks on the control
-plane; one is a listener on [the data plane](/events/overview). None of them is
-special: each is a file of under forty lines you can read, copy and change.
+Four rules ship with stellar, in `hooks/`. Three are hooks. One is a
+listener on the [event log](/events/overview). None of them is special, and
+each is a file of under forty lines.
 
-| card | plane | what it does |
+| rule | when it runs | what it does |
 | --- | --- | --- |
-| `Steps(n)` | hook, `model.pre` | n model calls per run, then `Stop`. `Steps(3)` buys exactly three replies. |
-| `Budget(max_tokens)` | hook, `model.post` | adds `input_tokens + output_tokens` from every reply's `meta["usage"]` into `run.extra["budget.tokens"]`. Past the limit it keeps the reply you already paid for, then stops. A reply with no usage costs nothing. |
-| `Permission(deny, allow, ask)` | hook, `tool.pre` | the guard at the tool gate. `deny` wins; then an `allow` list settles it alone; only then does `ask=True` put the question to a human. |
-| `Log(write=print)` | listener | one readable line per event: its name, and what it carried. |
+| `Steps(n)` | `model.pre` | gives the job n model calls, then ends it |
+| `Budget(max_tokens)` | `model.post` | adds up what every reply cost, and ends the job past your limit |
+| `Permission(deny, allow, ask)` | `tool.pre` | the guard at the door, refusing tools you did not allow |
+| `Log(write=print)` | every event | one readable line per event, its name and what it carried |
 
 <Note>
-  Each card is a **factory**: calling it hands back the function, and the
-  function is what you attach. Nothing is kept in the card — `Steps` counts on
-  `run.step`, `Budget` totals into `run.extra` — so one card on the agent gives
-  every run its own ration, its own purse, its own answer.
+  Each one is a factory. Calling it hands you back a function, and the
+  function is what you attach. Nothing is kept inside. One rule on the agent
+  gives every job its own count, its own budget, its own answer.
 </Note>
 
 ## Steps
 
-`Steps(n: int)` returns a [`model.pre`](/hooks/stages) hook. The loop counts
-the turn up *before* the bell, so the card only has to compare:
+`Steps(n: int)` gives you a `model.pre` hook. It buys exactly n replies, and
+the turn after that ends before the model is ever asked.
 
-```python
-if run.step > n:
-    raise Stop
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+from hooks.steps import Steps
+
+
+@tool
+def shout(word: str) -> str:
+    """Shout a word."""
+    return word.upper()
+
+
+asks = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
+agent = Agent(FakeModel([asks, asks, asks]), [shout])
+agent.hooks.attach(Steps(2))
+run = asyncio.run(agent.run("keep shouting"))
+print(run.step)
+print(sum(m.role == "assistant" for m in run.messages))
 ```
 
-`Steps(3)` buys exactly three replies. The fourth turn ends at `model.pre`, so
-the finished run reads `run.step == 4` while the model was asked three times.
-Attach one to the agent and every run gets its own ration, because the count
-lives on the run.
+```text output
+3
+2
+```
+
+The model asked for a tool every time and would have gone on forever. Two
+replies is what it got, and the third turn stopped, so `run.step` reads 3.
 
 ## Budget
 
-`Budget(max_tokens: int)` returns a [`model.post`](/hooks/stages) hook. It adds
-`input_tokens` and `output_tokens` from the reply's `meta["usage"]` to the
-running total in `run.extra["budget.tokens"]`, and past the limit it appends
-the reply itself before raising `Stop` — you paid for that answer, so you keep
-it.
+`Budget(max_tokens: int)` gives you a `model.post` hook. It adds
+`input_tokens` and `output_tokens` from each reply into
+`run.extra["budget.tokens"]`. Past the limit it keeps the reply you already
+paid for, then ends the job.
 
-The total lives in the run's own pocket, so it is per conversation and it rides
-along in a [checkpoint](/patterns/checkpoint). A reply whose meta carries no
-usage costs nothing: not every adapter counts, and a card that guessed would be
-worse than one that does not.
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message
+from hooks.budget import Budget
+
+paid = Message("assistant", "one",
+               meta={"usage": {"input_tokens": 30, "output_tokens": 12}})
+agent = Agent(FakeModel([paid]))
+agent.hooks.attach(Budget(20))
+run = asyncio.run(agent.run("go"))
+print(run.extra["budget.tokens"])
+print(run.messages[-1].text)
+```
+
+```text output
+42
+one
+```
+
+The total lives in `run.extra`, so it belongs to one conversation and it
+rides along in a [checkpoint](/patterns/checkpoint). A reply that carries no
+usage costs nothing, because not every provider counts.
 
 ## Permission
 
-`Permission(deny=None, allow=None, ask=False)` returns a
-[`tool.pre`](/hooks/stages) hook — the guard at the tool gate. It answers in
-one order, and stops at the first answer:
+`Permission(deny=None, allow=None, ask=False)` gives you a `tool.pre` hook.
+`deny` wins, then an `allow` list settles it alone, and only then is a
+person asked.
 
-<Steps>
-  <Step title="deny wins">
-    A call matching `deny` is refused: `denied: rm`. Nothing else is consulted.
-  </Step>
-  <Step title="an allow list settles it alone">
-    If `allow` was given at all, a call on it passes and every other call is
-    refused — `ask` never comes into it.
-  </Step>
-  <Step title="only then is a human asked">
-    With no `allow` list and `ask=True`, the question goes out to whoever is
-    listening.
-  </Step>
-</Steps>
+```python run
+import asyncio
 
-Each of `deny` and `allow` is a set of names, or a predicate `(run, call)`
-returning a bool — so a rule can read the arguments, not just the name:
-
-```python
+from core import Agent, FakeModel, Message, ToolCall, tool
 from hooks.permission import Permission
 
-by_name = Permission(deny={"rm", "write"})
-by_argument = Permission(deny=lambda run, call: call.args.get("path") == "/")
-read_only = Permission(allow={"read", "search"})
+
+@tool
+def rm(path: str) -> str:
+    """Delete a file."""
+    return "gone"
+
+
+asked = Message("assistant", "", [ToolCall("c1", "rm", {"path": "/"})])
+agent = Agent(FakeModel([asked, "I was not allowed."]), [rm])
+agent.hooks.attach(Permission(deny={"rm"}))
+run = asyncio.run(agent.run("delete everything"))
+print(next(m.text for m in run.messages if m.role == "tool"))
 ```
 
-`ask=True` asks through `extra["ui.ask"]`, an
-`async (question, options=None) -> str` that you provide. The guard looks in
-the run's pocket first and the agent's after, so one channel can serve every
-conversation or each one can bring its own. The question it sends reads
-`Allow shout({'word': 'hi'})?` with the options `["allow", "deny"]`.
+```text output
+denied: rm
+```
+
+`deny` and `allow` each take a set of names, or a function `(run, call)`
+that answers true or false. So a rule can read the arguments, not just the
+name. With `ask=True` the question goes to an
+`async (question, options)` function you put in `extra["ui.ask"]`.
 
 <Warning>
-  Anything but the exact string `"allow"` denies, and no channel at all denies
-  too: with `ask=True` and no `ui.ask` anywhere, every call is refused with
-  `denied: no ui.ask channel`. A guard with no voice says no.
+  Anything but the exact word `allow` refuses. With `ask=True` and no
+  `ui.ask` anywhere, every call is refused with `denied: no ui.ask channel`.
 </Warning>
 
 ## Log
 
-`Log(write=print)` is not a hook. It returns a plain sync function for
-`agent.events.listen`, and it writes one line per event — the event's name,
-then what it carried:
+`Log(write=print)` is not a hook. It is a listener, and it writes one line
+per event, the name and what it carried.
 
-```python
-agent.events.listen(Log())                        # everything, to print
-agent.events.listen(Log(lines.append), "tool")    # only the tool bells
-agent.events.listen(Log(), run_id=run.id)         # one conversation of many
-```
-
-## All four on one agent
-
-This runs as it stands — `FakeModel` needs no key and no network:
-
-```python
+```python run
 import asyncio
 
 from core import Agent, FakeModel, Message, ToolCall, tool
-from hooks.budget import Budget
 from hooks.logging import Log
-from hooks.permission import Permission
-from hooks.steps import Steps
 
 
 @tool
@@ -126,18 +145,12 @@ def shout(word: str) -> str:
 
 asked = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
 agent = Agent(FakeModel([asked, "done"]), [shout])
-agent.hooks.attach(Steps(8))
-agent.hooks.attach(Budget(50_000))
-agent.hooks.attach(Permission(deny={"rm"}))
 agent.events.listen(Log())
-
-asyncio.run(agent.run("shout hello"))
+asyncio.run(agent.run("shout hi"))
 ```
 
-And this is what it prints, exactly:
-
-```text
-run.pre: shout hello
+```text output
+run.pre: shout hi
 model.pre: 1 message
 model.delta: <tool_call>
 model.post: shout({'word': 'hi'})
@@ -149,6 +162,16 @@ model.post: done
 run.post: done
 ```
 
-Ten events for a two-turn run, each emitted after its hooks agreed on the
-payload. There is no `tool.delta` line because `shout` does not stream, and
-`Permission` never speaks: it only refuses, and nothing asked for `rm`.
+Ten events for a two-turn job. There is no `tool.delta` line because
+`shout` does not stream. Narrow it down with
+`agent.events.listen(Log(), "tool")` for the tool lines only, or
+`agent.events.listen(Log(), run_id=run.id)` for one conversation.
+
+<CardGroup cols={2}>
+  <Card title="The eight stages" icon="workflow" href="/hooks/stages">
+    Every moment a hook can listen for.
+  </Card>
+  <Card title="Events" icon="radio" href="/events/overview">
+    Watch what happens without changing it.
+  </Card>
+</CardGroup>

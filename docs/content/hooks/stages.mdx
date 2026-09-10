@@ -1,34 +1,38 @@
 ---
 title: The eight stages
-description: The eight moments a hook can listen for, what each one hands over, and one working card for each.
+description: The eight moments a hook can listen for, what each one hands you, and a working rule for each.
 ---
 
-The eight stages are the eight moments in a run, and nothing else is a moment.
-They are the loop's own event names too, so a hook and a
-[bus event](/events/overview) share one word; [the loop](/concepts/loop) is the
-picture of where each one falls.
+A stage is one moment in a run. There are eight of them and nothing else is
+a moment. They are also the names your agent writes in its
+[event log](/events/overview), so one word covers both.
 
-| stage | the payload it hands over | what a return replaces |
+```mermaid
+flowchart LR
+  A["run.pre"] --> B["model.pre"]
+  B --> C["model.delta"]
+  C --> D["model.post"]
+  D --> E["tool.pre"]
+  E --> F["tool.delta"]
+  F --> G["tool.post"]
+  G --> H["run.post"]
+```
+
+| stage | what it hands you | what a return changes |
 | --- | --- | --- |
-| `run.pre` | `Message` — the last message, once, before the first turn | that message |
-| `model.pre` | `list[Message]` — the notebook, before every model call | rebinds `run.messages`, permanently |
-| `model.delta` | `Part` — one streamed piece, before it is folded | the Part, and the new one is folded |
-| `model.post` | `Message` — the reply, after every model call | the reply that gets written down |
-| `tool.pre` | `ToolCall` — before every tool | a `ToolCall` runs instead; a `str` or `Message` skips the tool and *is* its result |
-| `tool.delta` | `Part` — one yielded piece, before it is folded | the Part, and the new one is folded |
-| `tool.post` | `ToolCall, Message` — the call and its result | the result |
-| `run.post` | `Message` — the last message, once, at the very end | nothing; this is teardown |
+| `run.pre` | the last message, once, before the first turn | that message |
+| `model.pre` | every message, before every model call | the whole conversation, for good |
+| `model.delta` | one streamed piece, before it joins the reply | that piece |
+| `model.post` | the reply, after every model call | the reply that gets written down |
+| `tool.pre` | one tool call, before the tool runs | a different call, or an answer that skips the tool |
+| `tool.delta` | one piece a streaming tool yielded | that piece |
+| `tool.post` | the call and its answer | the answer |
+| `run.post` | the last message, once, at the very end | nothing, the job is over |
 
-## One card per stage
+## run.pre
 
-Each card below fits its stage and does one useful thing. Every one of them
-takes the payload its row promises, and the ones that need the run take it as
-one extra argument — the rule is on [hooks](/hooks/overview).
-
-### run.pre
-
-Fires once, on the last message in the notebook, before the first turn. A good
-place to put words in the user's mouth.
+Runs once, on the last message, before the first turn. A good place to put
+words in the user's mouth.
 
 ```python
 from core import Message, hook
@@ -36,14 +40,14 @@ from core import Message, hook
 
 @hook("run.pre")
 async def house_style(message: Message) -> Message:
-    """Tack the house rule onto the thing that was asked."""
+    """Add the house rule to whatever was asked."""
     return Message("user", f"{message.text}\n\nAnswer in one sentence.")
 ```
 
-### model.pre
+## model.pre
 
-Fires before every model call, holding the whole notebook. What it returns
-rebinds `run.messages` permanently — this is the stage that edits history.
+Runs before every model call, holding every message. This is the stage that
+edits history, and what it returns sticks.
 
 ```python
 from core import Message, hook
@@ -51,17 +55,14 @@ from core import Message, hook
 
 @hook("model.pre")
 async def trim(messages: list[Message], run) -> list[Message]:
-    """Once the conversation is long, keep the system line and the last twenty."""
-    if run.step <= 3:
-        return messages
-    system = [m for m in messages[:1] if m.role == "system"]
-    return system + messages[-20:]
+    """Once the conversation is long, keep the first line and the last twenty."""
+    return messages if run.step <= 3 else messages[:1] + messages[-20:]
 ```
 
-### model.delta
+## model.delta
 
-One streamed `Part`, before it is folded into the reply. The hook lands first,
-so what folds is what you returned.
+One streamed piece, before it joins the reply. Your hook goes first, so what
+joins is what you handed back.
 
 ```python
 from core import Part, hook
@@ -78,95 +79,110 @@ async def redact(part: Part) -> Part | None:
 ```
 
 <Warning>
-  A delta is only a piece. A secret split across two parts is not seen by this
-  card — for a whole-answer rule, use `model.post`.
+  A piece is only a piece. A secret split across two of them slips past this
+  rule. For a whole-answer rule, use `model.post`.
 </Warning>
 
-### model.post
+## model.post
 
-The finished reply, after every model call, before it goes in the notebook.
-Returning `None` leaves the payload alone, so mutating it in place is the
-lightest way to tag it.
+The finished reply, before it is written down. Returning `None` leaves it
+alone, so changing it in place is the lightest way to tag one.
 
-```python
-from core import Message, hook
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, hook
 
 
 @hook("model.post")
 async def stamp(answer: Message, run) -> None:
-    """Write the turn number onto the reply that is about to be filed."""
+    """Write the turn number onto the reply about to be written down."""
     answer.meta["step"] = run.step
+
+
+agent = Agent(FakeModel(["hello"]))
+agent.hooks.attach(stamp)
+run = asyncio.run(agent.run("hi"))
+print(run.messages[-1].meta)
 ```
 
-### tool.pre
+```text output
+{'step': 1}
+```
 
-Before every tool. Return a `ToolCall` and that call runs instead; return a
-`str` or a `Message` and the tool is skipped and your answer *is* its result.
-The first hook that answers ends the ring.
+## tool.pre
 
-```python
-from core import ToolCall, hook
+Before every tool. Return a `ToolCall` and that call runs instead. Return a
+string or a `Message` and the tool is skipped, and your answer is its
+result.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, hook
 
 ALLOWED = {"read", "search"}
 
 
 @hook("tool.pre")
 async def only_reading(call: ToolCall) -> str | None:
-    """Anything off the list is answered for, and never runs."""
+    """Anything not on the list is refused, and never runs."""
     if call.name in ALLOWED:
         return None
-    return f"denied: {call.name} is not allowed here"
+    return f"denied: {call.name} is not on the list"
+
+
+asked = Message("assistant", "", [ToolCall("c1", "write", {"path": "a"})])
+agent = Agent(FakeModel([asked, "I could not write it."]))
+agent.hooks.attach(only_reading)
+run = asyncio.run(agent.run("write a file"))
+print(next(m.text for m in run.messages if m.role == "tool"))
 ```
 
-### tool.delta
+```text output
+denied: write is not on the list
+```
 
-One `Part` yielded by a streaming tool, before it folds. Because a hook may
-raise, this is also where a runaway stream can be cut short.
+## tool.delta
+
+One piece a streaming tool yielded. Because a hook may raise, this is also
+where you cut a runaway tool short.
 
 ```python
 from core import Part, Stop, hook
 
-CAP = 10_000
-
 
 @hook("tool.delta")
 async def cap(part: Part, run) -> None:
-    """End the run once one tool has streamed past the cap."""
-    if part.type != "text":
-        return None
-    run.extra["streamed"] = run.extra.get("streamed", 0) + len(part.data)
-    if run.extra["streamed"] > CAP:
+    """End the run once one tool has streamed more than ten thousand letters."""
+    if part.type == "text":
+        run.extra["streamed"] = run.extra.get("streamed", 0) + len(part.data)
+    if run.extra.get("streamed", 0) > 10_000:
         raise Stop
 ```
 
-A `Stop` from here ends the run mid-stream, so that tool's result never reaches
-the notebook at all — the last line is the assistant turn that asked for it.
+## tool.post
 
-### tool.post
-
-The call and its result, together. What you return replaces the result, and it
-is written down as it is — so carry the `tool_call_id` across yourself.
+The call and its answer, together. What you return is written down as it is,
+so carry the `tool_call_id` across yourself.
 
 ```python
 from core import Message, ToolCall, hook
 
-LIMIT = 4_000
-
 
 @hook("tool.post")
 async def shorten(call: ToolCall, result: Message) -> Message | None:
-    """Keep a huge result out of the notebook, and say that it was cut."""
-    if len(result.text) <= LIMIT:
+    """Keep a huge answer out of the conversation, and say that it was cut."""
+    if len(result.text) <= 4_000:
         return None
-    return Message("tool", result.text[:LIMIT] + "\n… truncated",
+    return Message("tool", result.text[:4_000] + "\n... cut",
                    tool_call_id=result.tool_call_id)
 ```
 
-### run.post
+## run.post
 
-Once, at the very end — after a clean finish, after a `Stop`, and after a
-crash. It is teardown: the return changes nothing, though a wrong *type* is
-still a `ContractError`.
+Once, at the very end. It runs after a clean finish, after a `Stop`, and
+after a crash. Nothing you return changes anything.
 
 ```python
 from core import Message, hook
@@ -174,9 +190,15 @@ from core import Message, hook
 
 @hook("run.post")
 async def done(last: Message, run) -> None:
-    """One line when the errand ends, however it ended."""
-    print(f"{run.id} ended at step {run.step}: {last.text[:60]}")
+    """One line when the job ends, however it ended."""
+    print(f"ended at step {run.step}: {last.text[:60]}")
 ```
 
-[Stopping and denying](/hooks/stopping) has the rest of what `run.post`
-guarantees.
+<CardGroup cols={2}>
+  <Card title="Stop a run, skip a tool" icon="circle-slash" href="/hooks/stopping">
+    The two signals, and what the loop catches.
+  </Card>
+  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+    Steps, Budget, Permission and Log.
+  </Card>
+</CardGroup>

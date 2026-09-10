@@ -1,55 +1,78 @@
 ---
 title: Hooks
-description: The control plane — an async function, tagged with the moments it listens for, that can change the run or end it.
+description: Rules your agent checks before and after each step. A hook can change the run, or end it.
 ---
 
-A hook is an async function tagged with the stages it listens for. It fires
-inline, in the middle of the run, and what it returns replaces the payload it
-was handed.
+A hook is a rule your agent checks while it works. You write an async
+function, tag it with the moments it should listen for, and attach it.
+What it returns replaces what it was handed.
 
-```python
-from core import Agent, FakeModel, ToolCall, hook
+```mermaid
+flowchart LR
+  A["model.pre"] --> Model
+  Model --> B["model.post"]
+  B --> C["tool.pre"]
+  C --> Tool
+  Tool --> D["tool.post"]
+```
+
+Those moments are called stages, and there are [eight of
+them](/hooks/stages).
+
+## Try it
+
+This rule answers for `rm` instead of letting it run.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, hook
 
 
 @hook("tool.pre")
 async def no_rm(call: ToolCall) -> str | None:
     """Answer for rm instead of letting it run."""
     if call.name == "rm":
-        return "denied"                 # the tool is skipped; this is its result
+        return "denied: ask a person first"
     return None
 
 
-agent = Agent(FakeModel(["done"]))
-agent.hooks.attach(no_rm)               # every run of this agent
+asked = Message("assistant", "", [ToolCall("c1", "rm", {"path": "/"})])
+agent = Agent(FakeModel([asked, "ok, I will not"]))
+agent.hooks.attach(no_rm)
+run = asyncio.run(agent.run("delete everything"))
+print(next(m.text for m in run.messages if m.role == "tool"))
+print(run.messages[-1].text)
 ```
 
-`agent.hooks` is the stack of cards every run of that
-[agent](/reference/agent) reads. `run.hooks` is the lane nobody else can see:
-`run.hooks.attach(no_rm)` files a card for one conversation only.
+```text output
+denied: ask a person first
+ok, I will not
+```
 
-## The return is the contract
+- `@hook("tool.pre")` only tags the function. `attach` is what makes the
+  agent use it.
+- A string returned from `tool.pre` skips the tool, and it is the answer the
+  model reads next.
+- That agent has no `rm` tool at all, and it did not matter. The rule
+  answered before the toolbox was ever looked at.
 
-Return `None` and the payload is left alone. Return the stage's own type and
-that value is what the next hook hears, and what the loop uses. Return anything
-else and it is a `ContractError` naming your function, the stage, and what to
-return instead:
+## What a hook can return
+
+- **Nothing.** Return `None` and what you were handed is left alone.
+- **A new value of the same kind.** Hand back a `Message` where you were
+  given a `Message`, and yours is what the run uses from here on.
+- **Anything else** raises `ContractError`, naming your function, the stage,
+  and what to return instead.
 
 ```text
 stringly at model.post returned str; return Message, or None to leave it alone
 ```
 
-In ring order the stages are [`run.pre`](/hooks/stages),
-[`model.pre`](/hooks/stages), [`model.delta`](/hooks/stages),
-[`model.post`](/hooks/stages), [`tool.pre`](/hooks/stages),
-[`tool.delta`](/hooks/stages), [`tool.post`](/hooks/stages) and
-[`run.post`](/hooks/stages). Each hands over its own payload — a `Message`, the
-whole notebook, one streamed `Part`, a `ToolCall` — and [the eight
-stages](/hooks/stages) is the table of which is which.
-
-## Asking for the run
+## Ask for the run
 
 A hook may take one argument more than its stage hands over, and that one is
-the run:
+the run.
 
 ```python
 from core import Message, hook
@@ -61,57 +84,29 @@ async def trim(messages, run) -> list[Message]:
     return messages[-20:] if run.step > 3 else messages
 ```
 
-The arity is sniffed once, **at attach** — not at the bell. A function that
-fits no shape of its stage is refused there and then:
+That shape is read once, when you attach the hook. A function that does not
+fit its stage is refused right there. So is one that is not async.
 
-```text
-half does not fit tool.post, which hands over ToolCall, Message — take those, and run after them if you want it
-```
+## In what order they run
 
-Hooks must be async. A sync one is refused at attach with the line to write
-instead: `must be async — write async def; sync work is one asyncio.to_thread
-line inside it`.
+- First attached, first to run. `attach` hands back the hooks, so attaches
+  chain, like `agent.hooks.attach(one).attach(two)`.
+- `agent.hooks` is checked by every job. `run.hooks` belongs to one
+  conversation only, and the agent's rules run first.
+- At `tool.pre`, the first hook that answers ends it. The hooks behind it
+  never hear about that call.
 
-## Tagging, filing, unfiling
+<Note>
+  Your agent waits for every hook, so a slow one slows the whole job down.
+  To watch without changing anything, read [events](/events/overview)
+  instead.
+</Note>
 
-`@hook` only tags: it writes the stage names onto the function and hands the
-function straight back, so it is still an ordinary function you can call and
-test. `attach` is what files it.
-
-<Tip>
-  A stage named at attach beats the tag, so an untagged function works too:
-  `agent.hooks.attach(watch, "run.post")`. `attach` hands back the registry, so
-  attaches chain: `agent.hooks.attach(one).attach(two)`.
-</Tip>
-
-`agent.hooks.detach(fn)` unfiles it from every stage it listened to, matched by
-identity — the same object that was attached.
-
-## The order the cards ring in
-
-Attach order is call order. The agent's cards ring before the run's, because a
-run's registry chains onto its agent's when the run is born. Within one
-registry, first attached is first to hear the bell.
-
-Two consequences worth knowing:
-
-- A card attached (or detached) **during** a bell starts listening at the next
-  one. The ring works off a snapshot, so the set of cards cannot change under
-  it mid-stage.
-- At [`tool.pre`](/hooks/stages), the first hook that answers with a result
-  ends the ring — the cards behind it, including every one of the run's own,
-  never hear that bell.
-
-## What a hook cannot do
-
-A hook can change the run or end it. It cannot *watch* cheaply: it is on the
-critical path, it is awaited, and a slow one slows the turn. For watching,
-listen on [the bus](/events/overview) instead — a listener is sync, it changes
-nothing, and one that raises is logged and swallowed rather than breaking the
-run.
-
-To end a run from a hook, `raise Stop`: see [stopping and
-denying](/hooks/stopping). The four cards that ship with stellar —
-`Steps`, `Budget`, `Permission`, `Log` — are on [the four shipped
-cards](/hooks/cards), and they are worth reading as examples even if you never
-attach one.
+<CardGroup cols={2}>
+  <Card title="The eight stages" icon="workflow" href="/hooks/stages">
+    Every moment a hook can listen for, with an example each.
+  </Card>
+  <Card title="The four rules that come in the box" icon="sliders-horizontal" href="/hooks/cards">
+    Steps, Budget, Permission and Log.
+  </Card>
+</CardGroup>
