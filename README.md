@@ -120,21 +120,25 @@ builds an `Agent` on `core` and changes nothing in it. Five tools (`bash`,
 first and a check at the end. The model is gpt-5.6-luna over the Responses
 API at reasoning effort high.
 
-| harness | model | completion | process | combined |
-| --- | --- | ---: | ---: | ---: |
-| **stellar** | gpt-5.6-luna | 85.5 | 97.4 | **83.3** |
-| nanobot | gpt-5.4 | | | 81.3 |
-| codex | gpt-5.4 | | | 80.4 |
-| nanobot | average over models | | | 76.2 |
-| hermes | average | | | 71.2 |
-| moltis | average | | | 68.8 |
-| nullclaw | average | | | 64.4 |
-| zeroclaw | average | | | 61.4 |
-| openclaw | average | | | 52.4 |
+| harness | model | combined | completion | process | input | output |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| **stellar** | gpt-5.6-luna | **83.3** | 85.5 | 97.4 | 2.84M | 1.35M |
+| nanobot | gpt-5.4 | 81.3 | 85.1 | 94.7 | 3.55M | 306.2K |
+| nanobot | glm-5.1 | 80.4 | 84.3 | 96.1 | 2.09M | 716.3K |
+| codex | gpt-5.4 | 80.4 | 86.5 | 92.6 | 8.84M | 282.1K |
+| nanobot | qwen3.6-plus | 79.2 | 83.5 | 95.2 | 7.70M | 788.8K |
+| hermes | glm-5.1 | 78.4 | 85.3 | 91.2 | 4.03M | 647.0K |
+| hermes | qwen3.6-plus | 77.7 | 84.0 | 91.9 | 18.77M | 740.7K |
+| nanobot | kimi-k2.5 | 76.3 | 81.8 | 93.4 | 5.13M | 503.1K |
+| moltis | glm-5.1 | 75.1 | 84.6 | 89.1 | 3.97M | 666.5K |
+| nanobot | deepseek-v4-flash | 74.8 | 81.8 | 92.2 | 9.26M | 1.11M |
+| nanobot | claude-opus-4.6 | 74.6 | 78.5 | 94.2 | 6.56M | 462.9K |
 
 The stellar row is one full pass on 2026-09-11: all 106 tasks, twelve at a
 time, 17 minutes of wall clock, about $2.40 of tokens at list price. The other
-rows are the public leaderboard at harness-bench.ai as read on 2026-09-10.
+rows are the top ten of the public leaderboard at harness-bench.ai as read on
+2026-09-11. Input is uncached input tokens over the 106 tasks; output counts
+every generated token, so ours includes reasoning.
 The wiring, every pass's per-task report and its logs are in [`bench/`](bench/).
 
 Read it with care. The leaderboard rows ran other models and were graded by
