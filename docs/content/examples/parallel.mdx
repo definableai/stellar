@@ -1,0 +1,58 @@
+---
+title: Run tools together
+description: Two slow tools in one turn, finishing in the time of one.
+---
+
+You will run two slow tools at the same time. When a model asks for three
+lookups at once, this is the difference between one wait and three.
+
+```python run
+import asyncio
+import time
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+
+
+@tool(parallel=True)
+async def weather() -> str:
+    """Look up the weather. Takes a fifth of a second."""
+    await asyncio.sleep(0.2)
+    return "sunny"
+
+
+@tool(parallel=True)
+async def traffic() -> str:
+    """Look up the traffic. Takes a fifth of a second."""
+    await asyncio.sleep(0.2)
+    return "clear"
+
+
+ask = Message("assistant", "", [ToolCall("c1", "weather", {}),
+                                ToolCall("c2", "traffic", {})])
+agent = Agent(FakeModel([ask, "Sunny and clear."]), [weather, traffic])
+
+start = time.perf_counter()
+run = asyncio.run(agent.run("weather and traffic, please"))
+took = time.perf_counter() - start
+
+print("results:", [m.text for m in run.messages if m.role == "tool"])
+print("both finished in one wait" if took < 0.35 else "they ran one after the other")
+```
+
+```text output
+results: ['sunny', 'clear']
+both finished in one wait
+```
+
+## What happened
+
+- `@tool(parallel=True)` says a tool is allowed to run beside other parallel
+  tools in the same turn.
+- Both tools wait a fifth of a second, and the whole run took about that, not
+  twice that.
+- The results still land in the order the model asked for them, whichever one
+  finished first.
+
+## Change it
+
+Drop `parallel=True` from one of the two and the waits go back to back again.

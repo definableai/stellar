@@ -1,0 +1,37 @@
+---
+title: Your first agent
+description: One model, one question, one answer. No API key needed.
+---
+
+You will build an agent that answers one question. Start here, because every
+other example on this tab is this program with one more piece.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel
+
+# FakeModel reads its answers off a list. No key, no network.
+agent = Agent(FakeModel(["Hi. I am your first agent."]))
+
+run = asyncio.run(agent.run("Say hi"))
+
+print(run.messages[-1].text)
+print("messages:", len(run.messages))
+```
+
+```text output
+Hi. I am your first agent.
+messages: 2
+```
+
+## What happened
+
+- `FakeModel` plays the part of the model and says what you told it to say.
+- `agent.run(...)` gives the agent a job and hands back a `Run` when it is done.
+- `run.messages` is the whole conversation, so your question is first and the
+  answer is last.
+
+## Change it
+
+Add a second string to the list, then call `agent.run` twice to hear both.

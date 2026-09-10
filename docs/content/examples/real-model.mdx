@@ -1,0 +1,66 @@
+---
+title: Use a real model
+description: The first example again, with Claude or GPT instead of FakeModel.
+---
+
+This is the hello example with a real model behind it. Every other page on this
+tab runs on `FakeModel`, so here is the one line that changes.
+
+<Note>
+This is the only example that does not run in our tests. It needs an API key.
+</Note>
+
+<Tabs>
+  <Tab title="Anthropic">
+
+```python
+import asyncio
+
+from core import Agent
+from models.anthropic import Anthropic
+
+agent = Agent(Anthropic("claude-sonnet-5"))     # ANTHROPIC_API_KEY in the env
+
+run = asyncio.run(agent.run("Say hi in five words"))
+print(run.messages[-1].text)
+```
+
+  </Tab>
+  <Tab title="OpenAI">
+
+```python
+import asyncio
+
+from core import Agent
+from models.openai import OpenAI
+
+agent = Agent(OpenAI("gpt-5.6-sol"))            # OPENAI_API_KEY in the env
+
+run = asyncio.run(agent.run("Say hi in five words"))
+print(run.messages[-1].text)
+```
+
+  </Tab>
+</Tabs>
+
+To go back to a program that needs no key, change the model back.
+
+```python
+from core import FakeModel                       # instead of the provider
+
+agent = Agent(FakeModel(["Hi there, five short words."]))
+```
+
+## What is different
+
+- The model writes its own answer now, so the words you get back will not match
+  this page.
+- Each provider reads one environment variable, and `api_key=` on the
+  constructor beats it.
+- Nothing else moves, because the loop, the tools and the hooks never know
+  which model they have.
+
+## Change it
+
+Put both models behind `Fallback` and your program still answers when one
+provider is down.

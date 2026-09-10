@@ -1,0 +1,52 @@
+---
+title: Watch words arrive
+description: Each piece of a reply as it lands, and the one message they make.
+---
+
+You will print each piece of a reply as it arrives. This is what feeds the
+typing effect in a chat window.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, Part
+
+# One reply, written in three pieces, the way a real model sends it.
+pieces = Message("assistant", [Part("text", "Once "),
+                               Part("text", "upon "),
+                               Part("text", "a time.")])
+agent = Agent(FakeModel([pieces]))
+
+
+def show(event) -> None:
+    """One piece of the reply, the moment it lands."""
+    print("piece:", repr(event.data.data))
+
+
+agent.events.listen(show, "model.delta")
+
+run = asyncio.run(agent.run("tell me a story"))
+
+print("joined:", run.messages[-1].text)
+```
+
+```text output
+piece: 'Once '
+piece: 'upon '
+piece: 'a time.'
+joined: Once upon a time.
+```
+
+## What happened
+
+- A real model sends its answer in pieces, and `FakeModel` sends the `Part`
+  list you wrote the same way.
+- Every piece raises a `model.delta` event before it is joined, so your
+  listener sees it first.
+- Stellar joins the text pieces into one message for you, and the quotes show
+  where the spaces sat.
+
+## Change it
+
+Print `event.data.data` without `repr` and with `end=""` to watch the sentence
+type itself out.

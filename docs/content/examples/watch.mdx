@@ -1,0 +1,54 @@
+---
+title: See every step
+description: A listener that prints the name of everything the agent does.
+---
+
+You will print the name of every step the agent takes, in order. This is the
+fastest way to see what your agent is really doing.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+
+
+@tool
+def shout(word: str) -> str:
+    """Shout a word."""
+    return word.upper()
+
+
+ask = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hi"})])
+agent = Agent(FakeModel([ask, "done"]), [shout])
+
+# A listener hears everything the agent writes down, as it happens.
+agent.events.listen(lambda event: print(event.name))
+
+asyncio.run(agent.run("shout hi"))
+```
+
+```text output
+run.pre
+model.pre
+model.delta
+model.post
+tool.pre
+tool.post
+model.pre
+model.delta
+model.post
+run.post
+```
+
+## What happened
+
+- `agent.events.listen(fn)` hands every event to your function the moment it
+  happens.
+- `run.pre` and `run.post` happen once, and everything between them happens
+  again for each turn.
+- There are eight names in all, and `tool.delta` is missing because `shout`
+  answers in one go.
+
+## Change it
+
+Pass `"tool"` as a second argument to `listen` and you hear the tool lines only.

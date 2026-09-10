@@ -1,0 +1,50 @@
+---
+title: Give the agent a tool
+description: A Python function the model can call, and the result it reads back.
+---
+
+You will give the agent one tool and watch the model call it. A tool is how an
+agent does something instead of only talking about it.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+
+
+@tool
+def shout(word: str) -> str:
+    """Shout a word."""
+    return word.upper()
+
+
+# The first reply asks for the tool. The second is the answer.
+ask = Message("assistant", "", [ToolCall("c1", "shout", {"word": "hello"})])
+agent = Agent(FakeModel([ask, "I shouted it. It came out HELLO."]), [shout])
+
+run = asyncio.run(agent.run("Shout hello"))
+
+for m in run.messages:
+    print(m.role + ":", m.text or f"(asks for {m.tool_calls[0].name})")
+```
+
+```text output
+user: Shout hello
+assistant: (asks for shout)
+tool: HELLO
+assistant: I shouted it. It came out HELLO.
+```
+
+## What happened
+
+- `@tool` turns a plain function into a tool, and its name, docstring and
+  parameters become what the model sees.
+- The first reply carries no text, only a `ToolCall`, which is the model asking
+  for `shout`.
+- Stellar runs the function, writes `HELLO` into the conversation as a `tool`
+  line, then asks the model again.
+
+## Change it
+
+Return a number or a dict from `shout`, and stellar turns it into JSON for the
+model.

@@ -1,0 +1,51 @@
+---
+title: Say no to a tool
+description: A rule that blocks one tool, and the words the model gets instead.
+---
+
+You will block a tool by name and see what the model is told. Use this when an
+agent has a tool you do not want it reaching for on its own.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+from hooks.permission import Permission
+
+
+@tool
+def delete(path: str) -> str:
+    """Delete a file."""
+    print("the tool ran!")          # you will not see this line
+    return f"deleted {path}"
+
+
+ask = Message("assistant", "", [ToolCall("c1", "delete", {"path": "notes.txt"})])
+agent = Agent(FakeModel([ask, "I was not allowed to delete it."]), [delete])
+agent.hooks.attach(Permission(deny={"delete"}))
+
+run = asyncio.run(agent.run("delete notes.txt"))
+
+told = [m for m in run.messages if m.role == "tool"]
+print("the model was told:", told[0].text)
+print("the answer:", run.messages[-1].text)
+```
+
+```text output
+the model was told: denied: delete
+the answer: I was not allowed to delete it.
+```
+
+## What happened
+
+- `Permission` is a hook on `tool.pre`, so it answers before the tool is ever
+  reached.
+- The blocked tool never runs, which is why its own print line is missing from
+  the output.
+- Whatever the hook returns becomes the tool's result, so the model reads
+  `denied: delete` and answers around it.
+
+## Change it
+
+Pass `allow=` instead of `deny=` and every tool that is not on the list is
+refused.

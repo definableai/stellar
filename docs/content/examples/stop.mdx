@@ -1,0 +1,55 @@
+---
+title: Stop after a few steps
+description: A rule that gives the agent three turns with the model, and no more.
+---
+
+You will cap how many times the agent may ask the model. This is your safety
+net against a model that keeps calling tools and never finishes.
+
+```python run
+import asyncio
+
+from core import Agent, Message, Model, ToolCall, tool
+from hooks.steps import Steps
+
+
+@tool
+def tick() -> str:
+    """Count one tick."""
+    return "tick"
+
+
+class Nagger(Model):
+    """Always asks for the tool. It never gives a final answer."""
+
+    async def invoke(self, run) -> Message:
+        return Message("assistant", "", [ToolCall("c1", "tick", {})])
+
+
+agent = Agent(Nagger(), [tick])
+agent.hooks.attach(Steps(3))
+
+run = asyncio.run(agent.run("go on forever"))
+
+print("replies:", sum(m.role == "assistant" for m in run.messages))
+print("run.step:", run.step)
+```
+
+```text output
+replies: 3
+run.step: 4
+```
+
+## What happened
+
+- `Nagger` asks for the tool every time, so nothing in the conversation would
+  ever end this run on its own.
+- `Steps(3)` is a hook that runs before each turn and raises `Stop` once the
+  count goes past three.
+- `run.step` reads 4 because the count goes up before the check, so only three
+  replies landed.
+
+## Change it
+
+Swap `Steps` for `Budget` from `hooks/budget.py` to cap what a run spends
+instead of how long it goes.

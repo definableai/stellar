@@ -1,0 +1,49 @@
+---
+title: Save and continue later
+description: Pickle a run, load it back, and keep the same conversation going.
+---
+
+You will save a run to bytes and pick the conversation back up. Use this for a
+chat that has to survive a restart.
+
+```python run
+import asyncio
+import pickle
+
+from core import Agent, FakeModel
+
+agent = Agent(FakeModel(["Blue.", "You asked about my favourite colour."]))
+
+first = asyncio.run(agent.run("What is your favourite colour?", run_id="a"))
+print("first answer:", first.messages[-1].text)
+
+saved = pickle.dumps(first)             # the id, the messages, the step count
+later = pickle.loads(saved)
+print("saved step:", later.step)
+
+second = asyncio.run(agent.run("What did I just ask about?",
+                               messages=later.messages, run_id=later.id))
+print("second answer:", second.messages[-1].text)
+print("same run id:", second.id == first.id)
+```
+
+```text output
+first answer: Blue.
+saved step: 1
+second answer: You asked about my favourite colour.
+same run id: True
+```
+
+## What happened
+
+- Pickling a `Run` keeps its id, messages, step count and `extra`, and leaves
+  the agent behind.
+- `messages=` opens the new run on the old conversation, and `run_id=` keeps
+  the same id.
+- The agent is the one you already had, so its script carries on where the
+  first run left off.
+
+## Change it
+
+Write `saved` to disk with `Path("run.pkl").write_bytes(saved)` and load it in
+a program you start tomorrow.
