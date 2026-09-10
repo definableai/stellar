@@ -280,3 +280,24 @@ agent.model = Fallback(Anthropic("claude-sonnet-5"), OpenAI("gpt-5"))  # [!code 
 A <Tooltip tip="one piece of a message: type names it, data holds it">Part</Tooltip> is
 the smallest thing on the wire, and <Icon icon="radio" size={16} color="#D9A62E" /> is
 the radio every one of them goes out on.
+
+## Diagram
+
+A `mermaid` fence is a picture, not a code block. Two kinds are drawn: a
+`flowchart`, which [the introduction](/introduction) has, and a
+`sequenceDiagram`, which is this.
+
+```mermaid
+sequenceDiagram
+  actor You
+  participant Agent
+  participant Model
+  participant Tool
+  You->>Agent: a job
+  Agent->>Model: the conversation
+  Note over Agent,Model: the hooks run here
+  Model-->>Agent: use this tool
+  Agent->>Tool: runs it
+  Tool-->>Agent: the result
+  Agent-->>You: the answer
+```

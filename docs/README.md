@@ -10,6 +10,8 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # tsc + vite, into dist/ (postbuild copies index.html to 404.html)
 npm run check    # python3 check.py --run — nav, links, icons, fences; every `run` example runs
+npm run check    # python3 check.py — nav, links, frontmatter, python fences
+npm run check:diagrams   # every ```mermaid fence parses
 ```
 
 ## Adding a page
@@ -38,7 +40,8 @@ inside them. Links are absolute site paths (`[the loop](/concepts/loop)`);
 `check.py` fails a relative one and one that points at no page.
 
 Every Mintlify component works by name, with no import line — `Note`, `Card`,
-`Tabs`, `Steps`, `ParamField` and the rest. `/kitchen-sink` shows them all.
+`Tabs`, `Steps`, `ParamField` and the rest. A `mermaid` fence is drawn as a
+diagram, themed for both modes. `/kitchen-sink` shows them all.
 
 The look — tokens, measurements, the component table — is specified in
 `tasks/docs-site/00-plan.md`.

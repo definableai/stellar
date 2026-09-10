@@ -7,6 +7,7 @@ import rehypeSlug from "rehype-slug";
 import rehypePrettyCode from "rehype-pretty-code";
 import { transformerNotationDiff } from "@shikijs/transformers";
 import { codeMeta } from "./src/mdx/code-meta.ts";
+import { mermaid } from "./src/mdx/mermaid.ts";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
@@ -14,7 +15,7 @@ import { defineConfig, type PluginOption } from "vite";
 
 const pages = mdx({
   providerImportSource: "@mdx-js/react",
-  remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
+  remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter, mermaid],
   rehypePlugins: [
     rehypeSlug,
     // The anchor carries no text of its own: prose.css draws the "#",

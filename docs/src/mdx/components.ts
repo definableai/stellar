@@ -6,6 +6,7 @@ import { Card, CardGroup, Columns } from "../components/cards";
 import { CodeBlock, CodeGroup } from "../components/code";
 import { Accordion, AccordionGroup, Expandable, Step, Steps, Tab, Tabs } from "../components/disclosure";
 import { ParamField, ResponseField } from "../components/fields";
+import { Mermaid } from "../components/mermaid";
 import { Frame, Icon, Tooltip } from "../components/misc";
 
 /** A link: the router for a site path, a new tab for the web, plain for an anchor. */
@@ -27,5 +28,5 @@ export const components = {
   Accordion, AccordionGroup, Tabs, Tab, Steps, Step, Expandable,
   ParamField, ResponseField,
   Frame, Tooltip, Icon,
-  CodeGroup,
+  CodeGroup, Mermaid,
 };
