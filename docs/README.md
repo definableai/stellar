@@ -9,7 +9,7 @@ server.
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # tsc + vite, into dist/ (postbuild copies index.html to 404.html)
-npm run check    # python3 check.py — nav, links, frontmatter, python fences
+npm run check    # python3 check.py --run — nav, links, icons, fences; every `run` example runs
 ```
 
 ## Adding a page
@@ -27,6 +27,11 @@ description: One barrier, ...  # the line under the h1
 sidebarTitle: Parallel         # optional, a shorter sidebar label
 ---
 ```
+
+A code example the reader can run is a fence tagged `run`, followed by a
+`text output` fence with exactly what it prints. `check.py --run` executes
+it from the repo root with no API key and compares. The block gets a
+"Tested" chip on the page. An example that needs a key is not tagged `run`.
 
 No `# H1` in the body — the title is the h1. Use `##` for sections and `###`
 inside them. Links are absolute site paths (`[the loop](/concepts/loop)`);
