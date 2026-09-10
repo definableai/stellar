@@ -1,0 +1,112 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "stellar",
+  "colors": {
+    "primary": "#D9A62E",
+    "light": "#F5C451",
+    "dark": "#B8891F"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "background": {
+    "color": {
+      "dark": "#0A0D0D",
+      "light": "#FFFFFF"
+    }
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo.svg",
+    "dark": "/logo.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get started",
+      "href": "/quickstart"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["introduction", "quickstart", "layout"]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/loop",
+              "concepts/nouns",
+              "concepts/agent-and-run",
+              "concepts/contracts",
+              "concepts/control"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "models/overview",
+              "models/provider",
+              "models/folder",
+              "models/profiles",
+              "models/anthropic",
+              "models/openai",
+              "models/fallback",
+              "models/testing"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": ["tools/functions", "tools/classes", "tools/parallel", "tools/results"]
+          },
+          {
+            "group": "Hooks",
+            "pages": ["hooks/overview", "hooks/stages", "hooks/stopping", "hooks/cards"]
+          },
+          {
+            "group": "Events",
+            "pages": ["events/overview", "events/streaming", "events/transport"]
+          },
+          {
+            "group": "Patterns",
+            "pages": ["patterns/sub-agents", "patterns/checkpoint", "patterns/concurrency"]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "reference/agent",
+              "reference/types",
+              "reference/model",
+              "reference/tool",
+              "reference/hooks",
+              "reference/events",
+              "reference/signals",
+              "reference/conformance"
+            ]
+          },
+          {
+            "group": "Beyond core",
+            "pages": ["reference/cards", "reference/drivers"]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {}
+}

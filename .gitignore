@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 skills/
 output/
+docs/node_modules/
+docs/dist/
