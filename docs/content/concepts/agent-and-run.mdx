@@ -1,0 +1,93 @@
+---
+title: Agent and Run
+description: The bag you build once and the errand you start each time — five fields, six fields, and one method between them.
+---
+
+An `Agent` is the wiring. A `Run` is one conversation. You build the first once
+and start as many of the second as you like.
+
+## The bag
+
+| field | what it holds |
+| --- | --- |
+| `model` | the brain; every run of this agent asks this one |
+| `tools` | hand it an iterable or the mapping — after construction it is always the mapping, keyed by name |
+| `hooks` | the control plane: rule cards every run of this agent inherits |
+| `events` | the data plane: one bus, with the log on it |
+| `extra` | the spare pocket. Namespaced keys, like `extra["ui.ask"]` |
+
+Only `model` is required — `Agent(model)` is an agent with an empty toolbox,
+no cards and a quiet bus.
+
+Hand the constructor an iterable and it keys each tool by its own `name`:
+`Agent(model, [shout])`. Two tools answering to one name is a `ContractError`
+right there in the constructor. Hand it the mapping yourself and the key must
+still be the tool's own name — a tool filed under anything else is caught at
+the top of the next step, like every other bad swap.
+
+Building the agent checks the wiring, so the mistakes that would show up on the
+first turn show up on the line that built it: a model whose `invoke` is not
+async, a tool with no name, a tool whose `parameters` is not a dict, a tool
+that defines no `execute`.
+
+And there is one method, `run()`. There is never a second one: whatever you
+were going to add as a method on the agent is a [hook](/hooks/overview), a
+[tool](/tools/functions), or a [Model](/reference/model) of your own.
+
+## The errand
+
+| field | what it holds |
+| --- | --- |
+| `agent` | the backpack behind this run — dropped from the checkpoint |
+| `id` | hex, minted per run, or the one you handed to `run_id=` |
+| `messages` | the notebook, in order; the loop appends to it |
+| `step` | model turns taken — the loop counts up before each `invoke` |
+| `hooks` | this run's own lane, chained onto the agent's cards |
+| `extra` | the spare pocket for this run alone |
+
+`run.emit(name, data, source)` says one thing on the agent's bus, stamped with
+this run's id. It never blocks and never raises, and the `Event` it hands back
+is already logged.
+
+The lane is the part worth knowing. A `Run` binds its `hooks` to the agent's
+when it is born, as a parent: one bell rings the agent's cards first, then this
+run's. So `run.hooks.attach(card)` is a rule nobody else in the process can
+see, and it needs no bookkeeping to clean up — the run ends and the lane goes
+with it.
+
+What survives a pickle is `id`, `messages`, `step` and `extra`, and nothing
+else: the wiring is code you build again. See
+[checkpoint and resume](/patterns/checkpoint).
+
+## One agent, many runs
+
+```python
+runs = await asyncio.gather(*(agent.run(prompt) for prompt in prompts))
+```
+
+A hundred users is that line. Nothing of one conversation leaks into another:
+each `Run` has its own notebook, its own step count, its own id, its own pocket
+and its own hooks lane. What they share is the agent — the model, the toolbox,
+the cards and the bus — which is the point, because one listener on
+`agent.events` hears all hundred, and every event says which run it came from.
+
+## Swap by assignment
+
+```python
+agent.model = OpenAI("gpt-5.6-luna")     # allowed mid-run
+agent.tools = {"shout": shout}
+```
+
+There is no `configure()` and no registry to update: composition is assignment.
+`check()` reads the whole backpack again at the top of every step, so a bad
+swap is caught before it runs rather than halfway through a turn.
+
+`agent.hooks.attach(card)` mid-flight reaches every run already in the air, at
+its next stage, and `detach` takes it away the same way. A card attached during
+a bell starts listening at the next one.
+
+<Warning>
+  Swap cards with `attach` and `detach`, not by reassigning `agent.hooks`. A
+  run binds its parent registry when it is born, so a run already in the air
+  goes on ringing the registry you replaced.
+</Warning>

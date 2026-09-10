@@ -1,0 +1,173 @@
+---
+title: Quickstart
+description: One agent, one tool, one run — from a clone to an answer.
+---
+
+<Steps>
+  <Step title="Get the code">
+
+    stellar is a repository you clone and work inside, not a package on an
+    index. There is nothing to `pip install`.
+
+    ```bash
+    git clone <your copy of stellar> stellar
+    cd stellar
+    uv sync
+    ```
+
+    Python 3.13 or newer (`pyproject.toml` says `requires-python = ">=3.13"`),
+    and `httpx` is the only dependency in the file. `uv run python` is how the
+    examples get an interpreter — a bare `python` need not be on your PATH.
+
+  </Step>
+
+  <Step title="Bring a key">
+
+    Each provider reads one environment variable. `api_key=` on the
+    constructor beats the environment; no key and no `api_key=` raises
+    `ValueError` naming the variable it wanted.
+
+    <Tabs>
+      <Tab title="Anthropic">
+
+        ```bash
+        export ANTHROPIC_API_KEY=sk-ant-…
+        ```
+
+      </Tab>
+      <Tab title="OpenAI">
+
+        ```bash
+        export OPENAI_API_KEY=sk-…
+        ```
+
+      </Tab>
+    </Tabs>
+
+    No key at all? Skip to the tip at the bottom of this page — `FakeModel`
+    runs the same loop with a script you wrote.
+
+  </Step>
+
+  <Step title="Write the agent">
+
+    Build the agent once. Call `run()` per conversation.
+
+    ```python title="hello.py"
+    import asyncio
+
+    from core import Agent, tool
+    from hooks.steps import Steps
+    from models.anthropic import Anthropic
+
+
+    @tool
+    def shout(word: str) -> str:
+        """Shout a word."""
+        return word.upper()
+
+
+    agent = Agent(Anthropic("claude-sonnet-5"), [shout])
+    agent.hooks.attach(Steps(8))                       # a runaway cap, on every run
+
+
+    async def main() -> None:
+        run = await agent.run("shout hello")
+        print(run.messages[-1].text)                   # what the model said last
+
+        again = await agent.run("again, louder",       # same conversation, carried on
+                                messages=run.messages, run_id=run.id)
+        print(again.messages[-1].text)
+
+
+    asyncio.run(main())
+    ```
+
+    `Anthropic("claude-sonnet-5")` names the model — one id per instance, no
+    default. `@tool` turns the function into a tool: the name is the
+    function's, the description is its docstring, and the schema is the
+    signature. `Steps(8)` is a rule card that raises `Stop` once the run has
+    had eight model calls.
+
+  </Step>
+
+  <Step title="Run it">
+
+    ```bash
+    uv run python hello.py
+    ```
+
+    Two lines print: what the model said after `shout` ran, and what it said to
+    the follow-up. The second `run()` starts from the first one's notebook and
+    reuses its id, so it is the same conversation carried on.
+
+  </Step>
+</Steps>
+
+## What run() takes
+
+| you pass | what happens |
+| --- | --- |
+| a `str` | wrapped into a user `Message` and appended |
+| a `Message` | appended as it is — images and all |
+| `messages=` | the notebook to open on; the list you hand over is copied, never touched |
+| `run_id=` | names the run, so a stream can find it and a resume keeps its identity |
+| nothing at all | `ContractError`: `run needs a prompt or messages` |
+
+A prompt and `messages=` together is the ordinary case: the notebook, then one
+more line on the end of it.
+
+## What comes back
+
+What comes back is the `Run` itself — the same object the loop filled in.
+
+- `run.messages` — the whole conversation, in order, every line a `Message`.
+- `run.messages[-1].text` — the answer, every text part joined.
+- `run.step` — model turns taken. The loop counts up before each call, so a
+  card that stops the run at the top of a step counts that one too.
+- `run.id` — the run's id, minted here unless you named it.
+- `run.extra` — this run's spare pocket; the shipped `Budget` card keeps its
+  total in there.
+
+<Tip>
+
+  **No key?** `FakeModel` takes a script — one entry per turn — and hands the
+  entries back in order. It is a real provider underneath, so the reply is
+  taken apart into parts and folded exactly the way a live adapter's is.
+
+  ```python
+  import asyncio
+
+  from core import Agent, FakeModel, Message, ToolCall, tool
+
+
+  @tool
+  def shout(word: str) -> str:
+      """Shout a word."""
+      return word.upper()
+
+
+  agent = Agent(FakeModel([                                  # one entry per turn
+      Message("assistant", tool_calls=[ToolCall("1", "shout", {"word": "hello"})]),
+      "HELLO — shouted.",
+  ]), [shout])
+
+  run = asyncio.run(agent.run("shout hello"))
+  print(run.messages[-1].text)                               # HELLO — shouted.
+  print(run.step)                                            # 2
+  ```
+
+  Asking for one more turn than you wrote raises `ContractError` naming the
+  reply it ran out on.
+
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="The loop" icon="repeat" href="/concepts/loop">
+    The eight moments between your prompt and your answer, one at a time.
+  </Card>
+  <Card title="Models" icon="brain" href="/models/overview">
+    Three ways in: wrap an SDK, write an object with `invoke`, or build on
+    `ProviderModel`.
+  </Card>
+</CardGroup>

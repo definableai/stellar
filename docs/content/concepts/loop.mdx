@@ -1,0 +1,113 @@
+---
+title: The loop
+description: The eight moments between your prompt and your answer — what core does at each, and what a rule card can change there.
+---
+
+Ask the model, run what it asked for, ask again. That is `core/loop.py`, and
+these eight names are every moment it has.
+
+```text
+run.pre
+  ┌ model.pre → the model answers, a model.delta per streamed Part → model.post
+  │   the answer goes in the notebook; for each tool it asked for:
+  │     tool.pre → the tool runs, a tool.delta per yielded Part → tool.post
+  │     → the result goes in the notebook
+  └ again, as long as the last answer asked for tools
+run.post
+```
+
+Each name is a bell and an event at once. The rule cards ([hooks](/hooks/overview))
+ring first and inline — the loop awaits them — and the event goes out
+afterwards, carrying whatever the cards agreed on. So a listener never sees a
+value a hook was about to replace, and that is the difference between the two
+planes: a hook can change the run or stop it, a [listener](/events/overview)
+can only watch.
+
+## run.pre
+
+Rings once, before the first turn, on the last line in the notebook — the
+prompt you just handed over. The payload is that `Message`, and what a hook
+returns takes its place in the notebook. Then the event goes out with the
+message the cards settled on.
+
+## model.pre
+
+The top of every step. The wiring is read again first — a part swapped since
+the last turn is checked here, and a bad swap raises `ContractError` before
+anything is sent — then `run.step` goes up by one, then the bell.
+
+The payload is the whole notebook, a `list[Message]`. A returned list rebinds
+`run.messages` permanently: a trim is a trim, not a view. The event carries a
+copy of the list, so the event log does not grow with the conversation.
+
+## model.delta
+
+`model.invoke(run)` runs. When the brain is a `ProviderModel` — every shipped
+adapter, and `FakeModel` — the reply arrives as a stream of `Part`s, and each
+one rings `model.delta` before it is folded into the answer. A returned `Part`
+is the one that gets folded.
+
+A Model that writes its own `invoke` rings nothing here: this bell belongs to
+the fold, not to the loop.
+
+## model.post
+
+The reply comes back as one assistant `Message` — anything else is a
+`ContractError` naming the class that did it. The payload is that message, and
+a return replaces the reply that gets written down. The hook sees the answer
+before the notebook does.
+
+## tool.pre
+
+If the answer asked for no tools there is no bell at all: the loop breaks out
+and goes to teardown. Otherwise the calls are cut into batches — consecutive calls on `parallel=True`
+tools ride together, every other call rides alone — and inside a batch every
+`tool.pre` rings first, in call order, before any tool runs.
+
+The payload is one `ToolCall`. Return a `ToolCall` and that one runs instead;
+return a `str` or a `Message` and the tool is skipped and your answer *is* its
+result — the cards behind you never hear that bell. The event carries the call
+either way.
+
+## tool.delta
+
+Then the batch runs, all at once. A tool written as an async generator streams:
+every `Part` it yields rings `tool.delta` before it is folded into the tool
+message, and a returned Part is the one folded. The event names the tool in
+`source` rather than `loop`, so deltas from siblings running side by side stay
+tellable apart.
+
+## tool.post
+
+Whatever the tool handed back is shaped into one tool message first: a `str` is
+the content, a `Part` or a list of them is the content, a `Message` is re-roled
+to `tool` and stamped with the call's id, and anything else becomes JSON. The
+payload is the call and that message, and a return replaces the result. Then
+the event, then it lands in the notebook — in call order, whichever tool
+finished first.
+
+## run.post
+
+Teardown, and it is a `finally`: it fires after a clean finish, after a `Stop`
+and after a crash. The payload is the last line in the notebook. A return
+replaces nothing. The event always goes out, and it is what ends a stream that
+is watching one run.
+
+## When it ends
+
+<Info>
+
+  Three ways out, and `run.post` fires on all three.
+
+  - **The model asked for no tools.** The ordinary end.
+  - **Someone raised `Stop`** — a hook or a tool. It is caught: no traceback
+    reaches you, and the `Run` comes back holding everything written down so
+    far.
+  - **Anything else raised.** A `ContractError`, a model that broke, a hook
+    that broke — it propagates to your `await`, with `run.post` already run.
+
+</Info>
+
+The two things you can do about any of it are on
+[Two control signals](/concepts/control); what each stage hands over, in one
+table, is on [Stages](/hooks/stages).

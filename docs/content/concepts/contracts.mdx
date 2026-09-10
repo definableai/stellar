@@ -1,0 +1,145 @@
+---
+title: The three contracts
+description: A Model, a Tool and a hook — what you implement, what core promises back, and why a sync one is refused up front.
+---
+
+There are three things you implement. Two are classes with one method each, one
+is a function. All three are async, and all three take the run.
+
+## Model
+
+**`async invoke(run) -> Message`**
+
+```python
+import asyncio
+
+from core import Message, Model
+
+
+class MyModel(Model):
+    async def invoke(self, run) -> Message:
+        said = await asyncio.to_thread(my_sdk.complete, run.messages)
+        return Message("assistant", said)
+```
+
+It reads `run.messages` and hands back one assistant `Message`. Return
+something else and the loop raises `ContractError` naming your class and what
+it gave. For an HTTP provider there is a shorter road:
+[`ProviderModel`](/models/provider) splits the job into `encode(run)` and an
+async `send(run, body)` and writes the fold for you.
+
+## Tool
+
+**`async execute(run, **args)`**
+
+```python
+from core import Tool
+
+
+class Shout(Tool):
+    name = "shout"
+    description = "Shout a word."
+    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
+
+    async def execute(self, run, word) -> str:
+        return word.upper()
+```
+
+The run comes first, then the arguments your schema promised, by name. Write
+`execute` as an async generator instead and the tool streams: every `Part` it
+yields rings `tool.delta` and folds into the tool message, the same protocol a
+streaming model obeys. For a plain function, [`@tool`](/tools/functions) builds
+all of this from the signature.
+
+## Hook
+
+**`async fn(payload[, run])`**
+
+```python
+from core import ToolCall, hook
+
+
+@hook("tool.pre")
+async def no_rm(call: ToolCall):
+    if call.name == "rm":
+        return "denied"
+```
+
+A hook takes the payload its stage hands over, and the run behind it if it
+leaves room for one. It stays an ordinary function — `@hook` only tags it, and
+`attach` is what files it.
+
+## The listener beside them
+
+**`fn(event)` — sync**
+
+```python
+def watch(event) -> None:
+    print(event.seq, event.name)
+
+
+agent.events.listen(watch, "tool")
+```
+
+A listener is sync, takes one `Event`, and whatever it returns is dropped. An
+`async def` here is refused, because `emit()` never awaits — an async consumer
+takes [`stream()`](/events/streaming) instead. That is the line between the
+planes: a hook can change the run or stop it, a listener can only watch.
+
+## No ancestry check
+
+`check()` asks one question of your object: does its *own* class define the
+method, and is it not the base class's? Any object whose own class defines an
+async `invoke(run)` passes and runs — nothing looks at what it inherits from,
+so wrapping an SDK class you do not control is legal. Subclassing `Model` buys
+you the docstrings, not permission.
+
+The same rule catches the other direction: a `Model` subclass that forgot to
+write `invoke` fails, because the only `invoke` it has is the base's.
+
+## No sync twins
+
+Nothing here is checked at the bell. A sync `invoke` or `execute` is refused
+when you build the agent and again at the top of every step; a sync hook is
+refused at `attach`, an async listener at `listen`. The fix is always the same
+one line — `await asyncio.to_thread(…)` inside the async method — and for a
+plain function `@tool` writes even that: a sync function it decorates runs in
+a thread.
+
+## The error carries the code to type
+
+```python
+from core import Agent, FakeModel, hook
+
+agent = Agent(FakeModel(["ok"]))
+
+
+@hook("tool.pre")
+def no_rm(call):                    # sync by mistake
+    return "denied"
+
+
+agent.hooks.attach(no_rm)           # ContractError, on this line
+```
+
+```text
+no_rm must be async — write async def; sync work is one asyncio.to_thread line inside it
+
+@hook("tool.pre")
+async def no_rm(call: ToolCall):        # add a trailing `run` arg if you need it
+    if call.name == "rm":
+        return "denied"                 # the tool is skipped; this is its result
+
+agent.hooks.attach(no_rm)               # untagged? attach(no_rm, "tool.pre")
+```
+
+Every `ContractError` is built that way: the sentence naming what is wrong,
+then the skeleton of the thing you were writing. There are four skeletons —
+model, provider, tool and hook.
+
+Two more you will meet. A hook whose arity does not fit its stage is refused at
+attach, not at the bell: `wrong_arity does not fit model.pre, which hands over
+list — take those, and run after them if you want it`. And a hook that returns
+the wrong type mid-run names the stage and the type it owed:
+`bad_return at model.post returned int; return Message, or None to leave it
+alone`.

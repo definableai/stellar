@@ -1,0 +1,94 @@
+---
+title: Project layout
+description: Where every file lives, which folder may import which, and the six rules that keep the shape.
+---
+
+The repository is one small `core/`, three folders of things built on it, and
+the tests that hold them to their rules.
+
+```text
+core/             the twelve nouns and the loop — stdlib (bar llm.py), under 2000 lines
+  types.py          Part, ToolCall, Message
+  contracts.py      Model, ProviderModel, Tool, Hooks, @hook, fold, the skeletons
+  agent.py          Agent and Run
+  loop.py           run, check, coerce
+  events.py         Event, Events
+  tool.py           @tool
+  fake.py           FakeModel
+  llm.py            Provider, Profile, Fallback — the HTTP half; the only httpx in core
+  conformance.py    check_model
+  __init__.py       the barrel: all of it, in one import
+models/           one folder per provider: __init__.py, mapping.py, model.py
+  anthropic/        the Messages API
+  openai/           Chat Completions, the format the compatible vendors clone
+hooks/            steps.py, budget.py, permission.py, logging.py
+drivers/          transport.py — sse() and ws_frames() over events.stream()
+tests/            plain python files, assert-based, no pytest
+docs/             this site: docs.json is the table, content/ the pages, check.py the test
+main.py           the front door: one agent, one tool, one card, one radio
+```
+
+## Imports are flat, and one-way
+
+There is one import shape and it has no depth:
+
+```python
+from core import Agent, tool
+from models.anthropic import Anthropic
+from hooks.steps import Steps
+```
+
+`models/`, `hooks/` and `drivers/` speak `core` and the standard library, and
+never each other. A provider's own files speak each other with one dot —
+`from .mapping import turn` — and never reach into another provider, which is
+why a vendor that cloned somebody's wire subclasses `OpenAI` in your code, not
+in `models/`. Nothing imports an adapter, and `core/` imports none of them.
+
+<Note>
+  The arrows only point one way, inside `core/` too: `core/agent.py` imports
+  `core/loop.py`, and the loop never imports back. The loop's functions take
+  any object with the right attributes, so the file that runs the agent does
+  not have to know the `Agent` class exists.
+</Note>
+
+## Running the tests
+
+```bash
+for f in tests/test_*.py; do uv run python "$f" || exit 1; done
+uv run ruff check .
+```
+
+Every test file is an ordinary Python script with asserts in it — no pytest,
+no fixtures, no plugins. Run one on its own and it prints what passed. `uv run
+python` is how it gets an interpreter; a bare `python` need not be on your
+PATH.
+
+## The rules
+
+`tests/test_rules.py` fails the build on four of them:
+
+- `core/*.py` is 2000 lines all together, at most.
+- `core/` imports the standard library and itself, nothing else — plus httpx,
+  in `llm.py` and nowhere else.
+- `core/` never says a product or protocol name — no mcp, anthropic, openai,
+  litellm, claude, gpt, a2a, acp. The test greps for those words in every
+  `core/*.py`, comments included.
+- `models/`, `hooks/` and `drivers/` import only `core` and the standard
+  library, plus httpx in `models/` — and a provider's own files, one dot deep.
+
+Two more belong to whoever reviews the change, because no test can see them:
+
+- Twelve nouns. `Part`, `ToolCall`, `Message`, `Model`, `Tool`, `Hooks`,
+  `Event`, `Events`, `Agent`, `Run`, `ContractError`, `Stop` — and nothing
+  else in `core/` gets to be one.
+- `Agent` has one method, `run()`. There is never a second one.
+
+<Warning>
+  A thirteenth noun in `core/` is a conversation, not a merge. The same goes
+  for a second method on `Agent`: both are the kind of change that has to be
+  argued for before it is written, because no test will stop it.
+</Warning>
+
+The first rule is the one that bites, and `wc -l core/*.py` is how you check
+it before you push. The budget is the reason the rest of the list stays short,
+and the reason a feature that could live in `hooks/` or `models/` lives there.
