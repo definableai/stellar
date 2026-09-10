@@ -15,9 +15,9 @@ type CardProps = {
   className?: string;
 };
 
-// `no-underline!` and `text-inherit!`: a card with an href is an <a>, and .prose would paint it as a link.
+// `no-underline` and `text-inherit`: a card with an href is an <a>, and .prose would paint it as a link.
 const box =
-  "group relative block rounded-2xl border border-gray-950/10 bg-white px-6 py-5 text-inherit! no-underline! transition-colors hover:border-primary/40 dark:border-white/10 dark:bg-background-dark dark:hover:border-primary-light/40";
+  "group relative block rounded-2xl border border-gray-950/10 bg-white px-6 py-5 text-inherit no-underline transition-colors hover:border-primary/40 dark:border-white/10 dark:bg-background-dark dark:hover:border-primary-light/40";
 
 export function Card({ title, icon, href, horizontal, arrow, cta, children, className = "" }: CardProps) {
   const glyph = <Icon icon={icon} size={24} className="text-primary dark:text-primary-light" />;

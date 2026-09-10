@@ -6,9 +6,9 @@ import { Icon } from "./misc";
 type Props = { children?: ReactNode };
 
 const box = "my-4 flex gap-3 rounded-2xl border px-5 py-4 text-sm leading-5";
-// The text inside is MDX; prose.css is unlayered, so `!` is what makes a callout's own rules stick.
+// The text inside is MDX: take the outer margins back from prose.css.
 const body =
-  "min-w-0 flex-1 [&_p]:my-0! [&_p+p]:mt-2! [&_a]:text-inherit! [&_a]:decoration-current! [&_strong]:text-inherit! [&>:first-child]:mt-0! [&>:last-child]:mb-0!";
+  "min-w-0 flex-1 [&_p]:my-0 [&_p+p]:mt-2 [&_a]:text-inherit [&_a]:decoration-current [&_strong]:text-inherit [&>:first-child]:mt-0 [&>:last-child]:mb-0";
 
 const gray = "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-800 dark:bg-gray-800/40 dark:text-gray-300";
 

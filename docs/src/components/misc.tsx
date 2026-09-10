@@ -5,13 +5,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-/**
- * The children of a component are MDX, so prose.css has already given them
- * their margins. prose.css is unlayered and Tailwind's utilities are in
- * `@layer utilities`, which loses whatever the specificity — `!` is how a
- * component takes its own spacing back.
- */
-export const inner = "[&>:first-child]:mt-0! [&>:last-child]:mb-0!";
+/** The children of a component are MDX with prose margins; a component takes the outer ones back. */
+export const inner = "[&>:first-child]:mt-0 [&>:last-child]:mb-0";
 
 type IconProps = { icon?: string; size?: number | string; color?: string; className?: string };
 
@@ -34,7 +29,7 @@ export function Icon({ icon, size = 16, color, className = "" }: IconProps) {
 export function Frame({ caption, children, className = "" }: { caption?: ReactNode; children?: ReactNode; className?: string }) {
   return (
     <div className={`my-6 rounded-2xl border border-gray-950/10 bg-gray-50 p-1 text-center dark:border-white/10 dark:bg-white/[0.03] ${className}`}>
-      <div className="[&_img]:my-0! [&_img]:rounded-xl">{children}</div>
+      <div className="[&_img]:my-0 [&_img]:rounded-xl">{children}</div>
       {caption != null && <div className="mt-2 mb-1 text-xs text-gray-500">{caption}</div>}
     </div>
   );

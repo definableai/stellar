@@ -1,5 +1,5 @@
 /** What opens, closes and switches: accordions, tabs, steps, expandables. */
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Play } from "lucide-react";
 import { Children, isValidElement, useState, type ReactElement, type ReactNode } from "react";
 import { Icon, inner } from "./misc";
 
@@ -15,21 +15,21 @@ type AccordionProps = {
 export function Accordion({ title, description, defaultOpen, icon, flush, children }: AccordionProps) {
   const [open, setOpen] = useState(!!defaultOpen);
   return (
-    <div className={flush ? "" : "my-4 rounded-xl border border-gray-200 dark:border-white/10"}>
+    <div className={flush ? "" : "my-4 rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-codeblock"}>
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-5 py-3.5 text-left text-sm font-medium text-gray-900 dark:text-gray-200"
+        className="flex w-full items-center gap-3 px-5 py-4 text-left text-base font-medium text-gray-900 dark:text-gray-200"
       >
-        <ChevronRight size={16} aria-hidden className={`${chevron(open)} text-gray-500`} />
+        <Play size={12} fill="currentColor" strokeWidth={0} aria-hidden className={`${chevron(open)} text-gray-400`} />
         <Icon icon={icon} size={16} className="text-gray-500" />
         <span>
           {title}
           {description != null && <span className="mt-0.5 block text-xs font-normal text-gray-500">{description}</span>}
         </span>
       </button>
-      {open && <div className={`px-5 pb-4 ${inner}`}>{children}</div>}
+      {open && <div className={`pr-5 pb-4 pl-11 ${inner}`}>{children}</div>}
     </div>
   );
 }
@@ -37,7 +37,7 @@ export function Accordion({ title, description, defaultOpen, icon, flush, childr
 /** One border around the lot: the accordions inside are drawn flush, so they give up their own. */
 export function AccordionGroup({ children }: { children?: ReactNode }) {
   return (
-    <div className="my-4 divide-y divide-gray-200 rounded-xl border border-gray-200 dark:divide-white/10 dark:border-white/10">
+    <div className="my-4 divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-codeblock">
       {kids<AccordionProps>(children).map((one, i) => (
         <Accordion key={i} {...one.props} flush />
       ))}
