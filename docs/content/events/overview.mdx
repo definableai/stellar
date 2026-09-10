@@ -1,98 +1,104 @@
 ---
 title: Events
-description: The data plane — everything that happened, numbered, named, and stamped with the run it belongs to.
+description: A diary of everything your agent did. You can watch it, but you cannot change it.
 ---
 
-Every stage [the loop](/concepts/loop) rings is also an `Event` on the agent's
-bus (`agent.events`), and so is anything you put there yourself. The bus numbers
-what it is told, keeps it in a list, and hands it to whoever is listening.
+Every time your agent does something, it writes an event. The events are the
+agent's diary. You can read them as they happen, or read them later.
 
-<Info>
-  Two planes, one bell. A [hook](/hooks/overview) can rewrite the payload or stop
-  the run; a listener can only watch. If you want to change something, you want
-  the control plane.
-</Info>
+```mermaid
+flowchart LR
+  Agent -->|"asks first"| Hooks
+  Hooks -->|"can change or stop"| Agent
+  Agent -->|"tells after"| Events
+  Events -->|"can only watch"| You([You])
+```
 
-## What an event carries
+The rules ([hooks](/hooks/overview)) get asked before something happens, and
+they can change it. Events are told after, and they change nothing.
+
+## What an event is
 
 | field | what it is |
 | --- | --- |
-| `seq` | per bus, monotonic, starts at 0 — and the cursor a reader resumes from |
-| `name` | the dotted name: one of the loop's eight, or anything you emit |
-| `data` | whatever rode along, stored as-is — usually a [`Message`, `Part` or `ToolCall`](/reference/types) |
-| `source` | who said it: `"loop"`, a tool's name, a model's, yours |
-| `run_id` | the run it belongs to, or `None` for a bus-wide event |
-| `ts` | when it was stamped, as `time.time()` |
+| `seq` | a number, counting up from 0. It is also the bookmark a reader comes back to. |
+| `name` | what happened, like `run.pre` or `tool.post`. |
+| `data` | whatever came with it, usually a [`Message`, `Part` or `ToolCall`](/reference/types). |
+| `source` | who said it: `"loop"`, a tool's name, a model's, or yours. |
+| `run_id` | which job it belongs to, or `None` if it belongs to no job. |
+| `ts` | the time it happened. |
 
-## Listening
+## Listen
 
-```python
-agent.events.listen(print)                      # everything
-agent.events.listen(watch, "tool")              # tool.pre, tool.delta, tool.post
-agent.events.listen(watch, run_id=run.id)       # one conversation
+Give `listen` a function that takes one event. It gets called every time an
+event lands. Listeners are plain functions, never `async def`, because writing
+an event never waits for anything.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel
+
+agent = Agent(FakeModel(["Hi there!"]))
+agent.events.listen(lambda event: print(event.seq, event.name))
+asyncio.run(agent.run("hello", run_id="a"))
 ```
 
-A prefix stops at a dot: `"tool"` hears `tool.pre`, never `toolbox.x`. Both
-filters compose, and `listen` hands the function back, so it also decorates.
-`agent.events.detach(fn)` unfiles it from every prefix and run it had; detaching
-a stranger does nothing.
-
-Listeners are sync, because `emit()` never awaits. An `async def` is refused at
-`listen()` with a `ContractError` that points you at
-[`stream()`](/events/streaming). A listener that raises is logged to the
-`core.events` logger and swallowed — the next listener still hears the event,
-and the code that emitted hears nothing of it.
-
-`agent.events.log` is the whole list, in `seq` order, across every run this agent
-has ever taken.
-
-## What the loop says
-
-The loop emits each stage *after* its hooks have run, so a listener sees what the
-rule cards agreed on. Every one of them is `source="loop"`, except a streaming
-tool's deltas, which carry the tool's own name.
-
-| name | `data` | `source` |
-| --- | --- | --- |
-| `run.pre` | the `Message` the run opens on | `"loop"` |
-| `model.pre` | a copy of the message list about to be sent | `"loop"` |
-| `model.delta` | one `Part` off the reply, as it arrives | `"loop"` |
-| `model.post` | the assistant `Message`, folded whole | `"loop"` |
-| `tool.pre` | the `ToolCall` about to run | `"loop"` |
-| `tool.delta` | one `Part` off a streaming tool | the tool's name |
-| `tool.post` | the tool result `Message` that lands in the notebook | `"loop"` |
-| `run.post` | the last `Message` in the notebook — streams end here | `"loop"` |
-
-`model.pre` carries a copy of the list on purpose: the notebook keeps growing,
-and the log must not grow with it.
-
-Two more names come from outside the loop. [`Fallback`](/models/fallback) emits
-`model.skip` with the error as a string and `source="model:<name>"` each time it
-gives up on a provider and asks the next one. An adapter whose
-[profile](/models/profiles) has `tool_stream` emits `tool.args` for each fragment
-of a tool call's arguments — `data` is `{"id", "name", "delta"}`, `source` is
-`"model:<model id>"`.
-
-## Anything can emit anything
-
-```python
-run.emit("cache.hit", key)
+```text output
+0 run.pre
+1 model.pre
+2 model.delta
+3 model.post
+4 run.post
 ```
 
-`run.emit(name, data, source)` stamps the event with that run's id and puts it on
-the agent's bus, where it travels with the rest. `agent.events.emit(...)` is the
-same door with `run_id` left to you. Names are free-form and nothing validates
-them: the eight the loop rings get no privilege here that `cache.hit` does not
-also have.
+- `agent.events.log` is that whole list, oldest first, across every job.
+- `agent.events.detach(fn)` stops telling it anything.
+- If your listener raises, the error goes to the `core.events` logger and the
+  next listener still hears the event.
 
-For a readable line per event rather than a raw record, the
-[`Log` card](/hooks/cards) is a listener: `agent.events.listen(Log())`.
+## Hear less
 
-<CardGroup>
-  <Card title="Streaming events" icon="radio-tower" href="/events/streaming">
-    `stream()` for an async consumer: the log replayed from a cursor, then live.
+`agent.events.listen(fn, "tool")` hears `tool.pre`, `tool.delta` and
+`tool.post`, and nothing else. A name is cut at the dot, so `"tool"` never
+hears `toolbox.x`. `agent.events.listen(fn, run_id=run.id)` hears one job.
+
+## What the agent writes
+
+| name | what came with it |
+| --- | --- |
+| `run.pre` | the message the job starts on |
+| `model.pre` | a copy of the messages about to be sent |
+| `model.delta` | one piece of the reply, as it arrives |
+| `model.post` | the model's whole answer |
+| `tool.pre` | the tool call about to run |
+| `tool.delta` | one piece from a tool that streams, under that tool's name |
+| `tool.post` | what the tool sent back |
+| `run.post` | the last message. Streams end here. |
+
+Each one is written after its hooks have run, so you see what they agreed on.
+
+## Write your own
+
+`run.emit("cache.hit", key)` puts your own event on the same list, stamped
+with that job's id. Nothing checks the name, so your names count for as much
+as the eight above.
+
+## Good to know
+
+- `model.pre` carries a copy of the messages. The conversation keeps growing,
+  and the event log must not grow with it.
+- Two more names come from outside the loop. [`Fallback`](/models/fallback)
+  writes `model.skip` when it gives up on one model and asks the next. A model
+  whose [profile](/models/profiles) streams tool arguments writes `tool.args`.
+- For one readable line per event, [`Log`](/hooks/cards) is a listener you can
+  hand straight to `listen`.
+
+<CardGroup cols={2}>
+  <Card title="As they happen" icon="radio-tower" href="/events/streaming">
+    Read one job's events live, from anywhere in your code.
   </Card>
-  <Card title="Events over the wire" icon="cable" href="/events/transport">
-    `sse()` and `ws_frames()` turn one run's events into strings.
+  <Card title="To a browser" icon="cable" href="/events/transport">
+    Turn events into lines a web page can read.
   </Card>
 </CardGroup>

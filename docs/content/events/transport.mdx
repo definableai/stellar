@@ -1,75 +1,104 @@
 ---
-title: Events over the wire
-description: sse() and ws_frames() — two serializers over a stream of events, and the seq that makes a reconnect free.
+title: Send events to a browser
+description: sse() and ws_frames() turn a stream of events into strings a web page can read.
 ---
 
-[The bus](/events/streaming) already does the hard half: one run's events, in
-order, replayed from a cursor and then live, ending on that run's `run.post`.
-`drivers/transport.py` only frames them. Both take any async iterator of events
-and give back an async iterator of strings.
+A web page cannot reach into your agent. It can hold a connection open and
+read lines. `drivers/transport.py` turns [events](/events/streaming) into
+those lines.
 
-```python
-from drivers.transport import sse, ws_frames
+```mermaid
+flowchart LR
+  Agent -->|"events"| SSE["sse()"]
+  SSE -->|"one frame each"| Browser
+  Browser -->|"Last-Event-ID"| Agent
 ```
 
-## Server-Sent Events
+Both take any stream of events and give back strings. They add nothing else.
 
-`sse()` writes two lines and a blank one per event: `id:` carrying the `seq`, and
-one `data:` line holding the whole record as JSON — nested `Message`s and `Part`s
-and all. The event name rides inside the JSON, so every frame is a plain
-`message` and a browser needs no `addEventListener` per stage.
+## What goes out
 
-Two frames off a real run, a tool call and its answer:
+`sse()` writes three lines per event. First an `id:` line with the number.
+Then a `data:` line with the whole event as JSON. Then a blank line. Browsers
+already know this format.
 
 ```text
 id: 4
-data: {"seq": 4, "name": "tool.pre", "data": {"id": "c1", "name": "shout", "args": {"word": "hi"}}, "source": "loop", "run_id": "r1", "ts": 1789024034.397145}
-
-id: 5
-data: {"seq": 5, "name": "tool.post", "data": {"role": "tool", "content": [{"type": "text", "data": "HI"}], "tool_calls": [], "tool_call_id": "c1", "meta": {}}, "source": "loop", "run_id": "r1", "ts": 1789024034.3972218}
+data: {"seq": 4, "name": "tool.pre", "data": {"id": "c1", "name": "shout", "args": {"word": "hi"}}, "source": "loop", "run_id": "a", "ts": 1789045332.478462}
 ```
 
-`ws_frames()` writes the same records with no framing at all: one JSON object per
-websocket text frame.
+The event's name is inside the JSON, not in the frame. So every frame arrives
+as a plain `message` and the page needs one handler, not one per stage.
 
-## Reconnecting costs nothing
+`ws_frames()` writes the same JSON with no wrapping at all. One event, one
+websocket frame.
 
-The `seq` is the cursor. A browser that drops hands its last id back as
-`Last-Event-ID`; reopen the stream one past it and the client misses exactly
-nothing:
+## Try it
+
+```python run
+import asyncio
+import json
+
+from core import Agent, FakeModel
+from drivers.transport import sse
+
+
+async def main() -> None:
+    agent = Agent(FakeModel(["Hello!"]))
+    job = asyncio.create_task(agent.run("hi", run_id="a"))
+    async for frame in sse(agent.events.stream(run_id="a")):
+        first, second = frame.strip().split("\n")
+        print(first, json.loads(second.removeprefix("data: "))["name"])
+    await job
+
+
+asyncio.run(main())
+```
+
+```text output
+id: 0 run.pre
+id: 1 model.pre
+id: 2 model.delta
+id: 3 model.post
+id: 4 run.post
+```
+
+## If the browser drops
+
+The browser remembers the last `id:` it saw and sends it back as a
+`Last-Event-ID` header when it reconnects. Start the stream one past that
+number and the page misses nothing.
 
 ```python
 last = request.headers.get("Last-Event-ID")
 events = agent.events.stream(run_id=rid, since=int(last) + 1 if last else 0)
 ```
 
-The same replay is why the race at the start does not matter. A reader that opens
-the stream after the run began — or after it ended — still gets the whole run, in
-order, and then the `run.post` that closes it.
-
-## Where they go is yours
+## Put it behind a web server
 
 <Note>
-  stellar ships no server. `sse()` and `ws_frames()` are strings; the sketch below
-  is a fragment for one framework, not something core imports. Any ASGI framework,
-  or none, will do.
+  stellar ships no server. `sse()` and `ws_frames()` hand you strings, and any
+  web framework, or none, can carry them. The sketch below is one framework's
+  spelling, not something core imports.
 </Note>
 
 ```python nocheck
 rid = uuid4().hex
 task = asyncio.create_task(agent.run(ask, run_id=rid))
-running.add(task)                          # hold it; a bare task can be collected
+running.add(task)                          # hold it, or it can be collected
 task.add_done_callback(running.discard)
 return StreamingResponse(sse(agent.events.stream(run_id=rid)),
                          media_type="text/event-stream")
 ```
 
-Starting the run and reading it are two jobs, and the framing does not join them:
-the task is where the `Run` and any exception end up, and holding a reference to
-it is yours. The stream needs nothing from it — it ends on `run.post` either way.
+Starting the job and reading it are two separate things. The task is where the
+`Run` and any error end up, and keeping hold of it is your job. The stream
+needs nothing from it, and ends on `run.post` either way.
 
-Two details worth knowing before you put this behind a load balancer. Every
-payload is deep-copied into JSON at frame time, so what goes out is a record and
-not a live handle on the notebook. And `seq` is numbered **per bus**, not per
-run — a shared agent's ids climb past the events any one reader sees, which is
-correct for a cursor and wrong for a progress bar.
+## Good to know
+
+- Each event is copied into JSON when the frame is written. What goes out is a
+  snapshot, not a live handle on the conversation.
+- `seq` counts per agent, not per job. One agent serving many people has
+  numbers that climb past what any one reader sees. That is right for a
+  bookmark and wrong for a progress bar.

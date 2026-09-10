@@ -1,57 +1,76 @@
 ---
-title: Checkpoint and resume
-description: A checkpoint is the Run with the wiring taken out — four fields that survive a restart, and what you have to put back.
+title: Save a run and continue later
+description: A Run pickles down to four things. Hand them back and the same conversation carries on.
 ---
 
-A [`Run`](/reference/agent) is a conversation: an id, a notebook, a step count
-and a spare pocket. It is also the checkpoint, because that is all `__getstate__`
-keeps:
+A conversation does not have to finish today. A [`Run`](/reference/agent)
+saves down to a few plain values, and `agent.run` picks it back up. Think of
+it as a save point in a game.
 
-```python
-def __getstate__(self) -> dict[str, Any]:
-    """The checkpoint: everything except the wiring."""
-    return {"id": self.id, "messages": self.messages, "step": self.step,
-            "extra": self.extra}
+```mermaid
+flowchart LR
+  Run -->|"pickle"| File["a file"]
+  File -->|"load"| Saved["the same messages"]
+  Saved -->|"run again"| New["a new Run"]
 ```
 
-The agent, its rule cards and its bus are dropped on purpose. Wiring is code you
-build again at start-up; a pickle of it would be a pickle of your whole
-application.
+What gets saved:
 
-## Freeze and thaw
+- `id`, the name of the conversation
+- `messages`, the conversation itself
+- `step`, how many turns it took
+- `extra`, a dict for anything else you want to keep
 
-```python
+What does not: the agent, its hooks and its event log. Those are code you
+build again at start-up, and a save file has no business holding your program.
+
+## Try it
+
+```python run
+import asyncio
 import pickle
 
 from core import Agent, FakeModel
 
-agent = Agent(FakeModel(["one", "two"]))
-run = await agent.run("hello")
 
-frozen = pickle.dumps(run)                          # four fields, no wiring
-saved = pickle.loads(frozen)
-again = await agent.run("and now?", messages=saved.messages, run_id=saved.id)
+async def main() -> None:
+    agent = Agent(FakeModel(["Blue.", "You asked about my favourite colour."]))
+    first = await agent.run("What is your favourite colour?")
+    print(first.messages[-1].text)
+
+    saved = pickle.loads(pickle.dumps(first))      # four values, no agent
+    later = await agent.run("What did I ask?",
+                            messages=saved.messages, run_id=saved.id)
+    print(later.messages[-1].text)
+    print(len(later.messages), "messages, same id:", later.id == first.id)
+
+
+asyncio.run(main())
 ```
 
-`messages=` opens the notebook — copied, so your list is left alone — and
-`run_id=` keeps the same name, so a stream watching that id sees one continuous
-conversation across the restart. The prompt is appended after the saved messages.
+```text output
+Blue.
+You asked about my favourite colour.
+4 messages, same id: True
+```
+
+- `messages=` starts from the saved conversation. It is copied, so your list
+  is left alone, and the new prompt goes on the end.
+- `run_id=` keeps the same name, so anyone
+  [watching that id](/events/streaming) sees one conversation across the gap.
 
 <Note>
-  What comes back from `pickle.loads` is a checkpoint, not a live run. It has no
-  `agent` and no `hooks` at all — reading either raises `AttributeError`. Read its
-  four fields, hand them to `agent.run`, and use the fresh `Run` you get back.
+  What `pickle.loads` gives you is a save file, not a working run. It has no
+  `agent` and no `hooks`, and reading either one raises `AttributeError`. Read
+  its values, hand them to `agent.run`, and use the `Run` you get back.
 </Note>
 
-## What resumes empty
+## What starts empty again
 
-`agent.run` mints a new `Run`, and a new `Run` starts with `step = 0` and an
-empty `extra`. The notebook and the id come across; nothing else does. That
-matters for [the cards](/hooks/cards) that keep their state there — `Budget`
-totals into `run.extra["budget.tokens"]`, and `Steps` counts on `run.step`, so a
-resumed run gets a fresh purse and a fresh ration unless you say otherwise.
-
-Putting a total back is a one-line hook:
+`agent.run` always builds a brand new `Run`. The messages and the id come
+across, but the step count starts at 0 and `extra` starts empty. So a
+[`Steps`](/hooks/cards) limit and a `Budget` total both begin again. Putting
+them back is one hook.
 
 ```python
 from core import hook
@@ -62,34 +81,44 @@ async def seed(message, run) -> None:
     run.extra.update(saved.extra)
 ```
 
-## Somewhere that is not a pickle
+## Saving it as JSON
 
-For JSON, or a database column, or anything a different process has to read,
-take each `Message` apart with `dataclasses.asdict`. Reading it back is yours,
-and there is exactly one shape to rebuild: `content` is always a list of parts,
-`tool_calls` always a list of calls.
+For a database column, or any other process, take each message apart with
+`dataclasses.asdict`. Building it back is yours, and there is only one shape
+to know. `content` is always a list of parts, and `tool_calls` a list of
+calls.
 
-```python
-from core import Message, Part, ToolCall
+```python run
+import asyncio
+import json
+from dataclasses import asdict
+
+from core import Agent, FakeModel, Message, Part, ToolCall
 
 
 def revive(d: dict) -> Message:
-    return Message(**{
-        **d,
-        "content": [Part(**p) for p in d["content"]],
-        "tool_calls": [ToolCall(**c) for c in d["tool_calls"]],
-    })
+    """One dict back into one Message, its parts and calls included."""
+    return Message(**{**d,
+                      "content": [Part(**p) for p in d["content"]],
+                      "tool_calls": [ToolCall(**c) for c in d["tool_calls"]]})
+
+
+job = asyncio.run(Agent(FakeModel(["Blue."])).run("Favourite colour?"))
+text = json.dumps([asdict(m) for m in job.messages])
+back = [revive(d) for d in json.loads(text)]
+print([m.text for m in back])
 ```
 
-That round-trips a whole notebook, tool calls and `meta` included. A folded
-message keeps only text and adapter-defined parts in `content` — a tool call
-lands in `tool_calls`, and `meta` merges into `meta` — so `Part.data` is a string
-unless an adapter put something else there. If it did, that something is yours to
-serialize.
+```text output
+['Favourite colour?', 'Blue.']
+```
+
+That handles a whole conversation, tool calls and `meta` included. A part's
+`data` is a string unless a model adapter put something else there. If it did,
+saving that something is yours.
 
 <Warning>
-  Never keep a callable in `extra` that has to survive a checkpoint.
-  `extra["ui.ask"]` — the channel `Permission(ask=True)` asks a human through —
-  is a live connection to a process that will not exist when you thaw. Rebuild
-  live things at start-up and put only data in the pocket.
+  Put only data in `extra`. A live thing will not exist when you load the file
+  back. The channel `Permission(ask=True)` uses to ask a person is one of
+  those. Build them again at start-up.
 </Warning>

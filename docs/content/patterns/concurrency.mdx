@@ -1,106 +1,91 @@
 ---
-title: Many runs at once
-description: One Agent, one backpack, a hundred conversations — what they share, what stays private, and what a mid-flight swap does.
+title: Many jobs at once
+description: One agent can run a hundred conversations side by side. Here is what they share.
 ---
 
-An [`Agent`](/reference/agent) holds no conversation. The notebook, the step
-count and the spare pocket live on the `Run`, so a hundred users is one line:
+An [`Agent`](/reference/agent) holds no conversation of its own. The messages,
+the step count and `extra` all live on the `Run`. So a hundred people is one
+line of `asyncio`.
 
-```python
-done = await asyncio.gather(*(agent.run(p) for p in prompts))
-```
+## Try it
 
-Every run borrows the same brain, the same toolbox and the same rule cards, and
-keeps its own notebook, step count and pocket. There is no lock anywhere in core:
-what a run writes is its own, and the two things that genuinely are shared —
-`agent.extra` and the event bus — are yours to keep honest.
+Give each job a name with `run_id=` and you can tell them apart in the log.
+The name is fixed before the job starts, which is what lets a reader
+[watch one](/events/streaming) while it happens.
 
-## Name a run so a stream can find it
-
-`run_id=` fixes the id up front, instead of waiting for the `Run` to come back at
-the end. That is what makes [a live stream](/events/streaming) possible: the
-reader knows the name before there is anything to read.
-
-```python
+```python run
 import asyncio
 
 from core import Agent, FakeModel
 
-agent = Agent(FakeModel(["sun", "moon", "stars"]))
-agent.events.listen(lambda e: print(e.run_id, e.name))
 
-done = await asyncio.gather(*(
-    agent.run(p, run_id=p) for p in ("sun", "moon", "stars")))
-print([r.messages[-1].text for r in done])
+async def main() -> None:
+    agent = Agent(FakeModel(["sun", "moon", "stars"]))
+    agent.events.listen(lambda event: print(event.run_id, event.name), "run")
+
+    done = await asyncio.gather(
+        agent.run("one", run_id="a"),
+        agent.run("two", run_id="b"),
+        agent.run("three", run_id="c"),
+    )
+    print([job.messages[-1].text for job in done])
+
+
+asyncio.run(main())
 ```
 
-```text
-sun run.pre
-sun model.pre
-sun model.delta
-sun model.post
-sun run.post
-moon run.pre
-...
-stars run.post
+```text output
+a run.pre
+a run.post
+b run.pre
+b run.post
+c run.pre
+c run.post
 ['sun', 'moon', 'stars']
 ```
 
-The bus is shared: three runs, one numbering, one log. Filter on the way in —
-`agent.events.listen(fn, run_id=rid)` or `agent.events.stream(run_id=rid)` —
-rather than sorting the whole log afterwards.
+The three jobs share one event log and one numbering. Filter on the way in,
+with `listen(fn, run_id=rid)` or `stream(run_id=rid)`, rather than sorting the
+whole thing out afterwards.
 
 <Note>
   Those three finished in order because [`FakeModel`](/models/testing) never
-  awaits anything: with nothing to wait for, `gather` runs each to completion
-  before starting the next. Put a real provider behind it and the socket is the
-  await point — the three runs interleave, and the names above arrive shuffled.
+  waits for anything. Each job ran to the end before the next one started. Put
+  a real model behind it and the network is the waiting point. The three jobs
+  overlap, and the lines above arrive mixed together.
 </Note>
 
-## The private lane
+## What they share
 
-`run.hooks` and `run.extra` belong to one conversation. `run.hooks` is chained
-onto the agent's, so the agent's cards ring first and then the run's; a
-`tool.pre` denial from the agent means the run's cards never hear that bell at
-all.
+- the model, the toolbox and the agent's hooks
+- `agent.extra` and the event log
 
-Neither is an argument to `agent.run` — both are reached from inside the run,
-through the `run` a hook or a tool is handed:
+Nothing in core takes a lock. Those last two are the only places one job can
+write where another will see it. Keeping them tidy is yours.
 
-```python
-from core import hook
+## What is private
 
+- `run.messages`, `run.step` and `run.extra`
+- `run.hooks`, this job's own rules, which run after the agent's
 
-@hook("run.pre")
-async def per_run(message, run) -> None:
-    run.extra["started"] = message.text
+Neither one is an argument to `agent.run`. You reach them from inside the job,
+through the `run` that every hook and every tool is handed.
 
-    @hook("model.post")
-    async def only_here(answer) -> None:
-        ...                                  # rings for this conversation only
+## Change parts while jobs run
 
-    run.hooks.attach(only_here)
-```
-
-## Swapping parts while runs are in the air
-
-Composition is by assignment, and [`check()`](/concepts/contracts) reads the whole
-backpack again at the top of every step. So a swap mid-flight is legal and it is
-checked: assign a broken model and the next run to take a step raises
-`ContractError` naming what to type instead, before it asks anything.
-
-`agent.hooks.attach(card)` reaches every run already running, at its next bell of
-that stage — the registry is read fresh each time it fires. A card added while a
-stage is already ringing waits for the next one.
+Swapping a part is an assignment, and the agent checks all its parts again at
+the top of every step. So you can change the model mid-flight. The next job to
+take a step either uses it or raises `ContractError` naming what to type
+instead. `agent.hooks.attach(rule)` reaches every job already running, at its
+next stage of that kind.
 
 <Warning>
-  `attach` and `detach`, not reassignment. A `Run` binds `run.hooks.parent` to
-  `agent.hooks` when it is born, so replacing `agent.hooks` wholesale leaves every
-  run in the air still chained to the old registry.
+  Use `attach` and `detach`, not `agent.hooks = something`. A job ties itself
+  to the agent's hooks the moment it is born. Replace them wholesale and every
+  job already running stays on the old set.
 </Warning>
 
 <Note>
-  One agent, one event bus, one `asyncio` loop. `agent.events.log` grows with
-  every run in the process and nothing prunes it — the ceiling that matters first
-  when many runs share one agent for a long time.
+  One agent means one event log, and nothing prunes it. With many jobs sharing
+  one agent for a long time, that is the limit you will run into first.
 </Note>
