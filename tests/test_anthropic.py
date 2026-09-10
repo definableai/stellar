@@ -239,7 +239,7 @@ def test_canned_replies_pass_check_model() -> None:
     assert "stream" not in model.sent[0]              # nor a stream this one cannot
     assert model.sent[2]["messages"][-1]["content"] == [
         {"type": "tool_result", "tool_use_id": "toolu_01A09q90qw90lq917835lq9",
-         "content": "hi"},
+         "content": "hi", "cache_control": {"type": "ephemeral"}},
     ]
 
 
@@ -249,9 +249,12 @@ def test_system_messages_go_to_the_top() -> None:
                    [Message("system", "Be brief."),
                     Message("user", "hi"),
                     Message("system", "Be kind too.")])
-    assert body["system"] == "Be brief.\n\nBe kind too."
+    assert body["system"] == [
+        {"type": "text", "text": "Be brief.\n\nBe kind too.",
+         "cache_control": {"type": "ephemeral"}}]        # the first breakpoint
     assert body["messages"] == [
-        {"role": "user", "content": [{"type": "text", "text": "hi"}]}
+        {"role": "user", "content": [{"type": "text", "text": "hi",
+                                      "cache_control": {"type": "ephemeral"}}]}
     ]
     assert body["model"] == "claude-sonnet-5"
     assert body["max_tokens"] == 64 and body["stop_sequences"] == ["END"]
@@ -310,6 +313,7 @@ def test_a_tool_result_carries_its_blocks() -> None:
                                          "media_type": "image/png",
                                          "data": "aGk="}},
         ],
+        "cache_control": {"type": "ephemeral"},          # the newest block
     }]
 
 
@@ -324,7 +328,8 @@ def test_parts_become_content_blocks() -> None:
         {"type": "image", "source": {"type": "base64", "media_type": "image/png",
                                      "data": "aGk="}},
         {"type": "image", "source": {"type": "url",
-                                     "url": "https://example.com/cat.png"}},
+                                     "url": "https://example.com/cat.png"},
+         "cache_control": {"type": "ephemeral"}},
     ]
 
 
@@ -374,7 +379,8 @@ def test_a_block_we_do_not_know_passes_through_untouched() -> None:
                    [Message("user", "hi"), answer])
     assert body["messages"][1]["content"] == [
         MIXED["content"][0],
-        {"type": "text", "text": "half one half two"},
+        {"type": "text", "text": "half one half two",
+         "cache_control": {"type": "ephemeral"}},
     ]
 
 
@@ -448,7 +454,8 @@ def test_scripted_streams_pass_check_model() -> None:
     assert len(model.sent) == 3
     assert model.sent[0]["stream"] is True
     assert model.sent[2]["messages"][-1]["content"] == [
-        {"type": "tool_result", "tool_use_id": ASKED, "content": "hi"},
+        {"type": "tool_result", "tool_use_id": ASKED, "content": "hi",
+         "cache_control": {"type": "ephemeral"}},
     ]
 
 
