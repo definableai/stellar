@@ -1,113 +1,132 @@
 ---
 title: The loop
-description: The eight moments between your prompt and your answer — what core does at each, and what a rule card can change there.
+description: Ask the model, run the tools it asked for, ask again. The eight moments in between, and what you can change at each.
 ---
 
-Ask the model, run what it asked for, ask again. That is `core/loop.py`, and
-these eight names are every moment it has.
+Here is the whole loop. Ask the model. Run the tools it asked for. Ask again.
+It ends when the model stops asking for tools.
 
-```text
-run.pre
-  ┌ model.pre → the model answers, a model.delta per streamed Part → model.post
-  │   the answer goes in the notebook; for each tool it asked for:
-  │     tool.pre → the tool runs, a tool.delta per yielded Part → tool.post
-  │     → the result goes in the notebook
-  └ again, as long as the last answer asked for tools
-run.post
+```mermaid
+flowchart TD
+  RunPre["run.pre"] --> ModelPre["model.pre"]
+  ModelPre --> ModelDelta["model.delta"]
+  ModelDelta --> ModelPost["model.post"]
+  ModelPost -->|"no tools"| RunPost["run.post"]
+  ModelPost -->|"wants a tool"| ToolPre["tool.pre"]
+  ToolPre --> ToolDelta["tool.delta"]
+  ToolDelta --> ToolPost["tool.post"]
+  ToolPost -->|"ask again"| ModelPre
 ```
 
-Each name is a bell and an event at once. The rule cards ([hooks](/hooks/overview))
-ring first and inline — the loop awaits them — and the event goes out
-afterwards, carrying whatever the cards agreed on. So a listener never sees a
-value a hook was about to replace, and that is the difference between the two
-planes: a hook can change the run or stop it, a [listener](/events/overview)
-can only watch.
+Each name is two things at once. Your rules ([hooks](/hooks/overview)) run
+there first, and the loop waits for them. Then an event goes out with whatever
+they agreed on. A hook can change things. A [listener](/events/overview) can
+only watch.
 
 ## run.pre
 
-Rings once, before the first turn, on the last line in the notebook — the
-prompt you just handed over. The payload is that `Message`, and what a hook
-returns takes its place in the notebook. Then the event goes out with the
-message the cards settled on.
+Runs once, before the first turn. A hook here gets your prompt, and what it
+returns takes the prompt's place.
 
 ## model.pre
 
-The top of every step. The wiring is read again first — a part swapped since
-the last turn is checked here, and a bad swap raises `ContractError` before
-anything is sent — then `run.step` goes up by one, then the bell.
-
-The payload is the whole notebook, a `list[Message]`. A returned list rebinds
-`run.messages` permanently: a trim is a trim, not a view. The event carries a
-copy of the list, so the event log does not grow with the conversation.
+The top of every turn. The wiring is checked again, `run.step` goes up by one,
+then your hooks run. A hook here gets the whole conversation, and a list it
+returns replaces it for good.
 
 ## model.delta
 
-`model.invoke(run)` runs. When the brain is a `ProviderModel` — every shipped
-adapter, and `FakeModel` — the reply arrives as a stream of `Part`s, and each
-one rings `model.delta` before it is folded into the answer. A returned `Part`
-is the one that gets folded.
-
-A Model that writes its own `invoke` rings nothing here: this bell belongs to
-the fold, not to the loop.
+The model answers. Every model in the box sends its reply in pieces. Each
+piece stops here, where a hook can swap it. A model with its own `invoke`
+never reaches this one.
 
 ## model.post
 
-The reply comes back as one assistant `Message` — anything else is a
-`ContractError` naming the class that did it. The payload is that message, and
-a return replaces the reply that gets written down. The hook sees the answer
-before the notebook does.
+The pieces are now one message. A hook here sees the answer before the
+conversation does, and what it returns is what gets written down.
 
 ## tool.pre
 
-If the answer asked for no tools there is no bell at all: the loop breaks out
-and goes to teardown. Otherwise the calls are cut into batches — consecutive calls on `parallel=True`
-tools ride together, every other call rides alone — and inside a batch every
-`tool.pre` rings first, in call order, before any tool runs.
-
-The payload is one `ToolCall`. Return a `ToolCall` and that one runs instead;
-return a `str` or a `Message` and the tool is skipped and your answer *is* its
-result — the cards behind you never hear that bell. The event carries the call
-either way.
+Skipped when the answer asked for no tools. A hook here gets one tool call.
+Return another call and that one runs. Return a string or a message and the
+tool is skipped, and your answer becomes its result.
 
 ## tool.delta
 
-Then the batch runs, all at once. A tool written as an async generator streams:
-every `Part` it yields rings `tool.delta` before it is folded into the tool
-message, and a returned Part is the one folded. The event names the tool in
-`source` rather than `loop`, so deltas from siblings running side by side stay
-tellable apart.
+The tools run. A tool written as an async generator sends its result in
+pieces, and each piece stops here. The event names the tool it came from.
 
 ## tool.post
 
-Whatever the tool handed back is shaped into one tool message first: a `str` is
-the content, a `Part` or a list of them is the content, a `Message` is re-roled
-to `tool` and stamped with the call's id, and anything else becomes JSON. The
-payload is the call and that message, and a return replaces the result. Then
-the event, then it lands in the notebook — in call order, whichever tool
-finished first.
+Whatever the tool gave back is now one message. A hook here can replace it.
+Then it lands in the conversation in call order, whichever tool finished
+first.
 
 ## run.post
 
-Teardown, and it is a `finally`: it fires after a clean finish, after a `Stop`
-and after a crash. The payload is the last line in the notebook. A return
-replaces nothing. The event always goes out, and it is what ends a stream that
-is watching one run.
+The end, and it always happens: after a clean finish, after a `Stop`, after a
+crash. A hook here gets the last message, and what it returns is ignored.
 
-## When it ends
+## How it ends
 
-<Info>
+- **The model asked for no tools.** The ordinary ending.
+- **A hook or a tool raised `Stop`.** No error reaches you, and the `Run` holds
+  everything written down so far.
+- **Something else raised.** It comes out of your `await`, with `run.post`
+  already done.
 
-  Three ways out, and `run.post` fires on all three.
+## Watch it go round
 
-  - **The model asked for no tools.** The ordinary end.
-  - **Someone raised `Stop`** — a hook or a tool. It is caught: no traceback
-    reaches you, and the `Run` comes back holding everything written down so
-    far.
-  - **Anything else raised.** A `ContractError`, a model that broke, a hook
-    that broke — it propagates to your `await`, with `run.post` already run.
+Every name is also an event, so a listener can print them as they happen.
 
-</Info>
+```python run
+import asyncio
 
-The two things you can do about any of it are on
-[Two control signals](/concepts/control); what each stage hands over, in one
-table, is on [Stages](/hooks/stages).
+from core import Agent, FakeModel, Message, Part, ToolCall, tool
+
+
+@tool
+async def shout(word: str):
+    """Shout a word, one piece at a time."""
+    yield Part("text", word.upper())
+
+
+def show(event) -> None:
+    print(event.name)
+
+
+agent = Agent(FakeModel([
+    Message("assistant", tool_calls=[ToolCall("1", "shout", {"word": "hi"})]),
+    "Done.",
+]), [shout])
+agent.events.listen(show)
+
+asyncio.run(agent.run("shout hi"))
+```
+
+```text output
+run.pre
+model.pre
+model.delta
+model.post
+tool.pre
+tool.delta
+tool.post
+model.pre
+model.delta
+model.post
+run.post
+```
+
+- The first answer asked for a tool, so the three `tool` names fire.
+- Then the loop goes back to `model.pre` and asks again.
+- The second answer asked for nothing, so the run ends.
+
+<CardGroup cols={2}>
+  <Card title="Stopping and skipping" icon="circle-slash" href="/concepts/control">
+    The two ways to steer the loop from outside it.
+  </Card>
+  <Card title="Stages" icon="workflow" href="/hooks/stages">
+    What each of the eight hands to your hook, in one table.
+  </Card>
+</CardGroup>

@@ -1,35 +1,36 @@
 ---
-title: Project layout
-description: Where every file lives, which folder may import which, and the six rules that keep the shape.
+title: Where things are
+description: One small core, three folders built on it, the tests, and the six rules that keep the shape.
 ---
 
-The repository is one small `core/`, three folders of things built on it, and
-the tests that hold them to their rules.
+The repository is one small `core/` and three folders built on top of it. The
+tests keep all four to the rules.
 
 ```text
-core/             the twelve nouns and the loop — stdlib (bar llm.py), under 2000 lines
-  types.py          Part, ToolCall, Message
-  contracts.py      Model, ProviderModel, Tool, Hooks, @hook, fold, the skeletons
-  agent.py          Agent and Run
-  loop.py           run, check, coerce
-  events.py         Event, Events
-  tool.py           @tool
-  fake.py           FakeModel
-  llm.py            Provider, Profile, Fallback — the HTTP half; the only httpx in core
-  conformance.py    check_model
-  __init__.py       the barrel: all of it, in one import
-models/           one folder per provider: __init__.py, mapping.py, model.py
-  anthropic/        the Messages API
-  openai/           Chat Completions, the format the compatible vendors clone
-hooks/            steps.py, budget.py, permission.py, logging.py
-drivers/          transport.py — sse() and ws_frames() over events.stream()
-tests/            plain python files, assert-based, no pytest
-docs/             this site: docs.json is the table, content/ the pages, check.py the test
+core/       types.py  contracts.py  agent.py  loop.py  events.py
+            tool.py  fake.py  llm.py  conformance.py  __init__.py
+models/     anthropic/  openai/
+hooks/      steps.py  budget.py  permission.py  logging.py
+drivers/    transport.py
+tests/      test_*.py
+docs/       docs.json  content/  check.py
 ```
 
-## Imports are flat, and one-way
+## What each folder is for
 
-There is one import shape and it has no depth:
+- `core/` is the engine. The twelve building blocks and the loop, in under
+  2000 lines of plain Python.
+- `models/` holds one folder per provider. Inside each, `mapping.py` is the
+  table of what turns into what and `model.py` is the rest.
+- `hooks/` holds the rules that ship in the box: a turn limit, a token
+  budget, a tool guard, a logger.
+- `drivers/` sends events out of the process. `transport.py` has `sse()` and
+  `ws_frames()`.
+- `tests/` is plain Python files with asserts in them. No pytest.
+- `docs/` is this site. `docs.json` is the menu, `content/` holds the pages,
+  and `check.py` is its test.
+
+This is what an import looks like.
 
 ```python
 from core import Agent, tool
@@ -37,57 +38,25 @@ from models.anthropic import Anthropic
 from hooks.steps import Steps
 ```
 
-`models/`, `hooks/` and `drivers/` speak `core` and the standard library, and
-never each other. A provider's own files speak each other with one dot —
-`from .mapping import turn` — and never reach into another provider, which is
-why a vendor that cloned somebody's wire subclasses `OpenAI` in your code, not
-in `models/`. Nothing imports an adapter, and `core/` imports none of them.
-
-<Note>
-  The arrows only point one way, inside `core/` too: `core/agent.py` imports
-  `core/loop.py`, and the loop never imports back. The loop's functions take
-  any object with the right attributes, so the file that runs the agent does
-  not have to know the `Agent` class exists.
-</Note>
-
-## Running the tests
+## How to run the tests
 
 ```bash
 for f in tests/test_*.py; do uv run python "$f" || exit 1; done
 uv run ruff check .
 ```
 
-Every test file is an ordinary Python script with asserts in it — no pytest,
-no fixtures, no plugins. Run one on its own and it prints what passed. `uv run
-python` is how it gets an interpreter; a bare `python` need not be on your
-PATH.
+Each test is an ordinary script. Run one on its own and it prints what passed.
 
-## The rules
-
-`tests/test_rules.py` fails the build on four of them:
+## The rules we keep
 
 - `core/*.py` is 2000 lines all together, at most.
-- `core/` imports the standard library and itself, nothing else — plus httpx,
-  in `llm.py` and nowhere else.
-- `core/` never says a product or protocol name — no mcp, anthropic, openai,
-  litellm, claude, gpt, a2a, acp. The test greps for those words in every
-  `core/*.py`, comments included.
-- `models/`, `hooks/` and `drivers/` import only `core` and the standard
-  library, plus httpx in `models/` — and a provider's own files, one dot deep.
+- `core/` imports the standard library and itself, plus `httpx` in `llm.py`.
+- `core/` never names a product or a protocol, comments included.
+- `models/`, `hooks/` and `drivers/` import `core`, the standard library,
+  `httpx` in `models/`, and a provider's own files.
+- Twelve building blocks in `core/`, and nothing else in there gets to be one.
+- `Agent` has one method, `run()`.
 
-Two more belong to whoever reviews the change, because no test can see them:
-
-- Twelve nouns. `Part`, `ToolCall`, `Message`, `Model`, `Tool`, `Hooks`,
-  `Event`, `Events`, `Agent`, `Run`, `ContractError`, `Stop` — and nothing
-  else in `core/` gets to be one.
-- `Agent` has one method, `run()`. There is never a second one.
-
-<Warning>
-  A thirteenth noun in `core/` is a conversation, not a merge. The same goes
-  for a second method on `Agent`: both are the kind of change that has to be
-  argued for before it is written, because no test will stop it.
-</Warning>
-
-The first rule is the one that bites, and `wc -l core/*.py` is how you check
-it before you push. The budget is the reason the rest of the list stays short,
-and the reason a feature that could live in `hooks/` or `models/` lives there.
+`tests/test_rules.py` fails the build on the first four. The last two belong
+to whoever reviews the change, because no test can see them. `wc -l core/*.py`
+is how you check the first one before you push.

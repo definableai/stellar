@@ -1,72 +1,62 @@
 ---
-title: The twelve nouns
-description: The whole vocabulary of core — three data types, three contracts, two planes, two signals, and the two things that hold them.
+title: The twelve building blocks
+description: Everything core names: three kinds of data, two things you write, the rules, the log, the agent, the job, and two signals.
 ---
 
 `core/` names twelve things. Everything else in it is one of these twelve, or
 a function that moves them around.
 
-| noun | kind | the contract |
+| name | kind | what it is |
 | --- | --- | --- |
-| [`Part`](/reference/types) | data | one piece of a message: `type` names it, `data` holds it. Three types are reserved words core folds itself — `text`, `tool_call`, `meta`; everything else passes through untouched. |
-| [`ToolCall`](/reference/types) | data | the model asking for one tool: `id`, `name`, `args`. |
-| [`Message`](/reference/types) | data | one line in the notebook: `role`, `content`, `tool_calls`, `tool_call_id`, `meta`. `content` is always `list[Part]` — a str coerces at construction, and `.text` joins the text parts back. |
-| [`Model`](/reference/model) | contract | the brain. Write an async `invoke(run)`; hand back a `Message`. |
-| [`Tool`](/reference/tool) | contract | one thing the agent can do. Write an async `execute(run, **args)` — an async generator streams. |
-| [`Hooks`](/reference/hooks) | registry | the rule cards, filed by stage: `attach`, `detach`, `fire`. The agent has one, every run has one. |
-| [`Event`](/reference/events) | data | one thing that happened: `seq`, `name`, `data`, `source`, `run_id`, `ts`. |
-| [`Events`](/reference/events) | the radio | the bus: `emit`, `listen`, `detach`, `stream`. |
-| [`Agent`](/reference/agent) | the bag | `model`, `tools`, `hooks`, `events`, `extra`. One method: `run()`. |
-| [`Run`](/reference/agent) | the errand | one conversation: `id`, `messages`, `step`, `hooks`, `extra`, and `emit()`. |
-| [`ContractError`](/reference/signals) | signal | you wired it wrong. The message carries the code to type instead. |
-| [`Stop`](/reference/signals) | signal | end the run cleanly. Raise it from any hook or tool. |
+| [`Part`](/reference/types) | data | One piece of a message: `type` names it, `data` holds it. |
+| [`ToolCall`](/reference/types) | data | The model asking for one tool: `id`, `name`, `args`. |
+| [`Message`](/reference/types) | data | One line in the conversation: `role` and `content`, plus tool and meta fields. |
+| [`Model`](/reference/model) | you write it | The brain: an async `invoke(run)` that gives back one `Message`. |
+| [`Tool`](/reference/tool) | you write it | One thing the agent can do: an async `execute(run, **args)`. |
+| [`Hooks`](/reference/hooks) | the rules | Your rules, filed by stage: `attach`, `detach`, `fire`. |
+| [`Event`](/reference/events) | data | One thing that happened: `seq`, `name`, `data`, `source`, `run_id`, `ts`. |
+| [`Events`](/reference/events) | the log | What happened, and everyone watching: `emit`, `listen`, `stream`. |
+| [`Agent`](/reference/agent) | the wiring | What you build once: `model`, `tools`, `hooks`, `events`, `extra`. |
+| [`Run`](/reference/agent) | one job | One conversation: `id`, `messages`, `step`, `hooks`, `extra`, `emit()`. |
+| [`ContractError`](/reference/signals) | signal | You wired it wrong. The message says what to type instead. |
+| [`Stop`](/reference/signals) | signal | Raise it from any hook or tool to end the run cleanly. |
 
-A thirteenth noun in `core/` is a conversation, not a merge — see
+A thirteenth one in `core/` is a conversation, not a merge. See
 [the rules](/layout).
 
-## Not nouns, still yours
+## Also in the box
 
-`from core import …` also gives you the things that are not new nouns. They are
-built out of the twelve, and you can write any of them yourself.
+`from core import …` gives you more than the twelve. Each of these is built
+out of them, and you could write it yourself.
 
-- **`ProviderModel`** — a [Model](/reference/model) in two steps: `encode(run)`
-  builds the request body, and an async `send(run, body)` yields the reply as
-  Parts. Its `invoke` rings `model.delta` per Part and folds them into one
-  message.
-- **`Provider`** — the HTTP half every adapter shares: the key, the profile,
-  one client, the retries, and two ways out — `post()` for one reply, `sse()`
-  for a stream. See [a provider is a folder](/models/folder).
-- **`Profile`** — one row off a provider's own docs: `id`, `context`,
-  `max_output`, and a set of feature words. `"image" in profile` is the whole
-  API. See [profiles](/models/profiles).
-- **`ANY`** — the profile an unrecognised model id falls back to, after a
-  logged warning: every feature allowed, rather than an error.
-- **`Fallback`** — a Model made of Models, asked in order; the first that takes
-  the run and answers wins. See [fallback](/models/fallback).
-- **`FakeModel`** — a `ProviderModel` that reads its answers off a list you
-  wrote. No network, no key, the same fold path. See [testing](/models/testing).
-- **`ProviderError`** — the provider said no. `.status` is the HTTP status, or
-  `None` when there was none to give — a dead socket, a broken chunk.
-- **`Unsupported`** — this model cannot do what the run asks, said before the
-  network, so a picture nobody can read costs no round trip.
-- **`@tool`** — a plain function becomes a [Tool](/tools/functions): its name,
-  its docstring, its signature. One keyword, `parallel=`.
-- **`@hook`** — tags a function with the stages it listens for and leaves it a
-  function. `attach` is what files it; see [hooks](/hooks/overview).
-- **`STAGES`** — the eight stage names, in ring order.
-- **`run`** — the loop itself. `Agent.run()` builds a `Run` and hands it here.
-- **`check`** — reads the whole backpack and raises `ContractError` with the
-  code to type instead. It runs when you build the agent, and again at the top
-  of every step.
-- **`check_model`** — grades an adapter over three real exchanges. This one
-  lives in `core.conformance`, not in the barrel:
-  `from core.conformance import check_model`. See
-  [conformance](/reference/conformance).
+- **`ProviderModel`** is a Model in two steps: `encode(run)` makes the request,
+  `send(run, body)` yields the reply in pieces.
+- **`Provider`** is the HTTP half every provider shares: the key, the client,
+  the retries. See [folders](/models/folder).
+- **`Profile`** is one row from a provider's docs: the id, the sizes, what the
+  model can do. See [profiles](/models/profiles).
+- **`ANY`** is the profile an unknown model id falls back to, after a warning.
+- **`Fallback`** is a model made of models, asked in order until one answers.
+  See [fallback](/models/fallback).
+- **`FakeModel`** reads its answers off a list you wrote. See
+  [testing](/models/testing).
+- **`ProviderError`** means the provider said no. `.status` is the HTTP status,
+  or `None`.
+- **`Unsupported`** means this model cannot do what the run asks, said before
+  the network.
+- **`@tool`** turns a plain function into a [Tool](/tools/functions): its name,
+  its docstring, its signature.
+- **`@hook`** tags a function with the stages it listens for. See
+  [hooks](/hooks/overview).
+- **`STAGES`** is the eight stage names, in order.
+- **`run`** is the loop itself. `Agent.run()` builds a `Run` and hands it here.
+- **`check`** reads the wiring and raises `ContractError` with the code to type
+  instead.
+- **`check_model`** tests a provider you wrote over three real exchanges.
+  Import it from `core.conformance`. See [conformance](/reference/conformance).
 
 <Note>
-  Everything is async, and everything core calls takes the run: `invoke(run)`,
-  `execute(run, …)`. There are no sync twins and no bridges — sync code is one
-  `asyncio.to_thread` line that you write inside the async method. The one
-  deliberate exception is an event listener, which is sync because `emit()`
-  never awaits.
+  Everything is async, and everything core calls takes the run. Sync work is
+  one `asyncio.to_thread` line inside your async method. The one exception is
+  an event listener, which is sync because `emit()` never waits.
 </Note>

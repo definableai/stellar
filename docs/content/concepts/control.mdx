@@ -1,93 +1,134 @@
 ---
-title: Two control signals
-description: raise Stop, and a tool.pre hook that returns a result. There is no third one — everything else is either an answer or an exception.
+title: Stopping and skipping
+description: Two ways to steer the loop from outside. Raise Stop to end the run, or answer for a tool before it runs.
 ---
 
 There are exactly two ways to steer the loop from outside it. One is raised,
-one is returned. Everything else that happens to a run is either an answer the
-model reads or an exception you catch.
+one is returned. Everything else is either an answer the model reads or an
+error you catch.
 
-## raise Stop
-
-```python
-from core import Stop, hook
-
-
-@hook("model.post")
-async def enough(answer) -> None:
-    if "goodbye" in answer.text.lower():
-        raise Stop
+```mermaid
+flowchart LR
+  Hook["a hook returns"] -->|"nothing"| Keep["keep going"]
+  Hook -->|"a new value"| Swap["use it instead"]
+  Hook -->|"raise Stop"| Done["end the run"]
 ```
 
-Raise it from any hook or any tool. The loop catches it and ends the run
-cleanly: no traceback reaches your `await`, and what comes back is the `Run`
-holding everything written down so far — the notebook up to that point, the
-step count, the pocket. A stop is an ending, not an error.
+## End the run with Stop
 
-Two of the [shipped cards](/hooks/cards) are this and nothing more.
-`Steps(n)` counts turns off `run.step` and raises. `Budget(max_tokens)` adds up
-what each reply cost and raises past the limit — and appends that last reply to
-the notebook itself first, because the loop's own append is one of the things a
-`Stop` skips. If you stop mid-stage, know what the stage had not done yet.
+Raise `Stop` from any hook or any tool. The loop catches it and ends the run
+cleanly. No error reaches your `await`, and the `Run` comes back holding
+everything written down so far.
 
-`run.post` always fires. It is a `finally`, so it runs after a clean finish,
-after a `Stop` and after a crash. Two consequences:
+```python run
+import asyncio
 
-- A `Stop` raised inside a `run.post` hook is ignored — too late to stop
-  anything.
-- Any other exception out of `run.post` propagates the ordinary way, with
-  whatever was already in flight attached as its `__context__`.
+from core import Agent, FakeModel, Message, Stop, ToolCall, hook, tool
 
-## Return a result from tool.pre
 
-The second signal is not raised, it is returned:
+@tool
+def clock() -> str:
+    """Tell the time."""
+    return "12:00"
 
-```python
-from core import ToolCall, hook
+
+@hook("model.pre")
+async def two_turns(messages: list, run) -> None:
+    """The model gets two turns. Then the run ends."""
+    if run.step > 2:
+        raise Stop
+
+
+asked = [Message("assistant", tool_calls=[ToolCall("1", "clock", {})])
+         for _ in range(2)]
+agent = Agent(FakeModel(asked), [clock])
+agent.hooks.attach(two_turns)
+
+run = asyncio.run(agent.run("what time is it?"))
+for message in run.messages:
+    print(message.role)
+```
+
+```text output
+user
+assistant
+tool
+assistant
+tool
+```
+
+- The hook runs at the top of every turn, before the model is asked.
+- Two turns went through. The third was stopped before it started.
+- `Steps(2)` is this hook, already written for you. `Budget(max_tokens)` counts
+  tokens the same way.
+
+`run.post` always runs, after a clean finish, after a `Stop` and after a crash.
+A `Stop` raised inside a `run.post` hook is ignored, because there is nothing
+left to stop.
+
+<Warning>
+  A `Stop` in the middle of a stage skips whatever that stage had not done yet.
+  Stop at `model.post` and the reply is never written into the conversation.
+  `Budget` writes the reply down itself first, for exactly that reason.
+</Warning>
+
+## Answer for a tool before it runs
+
+The second signal is returned, not raised. A `tool.pre` hook that returns
+something has answered for the tool, and the tool never runs.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, hook, tool
+
+
+@tool
+def rm(path: str) -> str:
+    """Delete a file."""
+    return f"deleted {path}"
 
 
 @hook("tool.pre")
 async def guard(call: ToolCall):
+    """Never let the agent delete a file."""
     if call.name == "rm":
-        return "denied: ask a human first"     # the tool never runs
+        return "denied: ask a human first"
+
+
+agent = Agent(FakeModel([
+    Message("assistant", tool_calls=[ToolCall("1", "rm", {"path": "notes.txt"})]),
+    "I was not allowed to delete it.",
+]), [rm])
+agent.hooks.attach(guard)
+
+run = asyncio.run(agent.run("delete notes.txt"))
+print(run.messages[2].text)          # what the model was told the tool said
+print(run.messages[-1].text)         # what the model said next
+```
+
+```text output
+denied: ask a human first
+I was not allowed to delete it.
 ```
 
 | you return | what the loop does |
 | --- | --- |
-| `None` | nothing — the call goes through as it is |
-| a `ToolCall` | runs that one instead: a reroute, or the same call with better arguments |
-| a `str` | skips the tool; this *is* its result, written into the notebook for the model to read |
-| a `Message` | the same, when the result needs parts rather than plain text |
+| `None` | nothing, the call goes through as it is |
+| a `ToolCall` | runs that one instead, with a new name or better arguments |
+| a `str` | skips the tool, and this is its result |
+| a `Message` | the same, for a result that needs more than text |
 
-A result also ends the ring: the first card that answers with one wins, and the
-cards behind it never hear that bell. That is the whole deny path — no third
-signal, no boolean to return. `Permission(deny, allow, ask)` is this signal
-wearing a uniform, and its refusals are ordinary strings like
-`denied: rm`.
+The first rule that answers wins, and the rules behind it never hear that
+stage. `Permission(deny, allow, ask)` is this signal in a uniform, and it
+refuses with plain strings like `denied: rm`.
 
 ## What is not a signal
 
-A tool that raises is not a control signal. The loop catches the exception,
-writes it into the notebook as that call's result, and the model gets another
-turn:
-
-| what happened | what the model reads |
-| --- | --- |
-| the tool raised | `error: ValueError: nope` |
-| it asked for a tool that is not in the toolbox | `error: unknown tool: ghost` |
-| the provider could not parse the call's arguments | `error: tool arguments were not valid JSON: …` |
-
-Run-time mistakes are answers, not crashes: the model reads its own mistake and
-tries again, which is usually what you wanted. The loop catches exactly two
-things — a `Stop`, and a tool's own exception. Everything else propagates: a
-model that raises, a hook that raises, and `ContractError` first among them,
-because a wiring mistake is not something a model can fix by trying again.
-
-<Warning>
-  A `Stop` from a tool inside a parallel batch waits for the batch. Every call
-  in it runs to the end — nothing is cancelled mid-write, so no half-written
-  file is left behind — and the `Stop` is raised once they are all done, first
-  in call order. The results ahead of it are already in the notebook; the ones
-  behind it are dropped, though their tools did run. See
-  [parallel tools](/tools/parallel).
-</Warning>
+- **A tool that raises.** The loop catches it, writes
+  `error: ValueError: nope` into the conversation, and the model gets another
+  turn.
+- **A tool that is not in the toolbox.** The model reads
+  `error: unknown tool: ghost` and tries again.
+- **A `ContractError`.** That is a bug in your wiring. No model can fix it by
+  trying again, so it comes straight out of your `await`.
