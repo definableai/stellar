@@ -1,0 +1,112 @@
+---
+title: Models
+description: The brain in the backpack, and the three ways to give an agent one.
+icon: brain
+---
+
+A model is the brain an [`Agent`](/reference/agent) thinks with. The whole
+contract is one method: `async invoke(run)`, handed the run, giving back one
+assistant [`Message`](/reference/types). Everything below is a shorter way to
+write that method well.
+
+The run is all the context there is. `run.messages` is the notebook (the
+conversation so far), `run.agent.tools` is the toolbox, `run.emit(…)` is the
+radio. Nothing else is passed in, and nothing else has to be.
+
+## Subclass `Model`
+
+Wrap what you already have. Core is async all the way down and ships no sync
+twins, so a blocking SDK is one `to_thread` line away:
+
+```python
+import asyncio
+
+from core import Message, Model
+
+
+class MyModel(Model):
+    async def invoke(self, run) -> Message:
+        said = await asyncio.to_thread(my_sdk.complete, run.messages)   # yours
+        return Message("assistant", said)
+```
+
+`Message("assistant", said)` takes a str and makes it one text
+[`Part`](/reference/types) at construction; `.text` joins them back.
+
+## No base class
+
+Nothing checks your ancestry. Any object whose own class defines an async
+`invoke(run)` passes [`check()`](/concepts/contracts) and runs. This one needs
+no key, no network and no import from `models/`:
+
+```python
+from core import Agent, Message
+
+
+class Parrot:
+    async def invoke(self, run) -> Message:
+        return Message("assistant", run.messages[-1].text.upper())
+
+
+run = await Agent(Parrot()).run("hello")
+print(run.messages[-1].text)                     # HELLO
+```
+
+<Warning>
+A sync `invoke` is refused before it ever runs — at construction, and again at
+the top of every step, because the backpack can be swapped mid-run. The loop
+could never await it, so the `ContractError` says so and carries the code to
+type instead.
+</Warning>
+
+## `ProviderModel`
+
+An HTTP provider in two steps. `encode(run)` builds the request body — pure
+translation, which is what makes it testable without a socket. `async
+send(run, body)` owns the network, retries included, and yields the reply as
+Parts.
+
+```python
+from core import Part, ProviderModel
+
+
+class MyProvider(ProviderModel):
+    def encode(self, run) -> dict:            # pure: send() takes it from here
+        ...
+
+    async def send(self, run, body):          # the network lives here
+        yield Part("text", "hello")
+```
+
+Core writes the fold: `invoke` rings `model.delta` for every Part and grows one
+assistant Message out of them. A provider that streams yields a Part per chunk;
+one that does not yields the Parts of its single response, and core cannot tell
+the difference — which is why a streaming UI is written once.
+
+For an HTTP provider a third of it is already written. `Provider`, in
+`core/llm.py`, holds the key, the profile, one client, the retries and an SSE
+parser; a real adapter is two small files on top of it.
+
+<CardGroup cols={2}>
+  <Card title="The provider model" icon="plug" href="/models/provider">
+    `encode`, `send`, and the Part protocol core folds them with.
+  </Card>
+  <Card title="A provider is a folder" icon="folder" href="/models/folder">
+    What `Provider` hands you, and the mapping table beside it.
+  </Card>
+  <Card title="Profiles and the gate" icon="sliders-horizontal" href="/models/profiles">
+    One row off the docs, and the refusal it buys before any byte.
+  </Card>
+  <Card title="Anthropic" icon="sparkles" href="/models/anthropic">
+    The Messages API: system lines, tool results, thinking blocks.
+  </Card>
+  <Card title="OpenAI and its clones" icon="bot" href="/models/openai">
+    Chat Completions, and the vendors who copied the wire.
+  </Card>
+  <Card title="Fallback and routing" icon="shuffle" href="/models/fallback">
+    Models in a row; the first that answers wins.
+  </Card>
+  <Card title="Testing a model" icon="flask-conical" href="/models/testing">
+    Canned traffic, `check_model`, and `FakeModel`.
+  </Card>
+</CardGroup>

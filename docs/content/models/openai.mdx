@@ -1,0 +1,138 @@
+---
+title: OpenAI and its clones
+description: Chat Completions — the wire format the compatible vendors copied.
+icon: bot
+---
+
+`models/openai/` speaks Chat Completions, the format most compatible vendors
+clone. Point `base_url` somewhere else and the same class talks to the clone.
+
+```python
+from core import Agent
+from models.openai import OpenAI
+
+agent = Agent(OpenAI("gpt-5.6-luna"))           # OPENAI_API_KEY in the env
+run = await agent.run("shout hello")
+```
+
+The base url is `https://api.openai.com/v1` and the key comes from
+`OPENAI_API_KEY` unless `api_key=` says otherwise. One header carries it:
+
+```python
+def headers(self) -> dict:
+    """The key, carried as a bearer token — the only header this wire wants."""
+    return {"Authorization": f"Bearer {self.key}"}
+```
+
+## The shipped rows
+
+| id | context | max output | words |
+| --- | --- | --- | --- |
+| `gpt-5.6-sol` | 1,050,000 | 128,000 | the six below |
+| `gpt-5.6-terra` | 1,050,000 | 128,000 | the six below |
+| `gpt-5.6-luna` | 1,050,000 | 128,000 | the six below |
+| `gpt-5.5` | 1,050,000 | 128,000 | the six below |
+
+All four share one set: `image`, `tools`, `stream`, `tool_stream`, `json`,
+`system`. No `document` and no `thinking` — this wire has no shape for either,
+and the [gate](/models/profiles) refuses them before a byte is sent.
+
+`encode` writes `max_completion_tokens` from the row, adds `stream` and
+`stream_options: {"include_usage": true}` when the row streams, adds `tools`
+when the toolbox is not empty — and then merges your constructor keywords over
+the lot, so `OpenAI("gpt-5.6-luna", max_completion_tokens=9)` wins.
+
+## A reply with no block types
+
+Claude's reply is a list of blocks. This one is not: text arrives as a string,
+tool calls arrive as a list beside it. So `mapping.py` here has an `OUT` and no
+`IN` — there is no block type to key a table on. It has one in-row all the
+same, `tool_call()`, called from `model.py` once the fragments of a call have
+finished arriving.
+
+`OUT` knows two Part types, `text` and `image`. Its else-rule is `unsaid`,
+which raises `ContractError`:
+
+```python
+def unsaid(p: Part) -> dict:
+    """A part this wire has no shape for — loud, because a profile word promised it."""
+    raise ContractError(
+        f"Chat Completions has no part type {p.type!r}; say 'text' or 'image'")
+```
+
+Loud on purpose. A part *you* authored got past the gate because a profile word
+promised it, so dropping it quietly would be the adapter lying about what it
+sent.
+
+A tool call's arguments travel as a JSON *string*: dumped on the way out,
+parsed on the way back in. On the stream they arrive a fragment at a time,
+grown in place by index until the turn ends, so nothing half-parsed leaves the
+adapter.
+
+## A tool result that is more than text
+
+The tool line keeps its text and only its text. Pictures a tool returned ride
+in **one user line right after the run of tool lines**, each captioned
+`[image returned by tool call <id>]` so the model can tell which result they
+belong to. Anything else a tool returned has no shape here and is dropped.
+
+```python
+from core import Message, Part, ToolCall
+
+notebook = [
+    Message("user", "look"),
+    Message("assistant", "", [ToolCall("t1", "shot", {})]),
+    Message("tool", [Part("text", "here"), Part("image", {"url": "https://x/s.png"})],
+            tool_call_id="t1"),
+]
+# on the wire: … a tool line saying "here", then a user line holding
+# "[image returned by tool call t1]" and the picture
+```
+
+## Its own past, off another wire
+
+An assistant turn may carry a thinking block it got from Claude. This wire
+cannot say one, so a replayed assistant turn drops what it cannot say and keeps
+its text and its tool calls. The model's own past is its own; the same part
+from *you* still raises `unsaid`. Nothing you wrote goes missing in silence.
+
+## A vendor that copied the wire
+
+Three lines, in your code, not in `models/`.
+
+<Tabs>
+  <Tab title="Groq">
+
+```python
+from models.openai import OpenAI
+
+
+class Groq(OpenAI):                     # in your code, not in models/
+    url, env = "https://api.groq.com/openai/v1", "GROQ_API_KEY"
+    PROFILES = {}                       # its own rows, off its own docs; an id
+                                        # with no row takes ANY and warns
+```
+
+  </Tab>
+  <Tab title="Ollama">
+
+```python
+from core import Profile
+from models.openai import OpenAI
+
+
+class Ollama(OpenAI):                   # a local model wants no key at all
+    url, env = "http://localhost:11434/v1", None
+
+
+ONE_POST = Profile("my-local-model", 32_000, 4_096,      # numbers off its docs
+                   frozenset({"tools", "system"}))       # and no "stream"
+model = Ollama("my-local-model", profile=ONE_POST)
+```
+
+  </Tab>
+</Tabs>
+
+A clone that cannot hold a stream open gets a profile without `stream` — either
+`profile=` on the instance, as above, or its own `PROFILES` — and takes the
+one-POST path. Everything else about it is the same wire.

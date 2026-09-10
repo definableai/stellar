@@ -1,0 +1,109 @@
+---
+title: Profiles and the gate
+description: One row off the provider's docs, and the refusal it buys before any byte.
+icon: sliders-horizontal
+---
+
+A `Profile` is one row off the provider's own documentation: what a single
+model id can do. Every [`Provider`](/models/folder) instance carries exactly
+one, chosen by the id you named.
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Profile:
+    id: str
+    context: int                        # input window, tokens
+    max_output: int                     # default max output tokens
+    features: frozenset[str] = frozenset()
+
+    def __contains__(self, feature: str) -> bool:
+        """True when this model has that word."""
+        return feature in self.features
+```
+
+`"image" in model.profile` is the whole API. It is a router's question, and it
+is the one question the gate asks of everything you put in the notebook.
+
+## The eight words
+
+| word | what it means |
+| --- | --- |
+| `image` | a `Part("image", …)` may ride in what you send |
+| `document` | a `Part("document", …)` may ride |
+| `thinking` | a `Part("thinking", …)` may ride |
+| `tools` | the toolbox may go on the wire |
+| `stream` | ask for the event stream; without it, one POST |
+| `tool_stream` | put argument fragments on the bus as `tool.args` events |
+| `json` | structured outputs |
+| `system` | system messages |
+
+The first three are Part types. `tools`, `stream` and `tool_stream` are read by
+the shipped adapters. `json` and `system` are read by nobody in this
+repository — they are there for a router of yours to ask about, and for an
+adapter that grows a use for them.
+
+## One rule
+
+**A feature named after a Part type admits that Part in what you send** — user,
+system and tool messages. That is the entire grading rule.
+
+The model's own output is never graded: an assistant turn is its past, not your
+request, and replays as its wire allows. Three types are never graded either,
+because core folds them itself: `text`, `tool_call` and `meta`.
+
+`accept()` runs inside `invoke`, before `encode` and before any byte leaves the
+process. It raises `Unsupported` — a `ValueError` — naming the part and listing
+what this row does read. A toolbox on a model without `tools` gets the same
+treatment.
+
+```python
+from core import Agent, Message, Part, Profile, Unsupported
+from models.openai import OpenAI
+
+WORDS = Profile("gpt-5.6-luna", 1_050_000, 128_000, frozenset({"system", "tools"}))
+agent = Agent(OpenAI("gpt-5.6-luna", api_key="sk-x", profile=WORDS))
+
+try:
+    await agent.run(Message("user", [Part("image", {"url": "https://x/cat.png"})]))
+except Unsupported as ex:
+    print(ex)    # gpt-5.6-luna reads no 'image' part; it reads system, tools
+```
+
+A picture nobody can read never costs a round trip — and under a
+[`Fallback`](/models/fallback) that free refusal is what moves the run to the
+next model.
+
+## What the adapters do with the words
+
+`stream` picks the path. With it, `encode` asks for the event stream and `send`
+yields a text Part per chunk; without it, one POST and the same parse. That is
+why a proxy that cannot hold a stream open only needs a row without the word.
+
+`tool_stream` puts the argument fragments on the radio as `tool.args`
+[events](/events/streaming) — `{"id", "name", "delta"}`, source `model:<id>`.
+An event and not a Part, deliberately: a Part would land in the message.
+
+`max_output` is the max-tokens the body carries, unless a param of yours says
+otherwise. `Anthropic` writes it as `max_tokens`, `OpenAI` as
+`max_completion_tokens`; in both, a keyword you passed to the constructor wins.
+
+## An id with no row
+
+`lookup` takes the longest row the id starts with, so a dated id finds its
+family: `gpt-5.6-luna-2026-08-01` resolves to the `gpt-5.6-luna` row. When
+nothing matches, the id gets the `ANY` profile — 128,000 context, 4,096 max
+output, all eight words — under its own name, and a warning on the
+`core.llm` logger. Never an error: an unknown id runs, loudly.
+
+Pass `profile=` to overrule all of that for one instance, or set your own
+`PROFILES` on a subclass to overrule it for a whole vendor.
+
+<Warning>
+The numbers in the shipped rows come from the providers' own docs. A row nobody
+could verify is absent, not invented — that is why the gate falls back to `ANY`
+and a warning instead of guessing, and why adding a model you use is a
+one-line pull request against `PROFILES`.
+</Warning>

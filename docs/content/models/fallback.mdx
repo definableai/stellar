@@ -1,0 +1,108 @@
+---
+title: Fallback and routing
+description: Models in a row, asked in order — the first that takes the run and answers wins.
+icon: shuffle
+---
+
+Routing composes Models. It is not a setting inside a provider: `Fallback` is a
+[`Model`](/models/overview) made of Models, and that is why it crosses vendors
+for free — the notebook is core-shaped, and every adapter encodes from
+[`Message`](/reference/types), never from another adapter's wire.
+
+```python
+from core import Agent, Fallback
+from models.anthropic import Anthropic
+from models.openai import OpenAI
+
+agent = Agent(Fallback(                          # order = preference
+    Anthropic("claude-opus-5"),
+    OpenAI("gpt-5.6-terra", reasoning_effort="high"),
+    OpenAI("gpt-5.6-luna"),                      # the last one's error is yours
+))
+run = await agent.run("what is in this pdf?")    # a document: opus takes it
+run.messages[-1].meta["model"]                   # who actually answered
+```
+
+`Fallback(first, *rest)` takes one Model minimum. The whole of it is eight
+lines:
+
+```python
+async def invoke(self, run) -> Message:
+    for model in self.models[:-1]:
+        try:
+            return await model.invoke(run)
+        except (Unsupported, ProviderError) as ex:
+            name = getattr(model, "model", None) or type(model).__name__
+            run.emit("model.skip", str(ex), source=f"model:{name}")
+    return await self.models[-1].invoke(run)
+```
+
+## What it catches, and what it does not
+
+Exactly two exceptions move the run along:
+
+- `Unsupported` — the [gate's](/models/profiles) no, said before any byte. A
+  picture on a text-only model costs no round trip at all.
+- `ProviderError` — the wire's no, with its three retries already spent.
+
+Everything else stays loud, `ContractError` first among them: a wiring mistake
+is not a reason to ask someone else, and quietly asking the next model would
+hide the bug that a `check()` complaint was trying to show you.
+
+The last model is asked **outside** the loop, so its refusal reaches you as
+itself — the same exception, with its own `.status`, not something wrapped.
+
+## Reading what happened
+
+Every skip rides the bus as a `model.skip` [event](/events/overview) carrying
+the refusal's own words, source `model:<id>` — or the class name, for a Model
+that has no `model` attribute to name.
+
+```python
+agent.events.listen(lambda e: print(e.source, e.data), "model.skip")
+```
+
+The reply's `meta["model"]` is how you tell who ended up answering: the wire's
+own word for itself, else the id that was asked, never `None`.
+
+## A policy of your own
+
+A smarter rule — cheap first, by toolbox or by notebook length — is a Model of
+your own, and it nests inside a `Fallback`, because every layer here is a
+Model:
+
+```python
+from core import Fallback, Message, Model
+from models.anthropic import Anthropic
+from models.openai import OpenAI
+
+
+class Cheap(Model):
+    def __init__(self, small, big) -> None:
+        self.small, self.big = small, big
+
+    async def invoke(self, run) -> Message:
+        long = sum(len(m.text) for m in run.messages) > 20_000
+        return await (self.big if long else self.small).invoke(run)
+
+
+model = Fallback(Cheap(Anthropic("claude-haiku-4-5"), Anthropic("claude-opus-5")),
+                 OpenAI("gpt-5.6-luna"))
+```
+
+`Cheap` never touches a wire, so it raises neither of the two caught
+exceptions; whatever the model it picked raises is what the `Fallback` around
+it sees. That is the whole composition rule.
+
+<Warning>
+Two ceilings, both deliberate.
+
+A provider that is down is retried **in full** — three tries, with backoff — at
+every step before the next one is asked. Add a per-model cooldown when that
+starts to hurt.
+
+A stream that dies after its first delta falls through like any other refusal.
+The notebook comes out right, because only the winner's Message is folded into
+it, but the radio already carried the dead model's deltas, and a UI reading the
+bus will have shown them.
+</Warning>

@@ -1,0 +1,128 @@
+---
+title: Testing a model
+description: Canned traffic, check_model for the reply side, and your own assertions for the request.
+icon: flask-conical
+---
+
+An adapter has two halves and they are tested differently. `encode` is pure, so
+you assert its output directly. `send` needs traffic — so you hand it real
+traffic, with the socket taken out.
+
+## Canned traffic
+
+`post` and `sse` are the seam. Override `post` for the one-POST path, `sse` for
+the streaming one, and never reach for `httpx`: everything below the seam is
+already tested in `tests/test_llm.py`, and everything above it — the parsing,
+the Parts, the [fold](/models/provider) — is what you actually want to
+exercise.
+
+```python
+from core import Profile
+from core.conformance import check_model
+from models.anthropic import DOES, Anthropic
+
+# a proxy that cannot SSE: the same model, one POST at a time
+ONCE = Profile("claude-sonnet-5", 1_000_000, 4096, DOES - {"stream"})
+
+
+class Canned(Anthropic):
+    """The real adapter with the POST swapped for a list of replies."""
+
+    def __init__(self, bodies) -> None:
+        super().__init__("claude-sonnet-5", api_key="test", profile=ONCE)
+        self.bodies, self.sent = list(bodies), []
+
+    async def post(self, path, body) -> dict:
+        self.sent.append(body)
+        return self.bodies[len(self.sent) - 1]
+```
+
+The streaming seam is the same shape, one class up: an `async def sse` that
+yields the chunks of a scripted event stream instead of reading a socket. Both
+keep the bodies they were sent in `self.sent`, which is how the request side
+gets asserted afterwards.
+
+## check_model
+
+`check_model(model)` grades an adapter against the real loop. It makes exactly
+three model calls, always in this order, so a three-entry script lines up with
+it:
+
+1. a plain reply, with no toolbox at all;
+2. a reply asking for the built-in `echo` tool;
+3. a final reply after the tool result lands.
+
+It grades the reply side: that an assistant Message with text comes back, that
+the text deltas add up **in order** to what folded, that any `meta` Part
+reached `message.meta`, that a tool call arrives as a whole
+[`ToolCall`](/reference/types) with a dict of args, that the tool message
+answers the right id, and that the model stops after one round.
+
+<Warning>
+It cannot see whether `encode` built a body your provider would accept.
+Nothing in the harness talks to the vendor, so a body with the wrong key name
+passes it happily. Assert that half yourself.
+</Warning>
+
+`check_model` calls `asyncio.run` inside, so call it from sync code only. From
+inside a running loop, `await core.conformance.exchanges(model)` is the same
+walk without the door.
+
+## The three steps
+
+<Steps>
+  <Step title="Script the traffic">
+    Real response bodies for the POST path, or real stream chunks for the SSE
+    path — copied out of the provider's docs or off a live call. Three of them,
+    in the order above: `ok`, a call to `echo`, then `done`.
+  </Step>
+  <Step title="Grade the reply side">
+    ```python
+    check_model(Canned(BODIES))     # BODIES: three real Messages API replies
+    ```
+    Anything that does not add up raises `ContractError` naming the exchange
+    that broke, what it needed, and the roles it saw instead.
+  </Step>
+  <Step title="Assert the request side">
+    ```python
+    from core import Agent, Message, Run
+    from models.anthropic import Anthropic
+
+
+    def encoded(model, messages, tools=()) -> dict:
+        """One request body, off a Run built by hand: encode needs no loop."""
+        return model.encode(Run(Agent(model, tools), "rid", list(messages)))
+
+
+    body = encoded(Anthropic("claude-sonnet-5", api_key="x"),
+                   [Message("system", "Be brief."), Message("user", "hi")])
+    assert body["system"] == "Be brief."
+    ```
+    A `Run` is a plain dataclass — an agent, an id, a notebook — so `encode`
+    needs no event loop and no network to be checked key by key.
+  </Step>
+</Steps>
+
+`tests/test_anthropic.py` and `tests/test_openai.py` do both halves, against
+real traffic, and are the template worth copying.
+
+## FakeModel
+
+For everything that is not an adapter — a tool, a hook, a whole agent —
+`FakeModel` reads its answers off a list you wrote. It is a
+`ProviderModel` on purpose, so tests ride the same fold and `model.delta` path
+a real adapter uses, with no network and no key.
+
+```python
+from core import Agent, FakeModel, Message, Part, ToolCall
+
+ASKS = Message("assistant", "", [ToolCall("c1", "echo", {"text": "hi"})])
+model = FakeModel(["ok", ASKS, Message("assistant", [Part("text", "done")],
+                                       meta={"usage": {"output_tokens": 3}})])
+```
+
+One entry per turn, in order. A str becomes an assistant Message; a Message is
+taken apart into Parts — its content, then one `tool_call` Part per
+`ToolCall`, then one `meta` Part if it carries meta. The list you hand over is
+copied, so your fixture survives the run. Ask for one more turn than you wrote
+and it raises `ContractError` saying which reply it ran out after.
