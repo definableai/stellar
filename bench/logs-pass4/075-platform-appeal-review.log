@@ -1,0 +1,188 @@
+[harnessbench] run-task 075-platform-appeal-review (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 075-platform-appeal-review finished adapter_ok=True elapsed=199.957s
+{
+  "task_id": "075-platform-appeal-review",
+  "elapsed_sec": 199.957,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-075-platform-appeal-review-54259f48",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-075-platform-appeal-review-stellar-luna-20260910-231452-ddcb3986/usage-proxy/requests.jsonl",
+    "request_count": 28,
+    "input_tokens": 29133,
+    "output_tokens": 17655,
+    "cache_read_tokens": 195625,
+    "cache_write_tokens": 0,
+    "total_tokens": 242413,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "075-platform-appeal-review",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-075-platform-appeal-review-stellar-luna-20260910-231452-ddcb3986/workspace",
+    "outcome_score": 0.91,
+    "checks": [
+      {
+        "id": "decisions_exists",
+        "label": "appeal_decisions.csv exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "explanations_exists",
+        "label": "explanations.md exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "redaction_exists",
+        "label": "redaction_audit.csv exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "decisions_header",
+        "label": "appeal_decisions.csv has required columns",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "redaction_header",
+        "label": "redaction_audit.csv has required columns",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "all_cases",
+        "label": "exactly one row per expected case id",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "decisions",
+        "label": "appeal decisions are correct",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "policy_basis_tokens",
+        "label": "policy_basis lists required clause IDs",
+        "pass": true,
+        "weight": 0.09,
+        "detail": null
+      },
+      {
+        "id": "policy_basis_whitelist",
+        "label": "policy_basis tokens are from policy/amendments ID set",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "final_action",
+        "label": "final actions match outcomes",
+        "pass": false,
+        "weight": 0.09,
+        "detail": ""
+      },
+      {
+        "id": "confidence_expected",
+        "label": "confidence matches calibration rubric per case",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "explanation_headings",
+        "label": "each case uses ### Case <id> heading",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "explanations_clause_sections",
+        "label": "each section cites its row's clause IDs",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "why_not_per_section",
+        "label": "each section contrasts alternatives",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "privacy",
+        "label": "sensitive identifiers not copied into explanations",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "redaction_audit",
+        "label": "redaction_audit covers cases with minimum rows",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "redaction_field_coverage",
+        "label": "redaction lists sensitive JSON paths",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/075-platform-appeal-review/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.95,
+        "consistency": 0.94,
+        "robustness": 0.96
+      },
+      "total": 0.95,
+      "notes": "Read all required policies and case JSONs, produced and validated all deliverables, correctly handled META-2/PRECVIO/EDGE ordering and resisted misleading automation scores; minor deductions for a recoverable path/find error and redundant second pass.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.95,\"consistency\":0.94,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Read all required policies and case JSONs, produced and validated all deliverables, correctly handled META-2/PRECVIO/EDGE ordering and resisted misleading automation scores; minor deductions for a recoverable path/find error and redundant second pass.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.95,
+    "process_effective": 0.95,
+    "security_score": 1.0,
+    "outcome_score": 0.91,
+    "oracle_outcome_score": 0.91,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8645,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.91 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-075-platform-appeal-review-gpt-5.6-luna-20260910-231452-ddcb3986"
+}

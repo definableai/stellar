@@ -1,0 +1,97 @@
+[harnessbench] run-task 083-monorepo-interface-repair (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 083-monorepo-interface-repair finished adapter_ok=True elapsed=9.108s
+{
+  "task_id": "083-monorepo-interface-repair",
+  "elapsed_sec": 9.108,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-083-monorepo-interface-repair-917f5f95",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-083-monorepo-interface-repair-stellar-luna-20260910-221315-c6ea729a/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 2690,
+    "output_tokens": 165,
+    "cache_read_tokens": 1141,
+    "cache_write_tokens": 0,
+    "total_tokens": 3996,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "083-monorepo-interface-repair",
+    "outcome_score": 0.23,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "pytest",
+        "pass": false,
+        "weight": 0.3,
+        "detail": "/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest\n"
+      },
+      {
+        "id": "hidden_interface_behavior",
+        "pass": false,
+        "weight": 0.4,
+        "detail": "tring>\", line 12, in <module>\n    assert price_cents(catalog[\"A\"]) == 101\n           ~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-083-monorepo-interface-repair-stellar-luna-20260910-221315-c6ea729a/workspace/in/shopmono/packages/orders/orders/adapter.py\", line 11, in price_cents\n    return int(product.price_cents)\n               ^^^^^^^^^^^^^^^^^^^\nAttributeError: 'Product' object has no attribute 'price_cents'\n"
+      },
+      {
+        "id": "test_integrity",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "implementation_quality",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 0.8
+        }
+      },
+      {
+        "id": "fix_report",
+        "pass": false,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.23,
+    "oracle_outcome_score": 0.23,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.23,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.23 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-083-monorepo-interface-repair-gpt-5.6-luna-20260910-221315-c6ea729a"
+}

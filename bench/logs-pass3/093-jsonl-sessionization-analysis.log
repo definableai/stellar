@@ -1,0 +1,165 @@
+[harnessbench] run-task 093-jsonl-sessionization-analysis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 093-jsonl-sessionization-analysis finished adapter_ok=True elapsed=56.998s
+{
+  "task_id": "093-jsonl-sessionization-analysis",
+  "elapsed_sec": 56.998,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-093-jsonl-sessionization-analysis-3346ce13",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-093-jsonl-sessionization-analysis-stellar-luna-20260910-223238-c8bb2a34/usage-proxy/requests.jsonl",
+    "request_count": 13,
+    "input_tokens": 8449,
+    "output_tokens": 3735,
+    "cache_read_tokens": 64737,
+    "cache_write_tokens": 0,
+    "total_tokens": 76921,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "093-jsonl-sessionization-analysis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-093-jsonl-sessionization-analysis-stellar-luna-20260910-223238-c8bb2a34/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_clickstream.jsonl",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_session_rules.md",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_campaign_map.csv",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "sessions_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "sessions_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "sessions_exact",
+        "pass": false,
+        "weight": 0.38,
+        "detail": "got [{'session_id': 'U100-1', 'user_key': 'U100', 'session_start': '2026-04-10T10:00:00Z', 'session_end': '2026-04-10T10:25:00Z', 'event_count': '4', 'landing_page': '/home', 'last_page': '/checkout', 'converted': 'true', 'campaign_source': 'google'}, {'session_id': 'U100-2', 'user_key': 'U100', 'session_start': '2026-04-10T11:00:00Z', 'session_end': '2026-04-10T11:00:00Z', 'event_count': '1', 'landing_page': '/account', 'last_page': '/account', 'converted': 'false', 'campaign_source': 'direct'}, {'session_id': 'U200-1', 'user_key': 'U200', 'session_start': '2026-04-10T09:00:00Z', 'session_end': '2026-04-10T09:30:00Z', 'event_count': '2', 'landing_page': '/home', 'last_page': '/features', 'converted': 'false', 'campaign_source': 'email'}, {'session_id': 'U200-2', 'user_key': 'U200', 'session_start': '2026-04-10T10:00:01Z', 'session_end': '2026-04-10T10:00:01Z', 'event_count': '1', 'landing_page': '/checkout', 'last_page': '/checkout', 'converted': 'true', 'campaign_source': ''}]"
+      },
+      {
+        "id": "identity_stitching",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "thirty_minute_boundary",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_identity",
+        "pass": false,
+        "weight": 0.12,
+        "detail": "hits 4/5 got [{'line_number': '7', 'event_id': 'E104', 'reason': 'duplicate_event_id', 'notes': 'Repeated event_id; first valid occurrence retained'}, {'line_number': '8', 'event_id': 'E300', 'reason': 'bot_user_excluded', 'notes': 'user_agent contains bot, crawler, or synthetic'}, {'line_number': '9', 'event_id': '', 'reason': 'malformed_json', 'notes': 'Line is not valid JSON'}, {'line_number': '10', 'event_id': 'E400', 'reason': 'missing_timestamp', 'notes': 'Timestamp is empty or invalid'}, {'line_number': '11', 'event_id': 'E401', 'reason': 'unknown_event_type', 'notes': 'Event type is not page_view, login, or purchase'}]"
+      },
+      {
+        "id": "reject_notes",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_exact",
+        "pass": false,
+        "weight": 0.12,
+        "detail": "got {'total_sessions': 4, 'converted_sessions': 2, 'excluded_bot_users': 1, 'deduped_event_ids': 1, 'malformed_line_numbers': [9], 'missing_timestamp_event_ids': ['E400'], 'unknown_event_type_ids': ['E401']}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_required",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.4939,
+    "score": 0.4939,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/093-jsonl-sessionization-analysis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.93,
+        "robustness": 0.9
+      },
+      "total": 0.93,
+      "notes": "Clear local-only progression produced correct-looking artifacts and recovered from verification wording failures, though several redundant checks and unexplained final nonzero readbacks slightly reduce robustness.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.93,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Clear local-only progression produced correct-looking artifacts and recovered from verification wording failures, though several redundant checks and unexplained final nonzero readbacks slightly reduce robustness.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.93,
+    "process_effective": 0.93,
+    "security_score": 1.0,
+    "outcome_score": 0.4939,
+    "oracle_outcome_score": 0.4939,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4593,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.4939 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-093-jsonl-sessionization-analysis-gpt-5.6-luna-20260910-223238-c8bb2a34"
+}

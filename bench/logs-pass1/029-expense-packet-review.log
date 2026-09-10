@@ -1,0 +1,180 @@
+[harnessbench] run-task 029-expense-packet-review (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 029-expense-packet-review finished adapter_ok=True elapsed=13.24s
+{
+  "task_id": "029-expense-packet-review",
+  "elapsed_sec": 13.24,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-029-expense-packet-review-697e7eef",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-029-expense-packet-review-stellar-luna-20260910-221225-c921f74f/usage-proxy/requests.jsonl",
+    "request_count": 5,
+    "input_tokens": 2832,
+    "output_tokens": 754,
+    "cache_read_tokens": 7100,
+    "cache_write_tokens": 0,
+    "total_tokens": 10686,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "029-expense-packet-review",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-029-expense-packet-review-stellar-luna-20260910-221225-c921f74f/workspace",
+    "outcome_score": 0.6154,
+    "checks": [
+      {
+        "id": "audit_csv_parseable",
+        "label": "audit csv parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "audit_header_exact",
+        "label": "audit header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "receipt_id",
+          "employee",
+          "amount",
+          "category",
+          "issue",
+          "allowed_amount",
+          "recommended_action"
+        ]
+      },
+      {
+        "id": "exactly_five_issue_rows",
+        "label": "exactly five issue rows",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 5
+      },
+      {
+        "id": "issue_R-001",
+        "label": "issue R-001",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "receipt_id": "R-001",
+          "issue_contains": "hotel cap",
+          "allowed_amount": "300.00"
+        }
+      },
+      {
+        "id": "issue_R-002",
+        "label": "issue R-002",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "receipt_id": "R-002",
+          "issue_contains": "dinner cap",
+          "allowed_amount": "75.00"
+        }
+      },
+      {
+        "id": "issue_R-004",
+        "label": "issue R-004",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "receipt_id": "R-004",
+          "issue_contains": "duplicate",
+          "allowed_amount": "0.00"
+        }
+      },
+      {
+        "id": "issue_R-005",
+        "label": "issue R-005",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "receipt_id": "R-005",
+          "issue_contains": "missing",
+          "allowed_amount": "0.00"
+        }
+      },
+      {
+        "id": "issue_R-006",
+        "label": "issue R-006",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "receipt_id": "R-006",
+          "issue_contains": "breakfast cap",
+          "allowed_amount": "25.00"
+        }
+      },
+      {
+        "id": "no_currency_symbols_in_amounts",
+        "label": "no currency symbols in amounts",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "missing_docs_exists",
+        "label": "missing docs exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "missing_docs_lists_required_receipts",
+        "label": "missing docs lists required receipts",
+        "pass": true,
+        "weight": 1.0,
+        "detail": "# Missing Documentation\n\n- **R-005 — Leah Kim — software — $210.00 claimed:** No attachment was provided, so there is no usable receipt. The required manager approval is also missing. Hold the claim until both the receipt and written manager approval are attached.\n\n## Totals\n\n- **Total claimed:** $1,065.00\n- **Total allowed after policy caps:** $425.00\n\nThe allowed total excludes duplicate receipt R-004 and the unsupported software claim R-005; capped amounts are applied to R-001, R-002, and R-006.\n"
+      },
+      {
+        "id": "missing_docs_total_claimed",
+        "label": "missing docs total claimed",
+        "pass": false,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "missing_docs_total_allowed",
+        "label": "missing docs total allowed",
+        "pass": false,
+        "weight": 1.0,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/029-expense-packet-review/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.6154,
+    "oracle_outcome_score": 0.6154,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6154,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.6154 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-029-expense-packet-review-gpt-5.6-luna-20260910-221225-c921f74f"
+}

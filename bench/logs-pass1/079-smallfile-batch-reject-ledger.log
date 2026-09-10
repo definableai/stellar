@@ -1,0 +1,586 @@
+[harnessbench] run-task 079-smallfile-batch-reject-ledger (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 079-smallfile-batch-reject-ledger finished adapter_ok=True elapsed=15.842s
+{
+  "task_id": "079-smallfile-batch-reject-ledger",
+  "elapsed_sec": 15.842,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-079-smallfile-batch-reject-ledger-b24c6adb",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-079-smallfile-batch-reject-ledger-stellar-luna-20260910-221320-9e12d0f0/usage-proxy/requests.jsonl",
+    "request_count": 5,
+    "input_tokens": 5966,
+    "output_tokens": 1508,
+    "cache_read_tokens": 7756,
+    "cache_write_tokens": 0,
+    "total_tokens": 15230,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "079-smallfile-batch-reject-ledger",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-079-smallfile-batch-reject-ledger-stellar-luna-20260910-221320-9e12d0f0/workspace",
+    "checks": [
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_01.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_01.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_02.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_02.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_03.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_03.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_04.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_04.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_05.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_05.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_06.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_06.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_07.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_07.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_08.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_08.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_09.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_09.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_10.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_10.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_11.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_11.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_12.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_12.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_13.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_13.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_14.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_14.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_15.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_15.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_16.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_16.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_17.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_17.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_18.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_18.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_19.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_19.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_20.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_20.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_21.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_21.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_22.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_22.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_23.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_23.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_24.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_24.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_25.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_25.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_26.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_26.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_27.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_27.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_28.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_28.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_29.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_29.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_bulk_unsupported_legacy_30.bak",
+        "label": "in/dropbox/bulk_unsupported/legacy_30.bak unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_customers_customers_01.csv",
+        "label": "in/dropbox/customers/customers_01.csv unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_customers_customers_bad.csv",
+        "label": "in/dropbox/customers/customers_bad.csv unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_customers_customers_extra.csv",
+        "label": "in/dropbox/customers/customers_extra.csv unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_misc_empty.md",
+        "label": "in/dropbox/misc/empty.md unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_misc_image.png",
+        "label": "in/dropbox/misc/image.png unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_notes_case_500.txt",
+        "label": "in/dropbox/notes/case_500.txt unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_notes_case_501.txt",
+        "label": "in/dropbox/notes/case_501.txt unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_notes_case_502.txt",
+        "label": "in/dropbox/notes/case_502.txt unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_notes_case_bad.txt",
+        "label": "in/dropbox/notes/case_bad.txt unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_100.json",
+        "label": "in/dropbox/orders/2026/order_100.json unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_101.JSON",
+        "label": "in/dropbox/orders/2026/order_101.JSON unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_102.json",
+        "label": "in/dropbox/orders/2026/order_102.json unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_bad.json",
+        "label": "in/dropbox/orders/2026/order_bad.json unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_dup.json",
+        "label": "in/dropbox/orders/2026/order_dup.json unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_dropbox_orders_2026_order_missing_currency.json",
+        "label": "in/dropbox/orders/2026/order_missing_currency.json unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "source_in_normalization_rules.yaml",
+        "label": "in/normalization_rules.yaml unchanged",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "file_set",
+        "label": "normalized file set exact",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "json_customer_C-001.json",
+        "label": "customer_C-001.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_customer_C-001.json",
+        "label": "customer_C-001.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'email': 'ada@example.com', 'id': 'C-001', 'name': 'Ada Lovelace', 'status': 'active'}"
+      },
+      {
+        "id": "json_customer_C-002.json",
+        "label": "customer_C-002.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_customer_C-002.json",
+        "label": "customer_C-002.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'email': 'lin@example.com', 'id': 'C-002', 'name': 'Lin Chen', 'status': 'inactive'}"
+      },
+      {
+        "id": "json_note_CASE-500.json",
+        "label": "note_CASE-500.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_note_CASE-500.json",
+        "label": "note_CASE-500.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'case': 'CASE-500', 'owner': 'ana', 'status': 'open'}"
+      },
+      {
+        "id": "json_note_CASE-501.json",
+        "label": "note_CASE-501.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_note_CASE-501.json",
+        "label": "note_CASE-501.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'case': 'CASE-501', 'owner': 'bo', 'status': 'closed'}"
+      },
+      {
+        "id": "json_order_O-100.json",
+        "label": "order_O-100.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_order_O-100.json",
+        "label": "order_O-100.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'amount': 120.5, 'currency': 'USD', 'customer_id': 'C-001', 'order_id': 'O-100'}"
+      },
+      {
+        "id": "json_order_O-101.json",
+        "label": "order_O-101.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_order_O-101.json",
+        "label": "order_O-101.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'amount': 88, 'currency': 'EUR', 'customer_id': 'C-002', 'order_id': 'O-101'}"
+      },
+      {
+        "id": "json_customer_C-003.json",
+        "label": "customer_C-003.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_customer_C-003.json",
+        "label": "customer_C-003.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'email': 'mira@example.com', 'id': 'C-003', 'name': 'Mira Patel', 'status': 'pending'}"
+      },
+      {
+        "id": "json_note_CASE-502.json",
+        "label": "note_CASE-502.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_note_CASE-502.json",
+        "label": "note_CASE-502.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'case': 'CASE-502', 'owner': 'cy', 'status': 'pending'}"
+      },
+      {
+        "id": "json_order_O-102.json",
+        "label": "order_O-102.json parses",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "content_order_O-102.json",
+        "label": "order_O-102.json content matches required normalized fields",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "{'amount': 42.75, 'currency': 'USD', 'customer_id': 'C-003', 'order_id': 'O-102'}"
+      },
+      {
+        "id": "index_read",
+        "label": "index.csv parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "index_header",
+        "label": "index header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "index_rows",
+        "label": "index rows identify the exact successful records in deterministic order",
+        "pass": true,
+        "weight": 4.0,
+        "detail": null
+      },
+      {
+        "id": "reject_read",
+        "label": "reject_ledger.csv parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reject_header",
+        "label": "reject header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reject_rows",
+        "label": "reject ledger includes every expected source/error",
+        "pass": true,
+        "weight": 4.0,
+        "detail": null
+      },
+      {
+        "id": "summary_parse",
+        "label": "batch_summary parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "summary_by_type",
+        "label": "summary by_type exact",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "None"
+      },
+      {
+        "id": "summary_reject_count",
+        "label": "summary reject_count exact",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "None"
+      },
+      {
+        "id": "summary_success_count",
+        "label": "summary success_count exact",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "None"
+      }
+    ],
+    "outcome_score": 0.504950495049505,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.505,
+    "oracle_outcome_score": 0.504950495049505,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.505,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.505 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-079-smallfile-batch-reject-ledger-gpt-5.6-luna-20260910-221320-9e12d0f0"
+}

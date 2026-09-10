@@ -1,0 +1,98 @@
+[harnessbench] run-task 008-image-recognize (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 008-image-recognize finished adapter_ok=True elapsed=41.837s
+{
+  "task_id": "008-image-recognize",
+  "elapsed_sec": 41.837,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-008-image-recognize-e6a9ab73",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-008-image-recognize-stellar-luna-20260911-003801-996aed1a/usage-proxy/requests.jsonl",
+    "request_count": 12,
+    "input_tokens": 8551,
+    "output_tokens": 1707,
+    "cache_read_tokens": 21455,
+    "cache_write_tokens": 0,
+    "total_tokens": 31713,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "008-image-recognize",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-008-image-recognize-stellar-luna-20260911-003801-996aed1a/workspace",
+    "checks": [
+      {
+        "id": "out_image1_answer.txt",
+        "label": "out/image1_answer.txt exists and is non-empty",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "out_image2_answer.txt",
+        "label": "out/image2_answer.txt exists and is non-empty",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "quality_rubric_meta": {
+      "skipped": false,
+      "parse_error": false,
+      "reason": null,
+      "notes": "Both answers accurately identify the key subjects, colors, and settings; the second omits only the soft indoor background detail.",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": 0.98
+    },
+    "quality": 0.98,
+    "outcome_llm_weight": 0.9
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/008-image-recognize/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 0.98,
+        "robustness": 1.0
+      },
+      "total": 0.9933,
+      "notes": "Used appropriate image inspection, wrote accurate one-line outputs, and verified both files and line counts; the extra final verification was mildly redundant but purposeful.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":0.98,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Used appropriate image inspection, wrote accurate one-line outputs, and verified both files and line counts; the extra final verification was mildly redundant but purposeful.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9933,
+    "process_effective": 0.9933,
+    "security_score": 1.0,
+    "outcome_score": 0.982,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": 0.98,
+    "quality_rubric_meta": {
+      "skipped": false,
+      "parse_error": false,
+      "reason": null,
+      "notes": "Both answers accurately identify the key subjects, colors, and settings; the second omits only the soft indoor background detail.",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": 0.98
+    },
+    "outcome_llm_weight": 0.9,
+    "outcome_formula": "outcome = (1-0.9)*oracle_outcome + 0.9*quality (from oracle-side rubric_llm)",
+    "combined_score": 0.9755,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.982 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = (1-0.9)*oracle_outcome + 0.9*quality (from oracle-side rubric_llm). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-008-image-recognize-gpt-5.6-luna-20260911-003801-996aed1a"
+}

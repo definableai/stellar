@@ -1,0 +1,102 @@
+[harnessbench] run-task 085-flaky-test-root-cause (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 085-flaky-test-root-cause finished adapter_ok=True elapsed=10.432s
+{
+  "task_id": "085-flaky-test-root-cause",
+  "elapsed_sec": 10.432,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-085-flaky-test-root-cause-416f236e",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-085-flaky-test-root-cause-stellar-luna-20260910-221307-da71f816/usage-proxy/requests.jsonl",
+    "request_count": 7,
+    "input_tokens": 3330,
+    "output_tokens": 234,
+    "cache_read_tokens": 6398,
+    "cache_write_tokens": 0,
+    "total_tokens": 9962,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "085-flaky-test-root-cause",
+    "outcome_score": 0.1837,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "repeated_pytest_stable",
+        "pass": false,
+        "weight": 0.35,
+        "detail": {
+          "returncodes": [
+            1
+          ],
+          "last_output": "/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest\n"
+        }
+      },
+      {
+        "id": "hidden_determinism",
+        "pass": false,
+        "weight": 0.35,
+        "detail": "le>\n    s.add(\"z\", 2)\n    ~~~~~^^^^^^^^\n  File \"/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-085-flaky-test-root-cause-stellar-luna-20260910-221307-da71f816/workspace/in/flakyqueue/flakyqueue/scheduler.py\", line 25, in add\n    task = Task(id=task_id, priority=priority, created_at=time.time(), run_at=time.time())\n                                                          ^^^^\nNameError: name 'time' is not defined. Did you forget to import 'time'?\n"
+      },
+      {
+        "id": "test_integrity",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "implementation_quality",
+        "pass": false,
+        "weight": 0.1,
+        "detail": {
+          "score": 0.3375
+        }
+      },
+      {
+        "id": "root_cause_report",
+        "pass": false,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.1837,
+    "oracle_outcome_score": 0.1837,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.1837,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.1837 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-085-flaky-test-root-cause-gpt-5.6-luna-20260910-221307-da71f816"
+}

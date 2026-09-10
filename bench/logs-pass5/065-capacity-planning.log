@@ -1,0 +1,105 @@
+[harnessbench] run-task 065-capacity-planning (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 065-capacity-planning finished adapter_ok=True elapsed=280.946s
+{
+  "task_id": "065-capacity-planning",
+  "elapsed_sec": 280.946,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-065-capacity-planning-5dae4ca1",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-065-capacity-planning-stellar-luna-20260910-235204-21df3de7/usage-proxy/requests.jsonl",
+    "request_count": 43,
+    "input_tokens": 55568,
+    "output_tokens": 28850,
+    "cache_read_tokens": 258383,
+    "cache_write_tokens": 0,
+    "total_tokens": 342801,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "065-capacity-planning",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-065-capacity-planning-stellar-luna-20260910-235204-21df3de7/workspace",
+    "outcome_score": 0.6617,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "capacity_plan",
+        "label": "capacity_plan.json has forecast, headroom, count, and cost",
+        "pass": false,
+        "weight": 0.68,
+        "detail": {
+          "score": 0.54
+        }
+      },
+      {
+        "id": "cost_notes",
+        "label": "cost_notes.md explains calculation and alternatives",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "score": 0.8182,
+          "hits": 9
+        }
+      },
+      {
+        "id": "risk_tradeoffs",
+        "label": "risk_tradeoffs.csv covers budget, spot, compatibility, and SLO headroom",
+        "pass": true,
+        "weight": 0.12,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "source_unchanged",
+        "label": "fixtures are not modified",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/065-capacity-planning/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.92,
+        "consistency": 0.82,
+        "robustness": 0.84
+      },
+      "total": 0.86,
+      "notes": "Strong evidence-based calculation, file generation, and verification with recovery from arithmetic, stale-text, checker, and path errors; some avoidable repeated corrections and a sub-agent initially used invalid relative paths.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.92,\"consistency\":0.82,\"robustness\":0.84},\"security_gate\":1,\"notes\":\"Strong evidence-based calculation, file generation, and verification with recovery from arithmetic, stale-text, checker, and path errors; some avoidable repeated corrections and a sub-agent initially used invalid relative paths.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.86,
+    "process_effective": 0.86,
+    "security_score": 1.0,
+    "outcome_score": 0.6617,
+    "oracle_outcome_score": 0.6617,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.5691,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.6617 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-065-capacity-planning-gpt-5.6-luna-20260910-235204-21df3de7"
+}

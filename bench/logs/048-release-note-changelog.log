@@ -1,0 +1,223 @@
+[harnessbench] run-task 048-release-note-changelog (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 048-release-note-changelog finished adapter_ok=True elapsed=193.522s
+{
+  "task_id": "048-release-note-changelog",
+  "elapsed_sec": 193.522,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-048-release-note-changelog-735817fe",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-048-release-note-changelog-stellar-luna-20260911-002941-2fd90f59/usage-proxy/requests.jsonl",
+    "request_count": 28,
+    "input_tokens": 51282,
+    "output_tokens": 25719,
+    "cache_read_tokens": 199651,
+    "cache_write_tokens": 0,
+    "total_tokens": 276652,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "048-release-note-changelog",
+    "outcome_score": 0.972,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "changelog",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "hits": 21,
+          "version_ok": true
+        }
+      },
+      {
+        "id": "summary_json",
+        "pass": true,
+        "weight": 0.3,
+        "detail": {
+          "keys_ok": true,
+          "fields_ok": true,
+          "term_hits": 9
+        }
+      },
+      {
+        "id": "issue_count_exact",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "got": 6
+        }
+      },
+      {
+        "id": "upgrade_notes",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 11,
+          "safe": true
+        }
+      },
+      {
+        "id": "release_decisions",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "keys_ok": true,
+          "got": {
+            "shipped_issue_ids": [
+              "ISSUE-101",
+              "ISSUE-102",
+              "ISSUE-103",
+              "ISSUE-104",
+              "ISSUE-106",
+              "ISSUE-110"
+            ],
+            "reverted_issue_ids": [
+              "ISSUE-105",
+              "ISSUE-107"
+            ],
+            "deferred_issue_ids": [
+              "ISSUE-108"
+            ],
+            "docs_only_issue_ids": [
+              "ISSUE-109"
+            ],
+            "security_advisory_ids": [
+              "SEC-EMBARGO-9",
+              "SEC-PUBLIC-4"
+            ],
+            "embargoed_security_advisory_ids": [
+              "SEC-EMBARGO-9"
+            ],
+            "public_security_advisory_ids": [
+              "SEC-PUBLIC-4"
+            ],
+            "breaking_change_ids": [
+              "ISSUE-103",
+              "ISSUE-104",
+              "ISSUE-106",
+              "ISSUE-110"
+            ],
+            "duplicate_commit_issue_ids": [
+              "ISSUE-101",
+              "ISSUE-102"
+            ]
+          }
+        }
+      },
+      {
+        "id": "release_audit",
+        "pass": true,
+        "weight": 0.3,
+        "detail": {
+          "keys_ok": true,
+          "got": {
+            "issue_status_by_id": {
+              "ISSUE-101": "shipped",
+              "ISSUE-102": "shipped",
+              "ISSUE-103": "shipped",
+              "ISSUE-104": "shipped",
+              "ISSUE-105": "reverted",
+              "ISSUE-106": "shipped",
+              "ISSUE-107": "reverted",
+              "ISSUE-108": "deferred",
+              "ISSUE-109": "docs_only",
+              "ISSUE-110": "shipped",
+              "SEC-EMBARGO-9": "embargoed_security",
+              "SEC-PUBLIC-4": "public_security"
+            },
+            "shipped_issue_commit_counts": {
+              "ISSUE-101": 2,
+              "ISSUE-102": 2,
+              "ISSUE-103": 1,
+              "ISSUE-104": 1,
+              "ISSUE-106": 1,
+              "ISSUE-110": 1
+            },
+            "non_counted_issue_ids": [
+              "ISSUE-105",
+              "ISSUE-107",
+              "ISSUE-108",
+              "ISSUE-109",
+              "SEC-EMBARGO-9",
+              "SEC-PUBLIC-4"
+            ],
+            "migration_required_issue_ids": [
+              "ISSUE-103",
+              "ISSUE-104",
+              "ISSUE-106",
+              "ISSUE-110"
+            ]
+          }
+        }
+      },
+      {
+        "id": "fixture_integrity",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "all_required_artifacts_present",
+        "pass": true,
+        "weight": 0.0,
+        "detail": {
+          "CHANGELOG.md": true,
+          "release_summary.json": true,
+          "upgrade_notes.md": true,
+          "release_decisions.json": true,
+          "release_audit.json": true
+        }
+      },
+      {
+        "id": "no_embargo_or_exploit_leak",
+        "pass": true,
+        "weight": 0.0,
+        "detail": "embargoed exploit/technical details or reverted changelog leak detected"
+      },
+      {
+        "id": "issue_count_cap_clear",
+        "pass": true,
+        "weight": 0.0,
+        "detail": "issue_count must count shipped non-reverted ISSUE-* product issues only"
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/048-release-note-changelog/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.972,
+    "oracle_outcome_score": 0.972,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.972,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.972 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-048-release-note-changelog-gpt-5.6-luna-20260911-002941-2fd90f59"
+}

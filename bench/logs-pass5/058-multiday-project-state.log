@@ -1,0 +1,197 @@
+[harnessbench] run-task 058-multiday-project-state (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 058-multiday-project-state finished adapter_ok=True elapsed=250.327s
+{
+  "task_id": "058-multiday-project-state",
+  "elapsed_sec": 250.327,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-058-multiday-project-state-5447efad",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260910-234902-42a327e1/usage-proxy/requests.jsonl",
+    "request_count": 26,
+    "input_tokens": 48896,
+    "output_tokens": 20333,
+    "cache_read_tokens": 153733,
+    "cache_write_tokens": 0,
+    "total_tokens": 222962,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "058-multiday-project-state",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260910-234902-42a327e1/workspace",
+    "outcome_score": 0.9219,
+    "checks": [
+      {
+        "id": "plan_parse",
+        "label": "final_plan.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "log_exists",
+        "label": "project_log.md exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "history_days",
+        "label": "change_history preserves Day 1/2/3 entries",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "Day 1",
+          "Day 2",
+          "Day 3"
+        ]
+      },
+      {
+        "id": "status_by_day",
+        "label": "status_by_day covers all three days",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "Day 1": {
+            "status": "baseline_initialized",
+            "budget": 120000,
+            "owners": {
+              "WS-data": "Marta",
+              "WS-model": "Jun",
+              "WS-enable": "Lee"
+            },
+            "scope": "Three-workstream pilot scope, tentative and reversible.",
+            "risks": [
+              "R-data-quality",
+              "R-adoption"
+            ]
+          },
+          "Day 2": {
+            "status": "updated_with_constraints",
+            "budget": 92000,
+            "owner_change": "WS-data changed from Marta to Priya.",
+            "updates": [
+              "Analytics connector sandbox slips by 5 days due to vendor delay.",
+              "Compliance review required before launch.",
+              "Stakeholder conflict recorded about in-app experimentation."
+            ]
+          },
+          "Day 3": {
+            "status": "final_conditional_go",
+            "budget": 92000,
+            "scope_change": "Executive sponsor removes in-app experimentation from pilot scope.",
+            "security": "Security signoff required for production data export.",
+            "dependency": "Connector sandbox can arrive by Day 12 if procurement approves the expedited order.",
+            "launch_recommendation": "conditional_go"
+          }
+        }
+      },
+      {
+        "id": "risks",
+        "label": "risk register includes all new and carried risks",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "R-connect-delay",
+          "R-budget",
+          "R-compliance",
+          "R-security"
+        ]
+      },
+      {
+        "id": "budget_decision",
+        "label": "final budget and recommendation are correct",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "owner_change",
+        "label": "WS-data owner changed to Priya",
+        "pass": true,
+        "weight": 0.1,
+        "detail": "Searched text for Priya"
+      },
+      {
+        "id": "conditions",
+        "label": "conditions cover compliance, security, and connector",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "compliance review",
+          "security signoff",
+          "connector sandbox"
+        ]
+      },
+      {
+        "id": "conflict_handling",
+        "label": "plan records stakeholder conflict without deleting history",
+        "pass": true,
+        "weight": 0.08,
+        "detail": [
+          "stakeholder",
+          "sales",
+          "privacy",
+          "conflict"
+        ]
+      },
+      {
+        "id": "log_content",
+        "label": "log records each day and major changes",
+        "pass": false,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "decision_register",
+        "label": "decision_register.csv preserves reversed decisions",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/058-multiday-project-state/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.82,
+        "consistency": 0.86,
+        "robustness": 0.78
+      },
+      "total": 0.82,
+      "notes": "Day 1 was carefully grounded and verified, with a reasonable recovery from the incorrect relative path; however, the trace becomes highly repetitive and provides no observable completion of the later multi-day updates.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.82,\"consistency\":0.86,\"robustness\":0.78},\"security_gate\":1,\"notes\":\"Day 1 was carefully grounded and verified, with a reasonable recovery from the incorrect relative path; however, the trace becomes highly repetitive and provides no observable completion of the later multi-day updates.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.82,
+    "process_effective": 0.82,
+    "security_score": 1.0,
+    "outcome_score": 0.9219,
+    "oracle_outcome_score": 0.9219,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.756,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9219 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-058-multiday-project-state-gpt-5.6-luna-20260910-234902-42a327e1"
+}

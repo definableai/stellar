@@ -1,0 +1,120 @@
+[harnessbench] run-task 036-citation-consistency-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 036-citation-consistency-audit finished adapter_ok=True elapsed=172.083s
+{
+  "task_id": "036-citation-consistency-audit",
+  "elapsed_sec": 172.083,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-036-citation-consistency-audit-90bdc7d5",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-036-citation-consistency-audit-stellar-luna-20260910-232812-e1b4a498/usage-proxy/requests.jsonl",
+    "request_count": 11,
+    "input_tokens": 25726,
+    "output_tokens": 14904,
+    "cache_read_tokens": 56138,
+    "cache_write_tokens": 0,
+    "total_tokens": 96768,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "036-citation-consistency-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-036-citation-consistency-audit-stellar-luna-20260910-232812-e1b4a498/workspace",
+    "outcome_score": 0.78,
+    "level": "good",
+    "checks": [
+      {
+        "id": "errors_csv",
+        "label": "citation_errors.csv covers expected error rows and evidence spans",
+        "pass": false,
+        "weight": 0.4,
+        "detail": {
+          "hits": 8,
+          "expected": 10,
+          "evidence_hits": 7,
+          "rows": 9,
+          "no_merged_keys": true
+        }
+      },
+      {
+        "id": "corrected_bib",
+        "label": "corrected_bib.json has corrected keys and fields",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "field_hits": 13,
+          "field_total": 13
+        }
+      },
+      {
+        "id": "format",
+        "label": "required output formats are valid CSV and JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "audit_notes",
+        "label": "audit_notes.md explains unknowns, suffixes, and no external lookup",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "citation_graph",
+        "label": "citation_graph.json maps draft citations to corrected bibliography actions",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/036-citation-consistency-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.93,
+        "robustness": 0.95
+      },
+      "total": 0.9533,
+      "notes": "Clear evidence-based workflow with appropriate reads, four targeted writes, structural validation, and recovery from a validation typo; minor concern that the DOI mismatch is inferred despite no draft DOI evidence.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.93,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Clear evidence-based workflow with appropriate reads, four targeted writes, structural validation, and recovery from a validation typo; minor concern that the DOI mismatch is inferred despite no draft DOI evidence.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9533,
+    "process_effective": 0.9533,
+    "security_score": 1.0,
+    "outcome_score": 0.78,
+    "oracle_outcome_score": 0.78,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7436,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.78 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-036-citation-consistency-audit-gpt-5.6-luna-20260910-232812-e1b4a498"
+}

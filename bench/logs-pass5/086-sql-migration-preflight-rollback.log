@@ -1,0 +1,186 @@
+[harnessbench] run-task 086-sql-migration-preflight-rollback (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 086-sql-migration-preflight-rollback finished adapter_ok=True elapsed=241.684s
+{
+  "task_id": "086-sql-migration-preflight-rollback",
+  "elapsed_sec": 241.684,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-086-sql-migration-preflight-rollback-18e41864",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-086-sql-migration-preflight-rollback-stellar-luna-20260910-235900-fbefd4ce/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 30045,
+    "output_tokens": 18712,
+    "cache_read_tokens": 132562,
+    "cache_write_tokens": 0,
+    "total_tokens": 181319,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "086-sql-migration-preflight-rollback",
+    "outcome_score": 0.9345,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "migration_executes",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "data_preservation",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "invoices": [
+            [
+              "inv1",
+              "cust-a",
+              1200,
+              "2024-01-03T10:00:00Z",
+              "open"
+            ],
+            [
+              "inv2",
+              "cust-b",
+              5000,
+              "2024-01-04T10:00:00Z",
+              "open"
+            ],
+            [
+              "inv3",
+              "cust-a",
+              800,
+              "2024-01-05T10:00:00Z",
+              "open"
+            ]
+          ],
+          "payments": [
+            [
+              "p1",
+              "inv1",
+              1200,
+              "2024-01-06T10:00:00Z"
+            ],
+            [
+              "p2",
+              "inv2",
+              2500,
+              "2024-01-06T11:00:00Z"
+            ],
+            [
+              "p3",
+              "inv2",
+              2500,
+              "2024-01-06T12:00:00Z"
+            ]
+          ],
+          "orphans": [
+            [
+              "p4",
+              "missing-invoice",
+              700,
+              "2024-01-07T10:00:00Z",
+              "missing_invoice"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "constraints",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "status_not_null": true,
+          "fk_exists": true,
+          "bad_insert_rejected": true
+        }
+      },
+      {
+        "id": "idempotent",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "sql_quality",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "rollback_executes",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "postcheck_sql",
+        "pass": false,
+        "weight": 0.06,
+        "detail": {
+          "score": 0.0
+        }
+      },
+      {
+        "id": "documentation",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.89
+        }
+      },
+      {
+        "id": "fixture_integrity",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.98,
+        "robustness": 0.98
+      },
+      "total": 0.9833,
+      "notes": "Clear evidence-driven workflow: inspected policy and inputs, wrote all required artifacts, ran migration/idempotence/FK/rollback and postchecks, then audited files and protected inputs; only minor issues were an irrelevant find option error and pytest finding no tests.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.98,\"robustness\":0.98},\"security_gate\":1,\"notes\":\"Clear evidence-driven workflow: inspected policy and inputs, wrote all required artifacts, ran migration/idempotence/FK/rollback and postchecks, then audited files and protected inputs; only minor issues were an irrelevant find option error and pytest finding no tests.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9833,
+    "process_effective": 0.9833,
+    "security_score": 1.0,
+    "outcome_score": 0.9345,
+    "oracle_outcome_score": 0.9345,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9189,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9345 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-086-sql-migration-preflight-rollback-gpt-5.6-luna-20260910-235900-fbefd4ce"
+}

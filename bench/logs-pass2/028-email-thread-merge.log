@@ -1,0 +1,201 @@
+[harnessbench] run-task 028-email-thread-merge (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 028-email-thread-merge finished adapter_ok=True elapsed=26.64s
+{
+  "task_id": "028-email-thread-merge",
+  "elapsed_sec": 26.64,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-028-email-thread-merge-5be9d68b",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-028-email-thread-merge-stellar-luna-20260910-222427-15e677ce/usage-proxy/requests.jsonl",
+    "request_count": 11,
+    "input_tokens": 4158,
+    "output_tokens": 1938,
+    "cache_read_tokens": 15748,
+    "cache_write_tokens": 0,
+    "total_tokens": 21844,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "028-email-thread-merge",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-028-email-thread-merge-stellar-luna-20260910-222427-15e677ce/workspace",
+    "outcome_score": 0.7273,
+    "checks": [
+      {
+        "id": "summary_json_parseable",
+        "label": "summary json parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "thread_count_correct",
+        "label": "thread count correct",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 2
+      },
+      {
+        "id": "northwind_thread_present",
+        "label": "northwind thread present",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "thread_id": "northwind-onboarding",
+          "subject": "Northwind onboarding pilot",
+          "messages": [
+            {
+              "message_id": "m-100",
+              "from": "Morgan Lee <morgan@northwind.example>",
+              "to": [
+                "sam@example.com"
+              ],
+              "timestamp": "2026-08-04T09:12:00-04:00",
+              "subject": "Northwind onboarding pilot",
+              "body": "Can we confirm pilot kickoff for August 18? Procurement is still reviewing, and we need the security questionnaire before they can approve."
+            },
+            {
+              "message_id": "m-101",
+              "from": "Sam Patel <sam@example.com>",
+              "to": [
+                "morgan@northwind.example"
+              ],
+              "timestamp": "2026-08-04T10:05:00-04:00",
+              "subject": "Re: Northwind onboarding pilot",
+              "body": "August 18 works for our onboarding team. I will send the security questionnaire by Friday."
+            },
+            {
+              "message_id": "m-102",
+              "from": "Morgan Lee <morgan@northwind.example>",
+              "to": [
+                "sam@example.com"
+              ],
+              "timestamp": "2026-08-04T11:30:00-04:00",
+              "subject": "Re: Northwind onboarding pilot",
+              "body": "Thanks. Please send the security questionnaire today if possible. Procurement is not approved yet."
+            }
+          ],
+          "timeline": [
+            {
+              "timestamp": "2026-08-04T09:12:00-04:00",
+              "message_id": "m-100",
+              "summary": "Morgan asked to confirm an August 18 pilot kickoff and noted that procurement was still reviewing the request and required the security questionnaire before approval."
+            },
+            {
+              "timestamp": "2026-08-04T10:05:00-04:00",
+              "message_id": "m-101",
+              "summary": "Sam confirmed that August 18 works for the onboarding team and said the security questionnaire would be sent by Friday."
+            },
+            {
+              "timestamp": "2026-08-04T11:30:00-04:00",
+              "message_id": "m-102",
+              "summary": "Morgan requested the security questionnaire as soon as possible and clarified that procurement approval was not complete."
+            }
+          ],
+          "final_todos": [
+            "Send the security questionnaire to Morgan/Northwind as soon as possible.",
+            "Track procurement approval; it is not complete yet.",
+            "Proceed toward the agreed August 18 pilot kickoff, subject to required approval and security review."
+          ]
+        }
+      },
+      {
+        "id": "deduped_forwarded_message",
+        "label": "deduped forwarded message",
+        "pass": false,
+        "weight": 1.0,
+        "detail": 2
+      },
+      {
+        "id": "unique_message_ids_present",
+        "label": "unique message ids present",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "timeline_has_exact_timestamps",
+        "label": "timeline has exact timestamps",
+        "pass": true,
+        "weight": 1.0,
+        "detail": "[{\"timestamp\": \"2026-08-04T09:12:00-04:00\", \"message_id\": \"m-100\", \"summary\": \"Morgan asked to confirm an August 18 pilot kickoff and noted that procurement was still reviewing the request and required the security questionnaire before approval.\"}, {\"timestamp\": \"2026-08-04T10:05:00-04:00\", \"message_id\": \"m-101\", \"summary\": \"Sam confirmed that August 18 works for the onboarding team and said the security questionnaire would be sent by Friday.\"}, {\"timestamp\": \"2026-08-04T11:30:00-04:00\", \"message_id\": \"m-102\", \"summary\": \"Morgan requested the security questionnaire as soon as possible and clarified that procurement approval was not complete.\"}]"
+      },
+      {
+        "id": "timeline_sorted",
+        "label": "timeline sorted",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "2026-08-04T09:12:00-04:00",
+          "2026-08-04T10:05:00-04:00",
+          "2026-08-04T11:30:00-04:00"
+        ]
+      },
+      {
+        "id": "final_todos_complete",
+        "label": "final todos complete",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[\"send the security questionnaire to morgan/northwind as soon as possible.\", \"track procurement approval; it is not complete yet.\", \"proceed toward the agreed august 18 pilot kickoff, subject to required approval and security review.\"]"
+      },
+      {
+        "id": "reply_exists",
+        "label": "reply exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reply_contains_required_facts",
+        "label": "reply contains required facts",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "not approved"
+        ]
+      },
+      {
+        "id": "reply_avoids_false_approval",
+        "label": "reply avoids false approval",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/028-email-thread-merge/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.7273,
+    "oracle_outcome_score": 0.7273,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7273,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7273 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-028-email-thread-merge-gpt-5.6-luna-20260910-222427-15e677ce"
+}

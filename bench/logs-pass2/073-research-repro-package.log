@@ -1,0 +1,138 @@
+[harnessbench] run-task 073-research-repro-package (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 073-research-repro-package finished adapter_ok=True elapsed=38.163s
+{
+  "task_id": "073-research-repro-package",
+  "elapsed_sec": 38.163,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-073-research-repro-package-b434a343",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-073-research-repro-package-stellar-luna-20260910-221948-ad69aa6c/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 5486,
+    "output_tokens": 2453,
+    "cache_read_tokens": 28359,
+    "cache_write_tokens": 0,
+    "total_tokens": 36298,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "073-research-repro-package",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-073-research-repro-package-stellar-luna-20260910-221948-ad69aa6c/workspace",
+    "outcome_score": 0.8,
+    "checks": [
+      {
+        "id": "report_exists",
+        "label": "reproducibility_report.md exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "missing_exists",
+        "label": "missing_steps.csv exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "claim_sections",
+        "label": "report has ### Claim sections for each CLAIM id",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "required_terms",
+        "label": "report cites artifacts metrics and failures",
+        "pass": false,
+        "weight": 0.1,
+        "detail": ""
+      },
+      {
+        "id": "no_false_repro",
+        "label": "does not assert successful reproduction",
+        "pass": false,
+        "weight": 0.1,
+        "detail": ""
+      },
+      {
+        "id": "script_issue_called_out",
+        "label": "report flags analyze_main packaging defect",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "missing_csv_header_line",
+        "label": "missing_steps header row exact",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "missing_csv_columns",
+        "label": "missing_steps DictReader columns",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "missing_minimum_rows",
+        "label": "missing_steps lists each blocking gap",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "missing_expectation_coverage",
+        "label": "CSV rows cover raw/script/mismatch/subgroup gaps",
+        "pass": true,
+        "weight": 0.4,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/073-research-repro-package/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.85,
+        "consistency": 0.95,
+        "robustness": 0.88
+      },
+      "total": 0.8933,
+      "notes": "Inspected all available inputs, recovered from the absent scripts path and a validation wording failure, clearly separated headline and Appendix evidence, and avoided fabricated reruns; the missing scripts prevented precise inspection of the defective driver.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.85,\"consistency\":0.95,\"robustness\":0.88},\"security_gate\":1,\"notes\":\"Inspected all available inputs, recovered from the absent scripts path and a validation wording failure, clearly separated headline and Appendix evidence, and avoided fabricated reruns; the missing scripts prevented precise inspection of the defective driver.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8933,
+    "process_effective": 0.8933,
+    "security_score": 1.0,
+    "outcome_score": 0.8,
+    "oracle_outcome_score": 0.8,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7147,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-073-research-repro-package-gpt-5.6-luna-20260910-221948-ad69aa6c"
+}

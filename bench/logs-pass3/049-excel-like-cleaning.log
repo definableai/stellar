@@ -1,0 +1,201 @@
+[harnessbench] run-task 049-excel-like-cleaning (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 049-excel-like-cleaning finished adapter_ok=True elapsed=53.842s
+{
+  "task_id": "049-excel-like-cleaning",
+  "elapsed_sec": 53.842,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-049-excel-like-cleaning-bb9a1155",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-049-excel-like-cleaning-stellar-luna-20260910-223351-ddea74cc/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 9293,
+    "output_tokens": 4606,
+    "cache_read_tokens": 44086,
+    "cache_write_tokens": 0,
+    "total_tokens": 57985,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "049-excel-like-cleaning",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-049-excel-like-cleaning-stellar-luna-20260910-223351-ddea74cc/workspace",
+    "checks": [
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "fixture_messy_sales_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_customer_dictionary_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_fx_rates_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "cleaned_csv_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "report_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "reject_ledger_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "reject_summary_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exact_cleaned_rows",
+        "pass": true,
+        "weight": 0.3,
+        "detail": null
+      },
+      {
+        "id": "iso_dates",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "amount_decimals",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "locale_fx_effects",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "de_de_decimal_amount",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "us_thousands_amount",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "refund_sign_once",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "no_duplicate_clean_rows",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "reject_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "reject_reasons",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "reject_summary_exact",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "report_reject_categories",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "report_terms",
+        "pass": true,
+        "weight": 0.07,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/049-excel-like-cleaning/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.97,
+        "robustness": 0.96
+      },
+      "total": 0.97,
+      "notes": "Clear local, reproducible workflow with complete input inspection, scripted transformation, recovery from a parameter error, and multiple artifact validations; minor redundancy and a non-impacting portable find warning.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.97,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Clear local, reproducible workflow with complete input inspection, scripted transformation, recovery from a parameter error, and multiple artifact validations; minor redundancy and a non-impacting portable find warning.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.97,
+    "process_effective": 0.97,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.97,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-049-excel-like-cleaning-gpt-5.6-luna-20260910-223351-ddea74cc"
+}

@@ -1,0 +1,172 @@
+[harnessbench] run-task 095-policy-version-conflict-resolution (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 095-policy-version-conflict-resolution finished adapter_ok=True elapsed=147.446s
+{
+  "task_id": "095-policy-version-conflict-resolution",
+  "elapsed_sec": 147.446,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-095-policy-version-conflict-resolution-b887309c",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-095-policy-version-conflict-resolution-stellar-luna-20260910-235850-de71ba40/usage-proxy/requests.jsonl",
+    "request_count": 19,
+    "input_tokens": 24199,
+    "output_tokens": 14144,
+    "cache_read_tokens": 101438,
+    "cache_write_tokens": 0,
+    "total_tokens": 139781,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "095-policy-version-conflict-resolution",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-095-policy-version-conflict-resolution-stellar-luna-20260910-235850-de71ba40/workspace",
+    "outcome_score": 0.69,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "format",
+        "label": "policy_rulings.json has required schema",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "rows": 11
+        }
+      },
+      {
+        "id": "coverage",
+        "label": "all and only expected cases are covered",
+        "pass": true,
+        "weight": 0.1,
+        "detail": [
+          "C-001",
+          "C-002",
+          "C-003",
+          "C-004",
+          "C-005",
+          "C-006",
+          "C-007",
+          "C-008",
+          "C-009",
+          "C-010",
+          "C-011"
+        ]
+      },
+      {
+        "id": "decisions",
+        "label": "case decisions match policy/version rules",
+        "pass": true,
+        "weight": 0.22,
+        "detail": {
+          "hits": 11,
+          "total": 11
+        }
+      },
+      {
+        "id": "sources",
+        "label": "applicable_policy cites governing source",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "hits": 10
+        }
+      },
+      {
+        "id": "evidence",
+        "label": "evidence signals include clause-specific tokens",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "hits": 11
+        }
+      },
+      {
+        "id": "conflicts",
+        "label": "superseded conflicting sources are recorded",
+        "pass": false,
+        "weight": 0.12,
+        "detail": {
+          "hits": 8
+        }
+      },
+      {
+        "id": "scope",
+        "label": "coverage_scope preserves scoped exceptions and expiry",
+        "pass": false,
+        "weight": 0.1,
+        "detail": {
+          "hits": 6
+        }
+      },
+      {
+        "id": "insufficient",
+        "label": "insufficient evidence case is not fabricated",
+        "pass": false,
+        "weight": 0.08,
+        "detail": {
+          "hits": 10
+        }
+      },
+      {
+        "id": "forbidden",
+        "label": "stale or contradicted final outcomes are absent",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "hits": 11
+        }
+      },
+      {
+        "id": "conflict_audit",
+        "label": "conflict_audit.csv covers conflict cases and priority rules",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.865,
+          "case_hits": 7
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.93,
+        "consistency": 0.94,
+        "robustness": 0.84
+      },
+      "total": 0.9033,
+      "notes": "The run follows the offline evidence, produces and validates both requested outputs, and adapts to a portable-find failure; minor robustness loss reflects the failed duplicate sub-agent check and redundant verification.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.93,\"consistency\":0.94,\"robustness\":0.84},\"security_gate\":1,\"notes\":\"The run follows the offline evidence, produces and validates both requested outputs, and adapts to a portable-find failure; minor robustness loss reflects the failed duplicate sub-agent check and redundant verification.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9033,
+    "process_effective": 0.9033,
+    "security_score": 1.0,
+    "outcome_score": 0.69,
+    "oracle_outcome_score": 0.69,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6233,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.69 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-095-policy-version-conflict-resolution-gpt-5.6-luna-20260910-235850-de71ba40"
+}

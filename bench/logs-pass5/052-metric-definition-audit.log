@@ -1,0 +1,172 @@
+[harnessbench] run-task 052-metric-definition-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 052-metric-definition-audit finished adapter_ok=True elapsed=91.735s
+{
+  "task_id": "052-metric-definition-audit",
+  "elapsed_sec": 91.735,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-052-metric-definition-audit-d761fad4",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-052-metric-definition-audit-stellar-luna-20260910-234816-8e1e5f4f/usage-proxy/requests.jsonl",
+    "request_count": 19,
+    "input_tokens": 16457,
+    "output_tokens": 8092,
+    "cache_read_tokens": 73869,
+    "cache_write_tokens": 0,
+    "total_tokens": 98418,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "052-metric-definition-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-052-metric-definition-audit-stellar-luna-20260910-234816-8e1e5f4f/workspace",
+    "checks": [
+      {
+        "id": "definitions_present",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "dashboard_present",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "output_exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "only_mismatches",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "exact_rows",
+        "pass": true,
+        "weight": 0.32,
+        "detail": null
+      },
+      {
+        "id": "severity_mapping",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "equivalent_formulas_not_flagged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "low_severity_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "window_medium_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_keys",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_mismatches",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_matching_metrics",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_severities",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_reason_classes",
+        "pass": true,
+        "weight": 0.16,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/052-metric-definition-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.92,
+        "robustness": 0.94
+      },
+      "total": 0.92,
+      "notes": "Careful source comparison, semantic-equivalence handling, exact-text validation, and recovery from an Inventory row defect were demonstrated; a redundant verifier initially used incorrect relative paths but recovered without affecting the completed outputs.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.92,\"robustness\":0.94},\"security_gate\":1,\"notes\":\"Careful source comparison, semantic-equivalence handling, exact-text validation, and recovery from an Inventory row defect were demonstrated; a redundant verifier initially used incorrect relative paths but recovered without affecting the completed outputs.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.92,
+    "process_effective": 0.92,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.92,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-052-metric-definition-audit-gpt-5.6-luna-20260910-234816-8e1e5f4f"
+}

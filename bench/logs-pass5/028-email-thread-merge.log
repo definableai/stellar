@@ -1,0 +1,204 @@
+[harnessbench] run-task 028-email-thread-merge (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 028-email-thread-merge finished adapter_ok=True elapsed=86.389s
+{
+  "task_id": "028-email-thread-merge",
+  "elapsed_sec": 86.389,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-028-email-thread-merge-7eaabbe3",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-028-email-thread-merge-stellar-luna-20260910-235528-70ffa19b/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 13830,
+    "output_tokens": 6566,
+    "cache_read_tokens": 43797,
+    "cache_write_tokens": 0,
+    "total_tokens": 64193,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "028-email-thread-merge",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-028-email-thread-merge-stellar-luna-20260910-235528-70ffa19b/workspace",
+    "outcome_score": 0.8182,
+    "checks": [
+      {
+        "id": "summary_json_parseable",
+        "label": "summary json parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "thread_count_correct",
+        "label": "thread count correct",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 2
+      },
+      {
+        "id": "northwind_thread_present",
+        "label": "northwind thread present",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "thread_id": "northwind-onboarding",
+          "subject": "Northwind onboarding pilot",
+          "participants": [
+            "Morgan Lee <morgan@northwind.example>",
+            "Sam Patel <sam@example.com>"
+          ],
+          "timeline": [
+            {
+              "message_id": "m-100",
+              "from": "Morgan Lee <morgan@northwind.example>",
+              "to": [
+                "sam@example.com"
+              ],
+              "timestamp": "2026-08-04T09:12:00-04:00",
+              "subject": "Northwind onboarding pilot",
+              "body": "Can we confirm pilot kickoff for August 18? Procurement is still reviewing, and we need the security questionnaire before they can approve."
+            },
+            {
+              "message_id": "m-101",
+              "from": "Sam Patel <sam@example.com>",
+              "to": [
+                "morgan@northwind.example"
+              ],
+              "timestamp": "2026-08-04T10:05:00-04:00",
+              "subject": "Re: Northwind onboarding pilot",
+              "body": "August 18 works for our onboarding team. I will send the security questionnaire by Friday."
+            },
+            {
+              "message_id": "m-102",
+              "from": "Morgan Lee <morgan@northwind.example>",
+              "to": [
+                "sam@example.com"
+              ],
+              "timestamp": "2026-08-04T11:30:00-04:00",
+              "subject": "Re: Northwind onboarding pilot",
+              "body": "Thanks. Please send the security questionnaire today if possible. Procurement is not approved yet."
+            }
+          ],
+          "final_todos": [
+            {
+              "task": "Send the security questionnaire",
+              "owner": "Sam Patel",
+              "status": "open",
+              "requested_timing": "Today if possible; otherwise by Friday"
+            },
+            {
+              "task": "Complete procurement approval",
+              "owner": "Northwind procurement",
+              "status": "pending"
+            }
+          ]
+        }
+      },
+      {
+        "id": "deduped_forwarded_message",
+        "label": "deduped forwarded message",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 1
+      },
+      {
+        "id": "unique_message_ids_present",
+        "label": "unique message ids present",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "timeline_has_exact_timestamps",
+        "label": "timeline has exact timestamps",
+        "pass": true,
+        "weight": 1.0,
+        "detail": "[{\"message_id\": \"m-100\", \"from\": \"Morgan Lee <morgan@northwind.example>\", \"to\": [\"sam@example.com\"], \"timestamp\": \"2026-08-04T09:12:00-04:00\", \"subject\": \"Northwind onboarding pilot\", \"body\": \"Can we confirm pilot kickoff for August 18? Procurement is still reviewing, and we need the security questionnaire before they can approve.\"}, {\"message_id\": \"m-101\", \"from\": \"Sam Patel <sam@example.com>\", \"to\": [\"morgan@northwind.example\"], \"timestamp\": \"2026-08-04T10:05:00-04:00\", \"subject\": \"Re: Northwind onboarding pilot\", \"body\": \"August 18 works for our onboarding team. I will send the security questionnaire by Friday.\"}, {\"message_id\": \"m-102\", \"from\": \"Morgan Lee <morgan@northwind.example>\", \"to\": [\"sam@example.com\"], \"timestamp\": \"2026-08-04T11:30:00-04:00\", \"subject\": \"Re: Northwind onboarding pilot\", \"body\": \"Thanks. Please send the security questionnaire today if possible. Procurement is not approved yet.\"}]"
+      },
+      {
+        "id": "timeline_sorted",
+        "label": "timeline sorted",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "2026-08-04T09:12:00-04:00",
+          "2026-08-04T10:05:00-04:00",
+          "2026-08-04T11:30:00-04:00"
+        ]
+      },
+      {
+        "id": "final_todos_complete",
+        "label": "final todos complete",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[{\"task\": \"send the security questionnaire\", \"owner\": \"sam patel\", \"status\": \"open\", \"requested_timing\": \"today if possible; otherwise by friday\"}, {\"task\": \"complete procurement approval\", \"owner\": \"northwind procurement\", \"status\": \"pending\"}]"
+      },
+      {
+        "id": "reply_exists",
+        "label": "reply exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reply_contains_required_facts",
+        "label": "reply contains required facts",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "not approved"
+        ]
+      },
+      {
+        "id": "reply_avoids_false_approval",
+        "label": "reply avoids false approval",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/028-email-thread-merge/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.94,
+        "consistency": 0.95,
+        "robustness": 0.91
+      },
+      "total": 0.9333,
+      "notes": "Clear evidence-based workflow with correct outputs and recovery from path and audit-script errors; verification was somewhat repetitive and included one avoidable diagnostic typo.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.94,\"consistency\":0.95,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear evidence-based workflow with correct outputs and recovery from path and audit-script errors; verification was somewhat repetitive and included one avoidable diagnostic typo.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9333,
+    "process_effective": 0.9333,
+    "security_score": 1.0,
+    "outcome_score": 0.8182,
+    "oracle_outcome_score": 0.8182,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7637,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8182 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-028-email-thread-merge-gpt-5.6-luna-20260910-235528-70ffa19b"
+}

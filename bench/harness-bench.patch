@@ -1,0 +1,53 @@
+diff --git a/config/app.yaml b/config/app.yaml
+index c31d815..d27ee24 100644
+--- a/config/app.yaml
++++ b/config/app.yaml
+@@ -1,8 +1,8 @@
+-{
+-  "data_dir": "data_0503",
+-  "tasks_dir": "tasks",
+-  "default_timeout_sec": 2400,
+-  "default_rounds": 1,
+-  "results_dir": "data_try6/results",
+-  "work_root": "data_try6/sandbox"
+-}
++{
++  "data_dir": "data",
++  "tasks_dir": "tasks",
++  "default_timeout_sec": 1700,
++  "default_rounds": 1,
++  "results_dir": "data/results",
++  "work_root": "data/sandbox"
++}
+diff --git a/src/harnessbench/grading/rubric_llm.py b/src/harnessbench/grading/rubric_llm.py
+index 73f500e..0952ee9 100644
+--- a/src/harnessbench/grading/rubric_llm.py
++++ b/src/harnessbench/grading/rubric_llm.py
+@@ -271,8 +271,9 @@ def run_llm_rubric(
+             {"role": "system", "content": system},
+             {"role": "user", "content": user},
+         ],
+-        "temperature": 0.2,
+     }
++    if not str(mdl).startswith("gpt-5"):        # stellar bench shim: gpt-5.x accepts only the default temperature
++        payload["temperature"] = 0.2
+     body = json.dumps(payload).encode("utf-8")
+     req = urllib.request.Request(
+         f"{base}/chat/completions",
+diff --git a/src/harnessbench/tasks.py b/src/harnessbench/tasks.py
+index 411fc2c..0518db4 100644
+--- a/src/harnessbench/tasks.py
++++ b/src/harnessbench/tasks.py
+@@ -91,7 +91,11 @@ def run_oracle(task: TaskSpec, workspace: Path) -> dict[str, Any]:
+             "outcome_score": 0.0,
+             "error": "oracle module missing score_workspace(workspace)",
+         }
+-    raw = dict(fn(workspace))
++    try:
++        raw = dict(fn(workspace))
++    except Exception as exc:  # stellar bench shim: a crashing oracle scores 0 instead of killing the run
++        raw = {"task": task.task_id, "workspace": str(workspace), "outcome_score": 0.0,
++               "error": f"oracle crashed: {type(exc).__name__}: {exc}"}
+     cfg_oc: Path | None = None
+     env_cfg = os.environ.get("HARNESSBENCH_OPENCLAW_CONFIG", "").strip()
+     if env_cfg:

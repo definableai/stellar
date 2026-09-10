@@ -1,0 +1,75 @@
+[harnessbench] run-task 001-file (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 001-file finished adapter_ok=True elapsed=6.467s
+{
+  "task_id": "001-file",
+  "elapsed_sec": 6.467,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-001-file-50e56348",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-001-file-stellar-luna-20260910-221350-207cfdc3/usage-proxy/requests.jsonl",
+    "request_count": 2,
+    "input_tokens": 1782,
+    "output_tokens": 173,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "total_tokens": 1955,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "001-file",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-001-file-stellar-luna-20260910-221350-207cfdc3/workspace",
+    "checks": [
+      {
+        "id": "linecount",
+        "label": "out/linecount.txt == 4",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/001-file/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 1.0
+      },
+      "total": 1.0,
+      "notes": "Used one appropriate command to read, count, and write the result without modifying the input; tool execution succeeded and the reported output is evidence-grounded.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Used one appropriate command to read, count, and write the result without modifying the input; tool execution succeeded and the reported output is evidence-grounded.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 1.0,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-001-file-gpt-5.6-luna-20260910-221350-207cfdc3"
+}

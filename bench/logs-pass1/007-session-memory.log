@@ -1,0 +1,82 @@
+[harnessbench] run-task 007-session-memory (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 007-session-memory finished adapter_ok=True elapsed=12.879s
+{
+  "task_id": "007-session-memory",
+  "elapsed_sec": 12.879,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-007-session-memory-e052a3f5",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-007-session-memory-stellar-luna-20260910-221239-934675a7/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 1826,
+    "output_tokens": 348,
+    "cache_read_tokens": 4181,
+    "cache_write_tokens": 0,
+    "total_tokens": 6355,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "007-session-memory",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-007-session-memory-stellar-luna-20260910-221239-934675a7/workspace",
+    "checks": [
+      {
+        "id": "phase1_done",
+        "label": "out/phase1_done.txt == 'ready'",
+        "pass": true,
+        "weight": 0.25,
+        "detail": null
+      },
+      {
+        "id": "recalled_secret",
+        "label": "out/recalled.txt matches memory_secret",
+        "pass": true,
+        "weight": 0.75,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/007-session-memory/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 1.0
+      },
+      "total": 1.0,
+      "notes": "Used only the permitted out files, completed phase 1 before recalling the passphrase in round 2, and all tool calls returned successfully.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Used only the permitted out files, completed phase 1 before recalling the passphrase in round 2, and all tool calls returned successfully.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 1.0,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-007-session-memory-gpt-5.6-luna-20260910-221239-934675a7"
+}

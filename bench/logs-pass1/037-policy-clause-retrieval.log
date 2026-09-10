@@ -1,0 +1,76 @@
+[harnessbench] run-task 037-policy-clause-retrieval (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 037-policy-clause-retrieval finished adapter_ok=True elapsed=5.849s
+{
+  "task_id": "037-policy-clause-retrieval",
+  "elapsed_sec": 5.849,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-037-policy-clause-retrieval-c5c5dcc5",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-037-policy-clause-retrieval-stellar-luna-20260910-221221-68e308be/usage-proxy/requests.jsonl",
+    "request_count": 4,
+    "input_tokens": 1537,
+    "output_tokens": 92,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "total_tokens": 1629,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "037-policy-clause-retrieval",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-037-policy-clause-retrieval-stellar-luna-20260910-221221-68e308be/workspace",
+    "outcome_score": 0.0,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "parse_error",
+        "label": "case_rulings.json parseable",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-037-policy-clause-retrieval-stellar-luna-20260910-221221-68e308be/workspace/out/case_rulings.json'"
+      },
+      {
+        "id": "ruling_summary_parse",
+        "label": "ruling_summary.csv parseable",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-037-policy-clause-retrieval-stellar-luna-20260910-221221-68e308be/workspace/out/ruling_summary.csv'"
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/037-policy-clause-retrieval/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.0,
+    "oracle_outcome_score": 0.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-037-policy-clause-retrieval-gpt-5.6-luna-20260910-221221-68e308be"
+}

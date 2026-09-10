@@ -1,0 +1,97 @@
+[harnessbench] run-task 065-capacity-planning (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 065-capacity-planning finished adapter_ok=True elapsed=56.958s
+{
+  "task_id": "065-capacity-planning",
+  "elapsed_sec": 56.958,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-065-capacity-planning-7fd9c215",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-065-capacity-planning-stellar-luna-20260910-223520-7c4fa287/usage-proxy/requests.jsonl",
+    "request_count": 15,
+    "input_tokens": 8824,
+    "output_tokens": 3950,
+    "cache_read_tokens": 41118,
+    "cache_write_tokens": 0,
+    "total_tokens": 53892,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "065-capacity-planning",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-065-capacity-planning-stellar-luna-20260910-223520-7c4fa287/workspace",
+    "outcome_score": 0.8657,
+    "level": "good",
+    "checks": [
+      {
+        "id": "capacity_plan",
+        "label": "capacity_plan.json has forecast, headroom, count, and cost",
+        "pass": true,
+        "weight": 0.68,
+        "detail": {
+          "score": 0.84
+        }
+      },
+      {
+        "id": "cost_notes",
+        "label": "cost_notes.md explains calculation and alternatives",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "score": 0.8182,
+          "hits": 9
+        }
+      },
+      {
+        "id": "risk_tradeoffs",
+        "label": "risk_tradeoffs.csv covers budget, spot, compatibility, and SLO headroom",
+        "pass": true,
+        "weight": 0.12,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "source_unchanged",
+        "label": "fixtures are not modified",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/065-capacity-planning/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.8657,
+    "oracle_outcome_score": 0.8657,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8657,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8657 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-065-capacity-planning-gpt-5.6-luna-20260910-223520-7c4fa287"
+}

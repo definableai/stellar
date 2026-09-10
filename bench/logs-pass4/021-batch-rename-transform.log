@@ -1,0 +1,237 @@
+[harnessbench] run-task 021-batch-rename-transform (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 021-batch-rename-transform finished adapter_ok=True elapsed=140.094s
+{
+  "task_id": "021-batch-rename-transform",
+  "elapsed_sec": 140.094,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-021-batch-rename-transform-803ae3c6",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-021-batch-rename-transform-stellar-luna-20260910-233416-b67de6d1/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 20366,
+    "output_tokens": 11111,
+    "cache_read_tokens": 64601,
+    "cache_write_tokens": 0,
+    "total_tokens": 96078,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "021-batch-rename-transform",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-021-batch-rename-transform-stellar-luna-20260910-233416-b67de6d1/workspace",
+    "checks": [
+      {
+        "id": "source_2024 FEB revenue.TXT",
+        "label": "fixtures/in/raw/2024 FEB revenue.TXT unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_Customer Export 01.csv",
+        "label": "fixtures/in/raw/Customer Export 01.csv unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_README.keep",
+        "label": "fixtures/in/raw/README.keep unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_bad revenue.txt",
+        "label": "fixtures/in/raw/bad revenue.txt unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_image.png",
+        "label": "fixtures/in/raw/image.png unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_mixed-case inventory.JSON",
+        "label": "fixtures/in/raw/mixed-case inventory.JSON unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_2024 mar revenue.txt",
+        "label": "fixtures/in/raw/nested/2024 mar revenue.txt unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_customer export 01.csv",
+        "label": "fixtures/in/raw/nested/customer export 01.csv unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "target_file_set",
+        "label": "normalized output file set is exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "json_revenue_2024_02.json",
+        "label": "out/normalized/revenue_2024_02.json valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "content_revenue_2024_02.json",
+        "label": "out/normalized/revenue_2024_02.json exact transformed data",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "json_revenue_2024_03.json",
+        "label": "out/normalized/revenue_2024_03.json valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "content_revenue_2024_03.json",
+        "label": "out/normalized/revenue_2024_03.json exact transformed data",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "json_customer_export_01.json",
+        "label": "out/normalized/customer_export_01.json valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "content_customer_export_01.json",
+        "label": "out/normalized/customer_export_01.json exact transformed data",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "json_customer_export_01__2.json",
+        "label": "out/normalized/customer_export_01__2.json valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "content_customer_export_01__2.json",
+        "label": "out/normalized/customer_export_01__2.json exact transformed data",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "content_inventory_west.csv",
+        "label": "out/normalized/inventory_west.csv exact content",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "log_read",
+        "label": "rename_log.csv can be parsed",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "log_header",
+        "label": "rename_log.csv header is exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "log_rows",
+        "label": "rename_log.csv rows are exact and sorted",
+        "pass": false,
+        "weight": 3.0,
+        "detail": "got [{'source': 'in/raw/2024 FEB revenue.TXT', 'target': 'out/normalized/revenue_2024_02.json', 'action': 'transformed'}, {'source': 'in/raw/Customer Export 01.csv', 'target': 'out/normalized/customer_export_01.json', 'action': 'transformed'}, {'source': 'in/raw/mixed-case inventory.JSON', 'target': 'out/normalized/inventory_west.csv', 'action': 'transformed'}, {'source': 'in/raw/nested/2024 mar revenue.txt', 'target': 'out/normalized/revenue_2024_03.json', 'action': 'transformed'}, {'source': 'in/raw/nested/customer export 01.csv', 'target': 'out/normalized/customer_export_01__2.json', 'action': 'transformed'}]"
+      },
+      {
+        "id": "error_report_read",
+        "label": "error_report.csv can be parsed",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "error_report_header",
+        "label": "error_report.csv header is exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "error_report_rows",
+        "label": "error_report.csv reports malformed and unsupported inputs",
+        "pass": false,
+        "weight": 3.0,
+        "detail": "got [{'source': 'in/raw/Customer Export 01.csv', 'row_or_record': '3', 'error_type': 'malformed_row', 'details': \"spend is not numeric: 'not-a-number'\"}, {'source': 'in/raw/README.keep', 'row_or_record': 'file', 'error_type': 'unsupported_file', 'details': 'Unsupported extension: .keep'}, {'source': 'in/raw/bad revenue.txt', 'row_or_record': '1', 'error_type': 'malformed_record', 'details': \"line 1: expected Key: Value; missing region; amount is not numeric: 'eleven'\"}, {'source': 'in/raw/image.png', 'row_or_record': 'file', 'error_type': 'unsupported_file', 'details': 'Unsupported extension: .png'}]"
+      }
+    ],
+    "outcome_score": 0.8235294117647058,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/021-batch-rename-transform/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.88,
+        "consistency": 0.82,
+        "robustness": 0.84
+      },
+      "total": 0.8467,
+      "notes": "Main run showed strong evidence-based inspection, transformation, correction, and validation, but the later sub-agent pass was redundant and included nonportable commands and unquoted-path read failures.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.88,\"consistency\":0.82,\"robustness\":0.84},\"security_gate\":1,\"notes\":\"Main run showed strong evidence-based inspection, transformation, correction, and validation, but the later sub-agent pass was redundant and included nonportable commands and unquoted-path read failures.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8467,
+    "process_effective": 0.8467,
+    "security_score": 1.0,
+    "outcome_score": 0.8235,
+    "oracle_outcome_score": 0.8235294117647058,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6972,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8235 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-021-batch-rename-transform-gpt-5.6-luna-20260910-233416-b67de6d1"
+}

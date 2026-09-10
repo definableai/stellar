@@ -1,0 +1,173 @@
+[harnessbench] run-task 071-ecommerce-support-routing (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 071-ecommerce-support-routing finished adapter_ok=True elapsed=40.972s
+{
+  "task_id": "071-ecommerce-support-routing",
+  "elapsed_sec": 40.972,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-071-ecommerce-support-routing-9dfc9d4f",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-071-ecommerce-support-routing-stellar-luna-20260910-222018-af386e43/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 6764,
+    "output_tokens": 3232,
+    "cache_read_tokens": 38467,
+    "cache_write_tokens": 0,
+    "total_tokens": 48463,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "071-ecommerce-support-routing",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-071-ecommerce-support-routing-stellar-luna-20260910-222018-af386e43/workspace",
+    "outcome_score": 0.83,
+    "checks": [
+      {
+        "id": "decisions_exists",
+        "label": "routing_decisions.json exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "templates_exists",
+        "label": "reply_templates.md exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "escalations_exists",
+        "label": "escalation_notes.csv exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "json_schema",
+        "label": "decisions JSON objects include required keys",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "all_tickets",
+        "label": "one routing row per ticket id",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "actions",
+        "label": "routing actions match ground truth",
+        "pass": true,
+        "weight": 0.13,
+        "detail": null
+      },
+      {
+        "id": "policy_basis",
+        "label": "policy_basis cites expected clause ids",
+        "pass": false,
+        "weight": 0.1,
+        "detail": ""
+      },
+      {
+        "id": "allowed_actions",
+        "label": "actions stay within taxonomy",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "order_id_fields",
+        "label": "order_id echoes ticket input",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "priority_map",
+        "label": "priority reflects escalation and vip-info urgency",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "reply_key_contract",
+        "label": "customer_reply_key matches routing contract",
+        "pass": false,
+        "weight": 0.07,
+        "detail": "T-1001: customer_reply_key expected 'tpl_reship_damage_photo' got 'damaged_item_reship'"
+      },
+      {
+        "id": "template_headings",
+        "label": "reply_templates uses ### Template <ticket_id> sections",
+        "pass": true,
+        "weight": 0.07,
+        "detail": null
+      },
+      {
+        "id": "templates_no_overpromise",
+        "label": "templates avoid forbidden promises",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "escalation_csv_header",
+        "label": "escalation_notes.csv header exact",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "escalation_notes_complete",
+        "label": "escalation rows teams reasons policy_basis",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/071-ecommerce-support-routing/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 0.98,
+        "robustness": 0.96
+      },
+      "total": 0.98,
+      "notes": "Read all required inputs, applied the relevant policy and escalation rules, created and validated all outputs, and recovered cleanly from an overly strict validation assertion without unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":0.98,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Read all required inputs, applied the relevant policy and escalation rules, created and validated all outputs, and recovered cleanly from an overly strict validation assertion without unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.98,
+    "process_effective": 0.98,
+    "security_score": 1.0,
+    "outcome_score": 0.83,
+    "oracle_outcome_score": 0.83,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8134,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.83 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-071-ecommerce-support-routing-gpt-5.6-luna-20260910-222018-af386e43"
+}

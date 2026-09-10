@@ -1,0 +1,128 @@
+[harnessbench] run-task 034-evidence-matrix-claims (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 034-evidence-matrix-claims finished adapter_ok=True elapsed=50.382s
+{
+  "task_id": "034-evidence-matrix-claims",
+  "elapsed_sec": 50.382,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-034-evidence-matrix-claims-5cbf4818",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-034-evidence-matrix-claims-stellar-luna-20260910-235759-e81d7e37/usage-proxy/requests.jsonl",
+    "request_count": 12,
+    "input_tokens": 9783,
+    "output_tokens": 4798,
+    "cache_read_tokens": 23706,
+    "cache_write_tokens": 0,
+    "total_tokens": 38287,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "034-evidence-matrix-claims",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-034-evidence-matrix-claims-stellar-luna-20260910-235759-e81d7e37/workspace",
+    "outcome_score": 0.92,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "format",
+        "label": "CSV has required columns",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "claim_id",
+          "claim",
+          "classification",
+          "source_file",
+          "evidence_phrase"
+        ]
+      },
+      {
+        "id": "coverage",
+        "label": "all and only expected claims covered",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "ids": [
+            "C1",
+            "C2",
+            "C3",
+            "C4",
+            "C5"
+          ]
+        }
+      },
+      {
+        "id": "classification",
+        "label": "support/contradict/unclear labels are correct",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "hits": 5,
+          "total": 5
+        }
+      },
+      {
+        "id": "sources",
+        "label": "source_file points to correct source",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 5,
+          "total": 5
+        }
+      },
+      {
+        "id": "evidence",
+        "label": "evidence_phrase includes decisive text signals",
+        "pass": false,
+        "weight": 0.2,
+        "detail": {
+          "hits": 3,
+          "total": 5
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/034-evidence-matrix-claims/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.86,
+        "robustness": 0.9
+      },
+      "total": 0.8867,
+      "notes": "Systematically read all claims and sources, produced the complete correct CSV, and validated it successfully after recovering from path-resolution and an overly literal reviewer-rule error; some redundant sub-agent checking reduced efficiency.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.86,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Systematically read all claims and sources, produced the complete correct CSV, and validated it successfully after recovering from path-resolution and an overly literal reviewer-rule error; some redundant sub-agent checking reduced efficiency.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8867,
+    "process_effective": 0.8867,
+    "security_score": 1.0,
+    "outcome_score": 0.92,
+    "oracle_outcome_score": 0.92,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8157,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.92 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-034-evidence-matrix-claims-gpt-5.6-luna-20260910-235759-e81d7e37"
+}

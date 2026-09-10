@@ -1,0 +1,89 @@
+[harnessbench] run-task 002-exec (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 002-exec finished adapter_ok=True elapsed=15.949s
+{
+  "task_id": "002-exec",
+  "elapsed_sec": 15.949,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-002-exec-bb2a1871",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-002-exec-stellar-luna-20260910-224100-e5770364/usage-proxy/requests.jsonl",
+    "request_count": 7,
+    "input_tokens": 2090,
+    "output_tokens": 595,
+    "cache_read_tokens": 4232,
+    "cache_write_tokens": 0,
+    "total_tokens": 6917,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "002-exec",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-002-exec-stellar-luna-20260910-224100-e5770364/workspace",
+    "checks": [
+      {
+        "id": "out_step1.txt",
+        "label": "out/step1.txt == '42'",
+        "pass": true,
+        "weight": 0.3333,
+        "detail": null
+      },
+      {
+        "id": "out_step2.txt",
+        "label": "out/step2.txt == 'c.txt'",
+        "pass": true,
+        "weight": 0.3333,
+        "detail": null
+      },
+      {
+        "id": "out_step3.txt",
+        "label": "out/step3.txt == 'hello'",
+        "pass": true,
+        "weight": 0.3333,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/002-exec/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 1.0
+      },
+      "total": 1.0,
+      "notes": "Used appropriate shell operations and verification, with a clear evidence-grounded sequence and no material failures or unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Used appropriate shell operations and verification, with a clear evidence-grounded sequence and no material failures or unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 1.0,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-002-exec-gpt-5.6-luna-20260910-224100-e5770364"
+}

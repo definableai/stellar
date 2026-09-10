@@ -1,0 +1,177 @@
+[harnessbench] run-task 089-ab-test-caveat-analysis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 089-ab-test-caveat-analysis finished adapter_ok=True elapsed=68.6s
+{
+  "task_id": "089-ab-test-caveat-analysis",
+  "elapsed_sec": 68.6,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-089-ab-test-caveat-analysis-bd5e35b3",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-089-ab-test-caveat-analysis-stellar-luna-20260911-002531-b048c737/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 20368,
+    "output_tokens": 10558,
+    "cache_read_tokens": 44349,
+    "cache_write_tokens": 0,
+    "total_tokens": 75275,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "089-ab-test-caveat-analysis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-089-ab-test-caveat-analysis-stellar-luna-20260911-002531-b048c737/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_experiment_cells.csv",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_exclusions.csv",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_analysis_plan.md",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "variant_metrics_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "variant_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "variants_once",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "variant_counts",
+        "pass": false,
+        "weight": 0.06,
+        "detail": "got [{'variant': 'A', 'eligible_users': '1199', 'conversions': '95', 'conversion_rate': '0.0792', 'refund_rate': '0.0632', 'revenue_per_eligible_user': '12.0100'}, {'variant': 'B', 'eligible_users': '1178', 'conversions': '131', 'conversion_rate': '0.1112', 'refund_rate': '0.0763', 'revenue_per_eligible_user': '17.4805'}]"
+      },
+      {
+        "id": "variant_calculations",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "summary_variants_alpha",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "summary_stats",
+        "pass": true,
+        "weight": 0.22,
+        "detail": null
+      },
+      {
+        "id": "summary_significant_launch",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "ledger_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "ledger_header",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "ledger_exact",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "recommendation_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "recommendation_mentions_stats",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "recommendation_caveats",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.9524,
+    "score": 0.9524,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/089-ab-test-caveat-analysis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.98,
+        "robustness": 0.97
+      },
+      "total": 0.98,
+      "notes": "Clear local-only workflow with correct exclusion handling, structured outputs, statistical calculations, caveats, and verification; one validation-script bug was promptly corrected, with minor redundant final checks.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.98,\"robustness\":0.97},\"security_gate\":1,\"notes\":\"Clear local-only workflow with correct exclusion handling, structured outputs, statistical calculations, caveats, and verification; one validation-script bug was promptly corrected, with minor redundant final checks.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.98,
+    "process_effective": 0.98,
+    "security_score": 1.0,
+    "outcome_score": 0.9524,
+    "oracle_outcome_score": 0.9524,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9334,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9524 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-089-ab-test-caveat-analysis-gpt-5.6-luna-20260911-002531-b048c737"
+}

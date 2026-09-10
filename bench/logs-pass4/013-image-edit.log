@@ -1,0 +1,131 @@
+[harnessbench] run-task 013-image-edit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 013-image-edit finished adapter_ok=True elapsed=181.689s
+{
+  "task_id": "013-image-edit",
+  "elapsed_sec": 181.689,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-013-image-edit-9680aeae",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-013-image-edit-stellar-luna-20260910-233418-42bbffe8/usage-proxy/requests.jsonl",
+    "request_count": 15,
+    "input_tokens": 26072,
+    "output_tokens": 12852,
+    "cache_read_tokens": 66307,
+    "cache_write_tokens": 0,
+    "total_tokens": 105231,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "013-image-edit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-013-image-edit-stellar-luna-20260910-233418-42bbffe8/workspace",
+    "outcome_score": 1.0,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "file_cat_styled.png",
+        "label": "cat_styled.png 存在且大小≥5000B",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "size": 371104
+        }
+      },
+      {
+        "id": "file_cat_scene.png",
+        "label": "cat_scene.png 存在且大小≥5000B",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "size": 440855
+        }
+      },
+      {
+        "id": "image_modification",
+        "label": "图片与原图差异检测: 2/2 不同",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "different": 2,
+          "total": 2
+        }
+      },
+      {
+        "id": "description",
+        "label": "description.txt 包含风格和场景说明",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "has_style": true,
+          "has_scene": true
+        }
+      }
+    ],
+    "summary": {
+      "files_exist": 1.0,
+      "images_modified": 1.0,
+      "description_quality": 1.0
+    },
+    "needs_human_review": false,
+    "auto_grade_only": true,
+    "quality_rubric_meta": {
+      "skipped": false,
+      "parse_error": false,
+      "reason": null,
+      "notes": "Both PNGs satisfy the requirements: the first clearly transforms the cat into a warm posterized/cel-shaded style, the second places a recognizable cat in a lunar space scene, and the description coherently matches both edits.",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": 0.95
+    },
+    "quality": 0.95,
+    "outcome_llm_weight": 0.9
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/013-image-edit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.92
+      },
+      "total": 0.96,
+      "notes": "Clear progression from source inspection to Pillow-based style and scene generation, artifact verification, visual review, and recovery from two nonfatal environment/tool errors.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.92},\"security_gate\":1,\"notes\":\"Clear progression from source inspection to Pillow-based style and scene generation, artifact verification, visual review, and recovery from two nonfatal environment/tool errors.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.96,
+    "process_effective": 0.96,
+    "security_score": 1.0,
+    "outcome_score": 0.955,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": 0.95,
+    "quality_rubric_meta": {
+      "skipped": false,
+      "parse_error": false,
+      "reason": null,
+      "notes": "Both PNGs satisfy the requirements: the first clearly transforms the cat into a warm posterized/cel-shaded style, the second places a recognizable cat in a lunar space scene, and the description coherently matches both edits.",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": 0.95
+    },
+    "outcome_llm_weight": 0.9,
+    "outcome_formula": "outcome = (1-0.9)*oracle_outcome + 0.9*quality (from oracle-side rubric_llm)",
+    "combined_score": 0.9168,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.955 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = (1-0.9)*oracle_outcome + 0.9*quality (from oracle-side rubric_llm). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-013-image-edit-gpt-5.6-luna-20260910-233418-42bbffe8"
+}

@@ -1,0 +1,201 @@
+[harnessbench] run-task 049-excel-like-cleaning (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 049-excel-like-cleaning finished adapter_ok=True elapsed=25.905s
+{
+  "task_id": "049-excel-like-cleaning",
+  "elapsed_sec": 25.905,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-049-excel-like-cleaning-cae323dc",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-049-excel-like-cleaning-stellar-luna-20260910-221130-9d5cb828/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 5641,
+    "output_tokens": 1792,
+    "cache_read_tokens": 17261,
+    "cache_write_tokens": 0,
+    "total_tokens": 24694,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "049-excel-like-cleaning",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-049-excel-like-cleaning-stellar-luna-20260910-221130-9d5cb828/workspace",
+    "checks": [
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "fixture_messy_sales_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_customer_dictionary_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "fixture_fx_rates_row_count",
+        "pass": true,
+        "weight": 0.02,
+        "detail": null
+      },
+      {
+        "id": "cleaned_csv_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "report_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "reject_ledger_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "reject_summary_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exact_cleaned_rows",
+        "pass": false,
+        "weight": 0.3,
+        "detail": "got [{'order_id': 'S1001', 'order_date': '2025-01-05', 'customer_id': 'C001', 'customer_name': 'Ada Chen', 'sku': 'A-10', 'quantity': '2', 'amount_usd': '39.98', 'status': 'complete'}, {'order_id': 'S1002', 'order_date': '2025-01-07', 'customer_id': 'C002', 'customer_name': 'Ben Ortiz', 'sku': 'B-20', 'quantity': '1', 'amount_usd': '21.45', 'status': 'complete'}, {'order_id': 'S1004', 'order_date': '2025-01-09', 'customer_id': 'C003', 'customer_name': 'Cleo Singh', 'sku': 'C-30', 'quantity': '3', 'amount_usd': '49.50', 'status': 'complete'}, {'order_id': 'S1005', 'order_date': '2025-01-10', 'customer_id': 'C004', 'customer_name': 'Dara Moore', 'sku': 'A-10', 'quantity': '1', 'amount_usd': '-19.99', 'status': 'refunded'}, {'order_id': 'S1006', 'order_date': '2025-01-11', 'customer_id': 'C002', 'customer_name': 'Ben Ortiz', 'sku': 'D-40', 'quantity': '2', 'amount_usd': '120.00', 'status': 'complete'}, {'order_id': 'S1009', 'order_date': '2025-01-12', 'customer_id': 'C007', 'customer_name': 'Gio Rossi', 'sku': 'F-60', 'quantity': '1', 'amount_usd': '27.50', 'status': 'complete'}, {'order_id': 'S1017', 'order_date': '2025-01-17', 'customer_id': 'C006', 'customer_name': 'Faye Lin', 'sku': 'H-85', 'quantity': '1', 'amount_usd': '15.00', 'status': 'complete'}, {'order_id': 'S1018', 'order_date': '2025-01-18', 'customer_id': 'C006', 'customer_name': 'Faye Lin', 'sku': 'H-86', 'quantity': '1', 'amount_usd': '1234.50', 'status': 'complete'}, {'order_id': 'S1019', 'order_date': '2025-01-19', 'customer_id': 'C007', 'customer_name': 'Gio Rossi', 'sku': 'H-87', 'quantity': '2', 'amount_usd': '-11.00', 'status': 'returned'}, {'order_id': 'S1020', 'order_date': '2025-01-20', 'customer_id': 'C003', 'customer_name': 'Cleo Singh', 'sku': 'I-10', 'quantity': '1', 'amount_usd': '135801.60', 'status': 'complete'}, {'order_id': 'S1021', 'order_date': '2025-01-21', 'customer_id': 'C001', 'customer_name': 'Ada Chen', 'sku': 'I-11', 'quantity': '1', 'amount_usd': '1234.56', 'status': 'complete'}, {'order_id': 'S1022', 'order_date': '2025-01-22', 'customer_id': 'C007', 'customer_name': 'Gio Rossi', 'sku': 'I-12', 'quantity': '1', 'amount_usd': '-11.00', 'status': 'refunded'}, {'order_id': 'S1023', 'order_date': '2025-01-23', 'customer_id': 'C004', 'customer_name': 'Dara Moore', 'sku': 'I-13', 'quantity': '1', 'amount_usd': '-11.00', 'status': 'returned'}]"
+      },
+      {
+        "id": "iso_dates",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "amount_decimals",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "locale_fx_effects",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "de_de_decimal_amount",
+        "pass": false,
+        "weight": 0.06,
+        "detail": "de_DE decimal/thousands parsing is wrong"
+      },
+      {
+        "id": "us_thousands_amount",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "refund_sign_once",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "no_duplicate_clean_rows",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "reject_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "reject_reasons",
+        "pass": false,
+        "weight": 0.14,
+        "detail": "got [{'order_id': 'S1003', 'reason': 'missing_amount', 'source_row': '3'}, {'order_id': 'S1001', 'reason': 'duplicate_order_id', 'source_row': '4'}, {'order_id': 'S1007', 'reason': 'inactive_customer', 'source_row': '8'}, {'order_id': 'S1008', 'reason': 'invalid_quantity', 'source_row': '9'}, {'order_id': 'S1010', 'reason': 'unknown_customer', 'source_row': '11'}, {'order_id': 'S1011', 'reason': 'unsupported_currency', 'source_row': '12'}, {'order_id': 'S1012', 'reason': 'invalid_date', 'source_row': '13'}, {'order_id': 'S1013', 'reason': 'invalid_date', 'source_row': '14'}, {'order_id': 'S1014', 'reason': 'invalid_date', 'source_row': '15'}, {'order_id': 'S1015', 'reason': 'missing_amount', 'source_row': '16'}, {'order_id': 'S1016', 'reason': 'unsupported_currency', 'source_row': '17'}, {'order_id': 'S1017', 'reason': 'invalid_date', 'source_row': '19'}]"
+      },
+      {
+        "id": "reject_summary_exact",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "report_reject_categories",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "report_terms",
+        "pass": false,
+        "weight": 0.07,
+        "detail": "missing required summary terms"
+      }
+    ],
+    "outcome_score": 0.6686,
+    "score": 0.6686,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/049-excel-like-cleaning/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.88,
+        "consistency": 0.82,
+        "robustness": 0.74
+      },
+      "total": 0.8133,
+      "notes": "Used a reproducible local Python/CSV workflow and recovered from the missing pandas dependency, but verification was mostly visual and the de_DE amount parsing implementation produced an incorrect FX-converted value; an edit attempt also failed without clear follow-up.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.88,\"consistency\":0.82,\"robustness\":0.74},\"security_gate\":1,\"notes\":\"Used a reproducible local Python/CSV workflow and recovered from the missing pandas dependency, but verification was mostly visual and the de_DE amount parsing implementation produced an incorrect FX-converted value; an edit attempt also failed without clear follow-up.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8133,
+    "process_effective": 0.8133,
+    "security_score": 1.0,
+    "outcome_score": 0.6686,
+    "oracle_outcome_score": 0.6686,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.5438,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.6686 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-049-excel-like-cleaning-gpt-5.6-luna-20260910-221130-9d5cb828"
+}

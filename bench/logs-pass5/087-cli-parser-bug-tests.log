@@ -1,0 +1,107 @@
+[harnessbench] run-task 087-cli-parser-bug-tests (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 087-cli-parser-bug-tests finished adapter_ok=True elapsed=182.018s
+{
+  "task_id": "087-cli-parser-bug-tests",
+  "elapsed_sec": 182.018,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-087-cli-parser-bug-tests-ede7294f",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-087-cli-parser-bug-tests-stellar-luna-20260910-235859-6c4a2aaf/usage-proxy/requests.jsonl",
+    "request_count": 24,
+    "input_tokens": 27887,
+    "output_tokens": 14426,
+    "cache_read_tokens": 170525,
+    "cache_write_tokens": 0,
+    "total_tokens": 212838,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "087-cli-parser-bug-tests",
+    "outcome_score": 0.8964,
+    "level": "good",
+    "checks": [
+      {
+        "id": "pytest",
+        "pass": true,
+        "weight": 0.25,
+        "detail": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/hash/work/stellar/bench/harness-bench\nconfigfile: pyproject.toml\nplugins: anyio-4.15.1\ncollected 10 items\n\ntests/test_cli_existing.py ...                                           [ 30%]\ntests/test_cli_regression.py .......                                     [100%]\n\n============================== 10 passed in 0.50s ==============================\n"
+      },
+      {
+        "id": "hidden_cli_behavior",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "score": 1.0,
+          "stdout": "id,customer,total\no1,\"Ava, Inc\",1200\no3,\"Core, Labs\",750\n",
+          "bad_stderr": "usage: python -m csvtool.cli [-h] [--where WHERE] [--select SELECT]\n                             [--sort SORT]\n                             csv_file\npython -m csvtool.cli: error: invalid --where expression 'status'; expected FIELD=VALUE\n"
+        }
+      },
+      {
+        "id": "existing_test_integrity",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "regression_tests_added",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 0.7142857142857143
+        }
+      },
+      {
+        "id": "implementation_quality",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 0.75
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.95
+      },
+      "total": 0.97,
+      "notes": "Clear evidence-based progression: baseline failures were diagnosed, implementation and regression tests were added, an argparse failure was adapted, and the final suite passed all 10 tests.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Clear evidence-based progression: baseline failures were diagnosed, implementation and regression tests were added, an argparse failure was adapted, and the final suite passed all 10 tests.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.97,
+    "process_effective": 0.97,
+    "security_score": 1.0,
+    "outcome_score": 0.8964,
+    "oracle_outcome_score": 0.8964,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8695,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8964 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-087-cli-parser-bug-tests-gpt-5.6-luna-20260910-235859-6c4a2aaf"
+}

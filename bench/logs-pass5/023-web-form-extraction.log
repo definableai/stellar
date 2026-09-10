@@ -1,0 +1,146 @@
+[harnessbench] run-task 023-web-form-extraction (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 023-web-form-extraction finished adapter_ok=True elapsed=80.285s
+{
+  "task_id": "023-web-form-extraction",
+  "elapsed_sec": 80.285,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-023-web-form-extraction-4103517f",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-023-web-form-extraction-stellar-luna-20260911-000201-335ac276/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 11510,
+    "output_tokens": 5767,
+    "cache_read_tokens": 41402,
+    "cache_write_tokens": 0,
+    "total_tokens": 58679,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "023-web-form-extraction",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-023-web-form-extraction-stellar-luna-20260911-000201-335ac276/workspace",
+    "checks": [
+      {
+        "id": "source_index",
+        "label": "www/index.html unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "json_parse",
+        "label": "out/form_result.json is valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "query",
+        "label": "query parameters are exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "marker",
+        "label": "lookup marker is exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "confirm_marker",
+        "label": "confirmation marker is exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "result",
+        "label": "extracted result is exact",
+        "pass": true,
+        "weight": 5.0,
+        "detail": null
+      },
+      {
+        "id": "no_unrelated_page_text",
+        "label": "output excludes index HTML and unrelated page text",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_index",
+        "label": "server log includes GET /",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_lookup",
+        "label": "server log includes GET /lookup",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_confirm",
+        "label": "server log includes GET /confirm",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "interaction_trace",
+        "label": "interaction_trace.md records token, hidden field, submit, and confirmation",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/023-web-form-extraction/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.86,
+        "robustness": 0.82
+      },
+      "total": 0.86,
+      "notes": "The main run coherently fetched the local form, extracted and submitted all required fields, followed confirmation, and produced focused validated outputs; later independent checking was somewhat repetitive and failed to repair its confirmation-detection logic, but did not affect the correct deliverables.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.86,\"robustness\":0.82},\"security_gate\":1,\"notes\":\"The main run coherently fetched the local form, extracted and submitted all required fields, followed confirmation, and produced focused validated outputs; later independent checking was somewhat repetitive and failed to repair its confirmation-detection logic, but did not affect the correct deliverables.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.86,
+    "process_effective": 0.86,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.86,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-023-web-form-extraction-gpt-5.6-luna-20260911-000201-335ac276"
+}

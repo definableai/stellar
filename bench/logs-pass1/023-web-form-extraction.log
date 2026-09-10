@@ -1,0 +1,138 @@
+[harnessbench] run-task 023-web-form-extraction (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 023-web-form-extraction finished adapter_ok=True elapsed=27.632s
+{
+  "task_id": "023-web-form-extraction",
+  "elapsed_sec": 27.632,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-023-web-form-extraction-6c1732f4",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-023-web-form-extraction-stellar-luna-20260910-221321-e5cc2a25/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 3304,
+    "output_tokens": 1101,
+    "cache_read_tokens": 16511,
+    "cache_write_tokens": 0,
+    "total_tokens": 20916,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "023-web-form-extraction",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-023-web-form-extraction-stellar-luna-20260910-221321-e5cc2a25/workspace",
+    "checks": [
+      {
+        "id": "source_index",
+        "label": "www/index.html unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "json_parse",
+        "label": "out/form_result.json is valid JSON",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "query",
+        "label": "query parameters are exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "marker",
+        "label": "lookup marker is exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "confirm_marker",
+        "label": "confirmation marker is exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "result",
+        "label": "extracted result is exact",
+        "pass": true,
+        "weight": 5.0,
+        "detail": null
+      },
+      {
+        "id": "no_unrelated_page_text",
+        "label": "output excludes index HTML and unrelated page text",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_index",
+        "label": "server log includes GET /",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_lookup",
+        "label": "server log includes GET /lookup",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_confirm",
+        "label": "server log includes GET /confirm",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "interaction_trace",
+        "label": "interaction_trace.md records token, hidden field, submit, and confirmation",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/023-web-form-extraction/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-023-web-form-extraction-gpt-5.6-luna-20260910-221321-e5cc2a25"
+}

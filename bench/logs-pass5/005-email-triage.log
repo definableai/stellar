@@ -1,0 +1,125 @@
+[harnessbench] run-task 005-email-triage (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 005-email-triage finished adapter_ok=True elapsed=44.673s
+{
+  "task_id": "005-email-triage",
+  "elapsed_sec": 44.673,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-005-email-triage-d448d691",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-005-email-triage-stellar-luna-20260911-000359-41c60220/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 8145,
+    "output_tokens": 3623,
+    "cache_read_tokens": 17577,
+    "cache_write_tokens": 0,
+    "total_tokens": 29345,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "005-email-triage",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-005-email-triage-stellar-luna-20260911-000359-41c60220/workspace",
+    "checks": [
+      {
+        "id": "label_001",
+        "label": "triage[001] == spam",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "label_002",
+        "label": "triage[002] == needs_reply",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "label_003",
+        "label": "triage[003] == ok",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "label_004",
+        "label": "triage[004] == spam",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "label_005",
+        "label": "triage[005] == needs_reply",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "delete_ids",
+        "label": "delete_ids.txt matches spam list",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "reply_nonempty_002",
+        "label": "out/replies/002.txt exists and non-empty",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      },
+      {
+        "id": "reply_nonempty_005",
+        "label": "out/replies/005.txt exists and non-empty",
+        "pass": true,
+        "weight": 0.125,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/005-email-triage/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 1.0
+      },
+      "total": 1.0,
+      "notes": "Clear, evidence-grounded workflow: created required directories, read all emails, wrote correct outputs, and performed targeted validation with no material failures or unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Clear, evidence-grounded workflow: created required directories, read all emails, wrote correct outputs, and performed targeted validation with no material failures or unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 1.0,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-005-email-triage-gpt-5.6-luna-20260911-000359-41c60220"
+}

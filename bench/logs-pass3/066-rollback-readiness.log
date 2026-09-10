@@ -1,0 +1,89 @@
+[harnessbench] run-task 066-rollback-readiness (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 066-rollback-readiness finished adapter_ok=True elapsed=23.943s
+{
+  "task_id": "066-rollback-readiness",
+  "elapsed_sec": 23.943,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-066-rollback-readiness-83560265",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-066-rollback-readiness-stellar-luna-20260910-223517-5b6bb79f/usage-proxy/requests.jsonl",
+    "request_count": 7,
+    "input_tokens": 5412,
+    "output_tokens": 1800,
+    "cache_read_tokens": 17717,
+    "cache_write_tokens": 0,
+    "total_tokens": 24929,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "066-rollback-readiness",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-066-rollback-readiness-stellar-luna-20260910-223517-5b6bb79f/workspace",
+    "outcome_score": 0.7594,
+    "level": "pass",
+    "checks": [
+      {
+        "id": "blockers_csv",
+        "label": "blockers.csv lists all release blockers with evidence",
+        "pass": true,
+        "weight": 0.72,
+        "detail": {
+          "score": 0.703,
+          "rows": 5
+        }
+      },
+      {
+        "id": "readiness_doc",
+        "label": "rollback_readiness.md states blocked decision, metrics, approvals, and safety",
+        "pass": true,
+        "weight": 0.22,
+        "detail": {
+          "score": 0.8786,
+          "unsafe_claim": false
+        }
+      },
+      {
+        "id": "source_unchanged",
+        "label": "fixtures are not modified",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/066-rollback-readiness/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.7594,
+    "oracle_outcome_score": 0.7594,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7594,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7594 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-066-rollback-readiness-gpt-5.6-luna-20260910-223517-5b6bb79f"
+}

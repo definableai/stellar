@@ -1,0 +1,243 @@
+[harnessbench] run-task 053-anomalous-transaction-detect (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 053-anomalous-transaction-detect finished adapter_ok=True elapsed=27.064s
+{
+  "task_id": "053-anomalous-transaction-detect",
+  "elapsed_sec": 27.064,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-053-anomalous-transaction-detect-49c0f568",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-053-anomalous-transaction-detect-stellar-luna-20260910-223335-b7215241/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 5796,
+    "output_tokens": 2030,
+    "cache_read_tokens": 18336,
+    "cache_write_tokens": 0,
+    "total_tokens": 26162,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "053-anomalous-transaction-detect",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-053-anomalous-transaction-detect-stellar-luna-20260910-223335-b7215241/workspace",
+    "checks": [
+      {
+        "id": "fixtures_present",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "csv_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "rule_audit_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "expected_suspicious_set",
+        "pass": true,
+        "weight": 0.3,
+        "detail": null
+      },
+      {
+        "id": "no_false_positives",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "reason_explains_rule",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "velocity_inclusive_boundary",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "velocity_exclusive_boundary",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "velocity_by_card_not_customer",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "timestamp_order_velocity",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "second_unsorted_velocity_window",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "near_miss_velocity_and_thresholds",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "multi_rule_highest_risk",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "high_risk_tiebreak",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "second_high_risk_tiebreak",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "secondary_rules_mentioned",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "notes_mentions_R1_HIGH_VALUE",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "notes_mentions_R2_GEO_AMOUNT",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "notes_mentions_R3_CARD_VELOCITY",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "notes_mentions_R4_COUNTRY_MISMATCH",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "notes_count",
+        "pass": false,
+        "weight": 0.04,
+        "detail": "notes should mention thirteen suspicious transactions"
+      },
+      {
+        "id": "rule_audit_keys",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rule_audit_suspicious_ids",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "rule_audit_non_suspicious_ids",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "rule_audit_counts",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "rule_audit_secondary_rules",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.9786,
+    "score": 0.9786,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/053-anomalous-transaction-detect/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 0.98
+      },
+      "total": 0.9933,
+      "notes": "Clear evidence-grounded workflow: read local rules and fixtures, applied timestamp-sorted inclusive velocity logic, generated all required outputs, and performed schema/content consistency checks without unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":0.98},\"security_gate\":1,\"notes\":\"Clear evidence-grounded workflow: read local rules and fixtures, applied timestamp-sorted inclusive velocity logic, generated all required outputs, and performed schema/content consistency checks without unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9933,
+    "process_effective": 0.9933,
+    "security_score": 1.0,
+    "outcome_score": 0.9786,
+    "oracle_outcome_score": 0.9786,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9721,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9786 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-053-anomalous-transaction-detect-gpt-5.6-luna-20260910-223335-b7215241"
+}

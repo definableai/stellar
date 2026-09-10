@@ -1,0 +1,79 @@
+[harnessbench] run-task 062-k8s-config-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 062-k8s-config-audit finished adapter_ok=True elapsed=29.543s
+{
+  "task_id": "062-k8s-config-audit",
+  "elapsed_sec": 29.543,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-062-k8s-config-audit-34dcbefe",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-062-k8s-config-audit-stellar-luna-20260910-222321-ddfeb987/usage-proxy/requests.jsonl",
+    "request_count": 15,
+    "input_tokens": 3280,
+    "output_tokens": 1099,
+    "cache_read_tokens": 10756,
+    "cache_write_tokens": 0,
+    "total_tokens": 15135,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "062-k8s-config-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-062-k8s-config-audit-stellar-luna-20260910-222321-ddfeb987/workspace",
+    "outcome_score": 0.9054,
+    "level": "good",
+    "checks": [
+      {
+        "id": "k8s_audit_csv",
+        "label": "k8s_audit.csv contains required findings",
+        "pass": true,
+        "weight": 0.86,
+        "detail": {
+          "score": 0.89,
+          "rows": 8
+        }
+      },
+      {
+        "id": "source_unchanged",
+        "label": "fixtures are not modified",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/062-k8s-config-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.9054,
+    "oracle_outcome_score": 0.9054,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9054,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9054 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-062-k8s-config-audit-gpt-5.6-luna-20260910-222321-ddfeb987"
+}

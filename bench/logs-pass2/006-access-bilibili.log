@@ -1,0 +1,96 @@
+[harnessbench] run-task 006-access-bilibili (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 006-access-bilibili finished adapter_ok=True elapsed=33.54s
+{
+  "task_id": "006-access-bilibili",
+  "elapsed_sec": 33.54,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-006-access-bilibili-9dd0570f",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-006-access-bilibili-stellar-luna-20260910-222454-c5aff7a6/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 3222,
+    "output_tokens": 1133,
+    "cache_read_tokens": 14531,
+    "cache_write_tokens": 0,
+    "total_tokens": 18886,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "006-access-bilibili",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-006-access-bilibili-stellar-luna-20260910-222454-c5aff7a6/workspace",
+    "checks": [
+      {
+        "id": "titles_min_lines",
+        "label": "out/titles.txt exists with >= 3 non-empty lines",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "expected_top_by_views",
+        "label": "first N lines match expected_ordered_titles (play-count desc snapshot)",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "title_line_shape",
+        "label": "each title line length in [2,240]",
+        "pass": true,
+        "weight": 0.2,
+        "detail": null
+      },
+      {
+        "id": "source_url",
+        "label": "out/source_url.txt non-empty and looks like a URL/page ref",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/006-access-bilibili/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 0.96,
+        "robustness": 0.96
+      },
+      "total": 0.9733,
+      "notes": "Fetched and inspected the provided mock page, extracted titles in confirmed order, created the required output directory/files, recovered from parameter and portability errors, and completed exact-content verification.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":0.96,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Fetched and inspected the provided mock page, extracted titles in confirmed order, created the required output directory/files, recovered from parameter and portability errors, and completed exact-content verification.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9733,
+    "process_effective": 0.9733,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9733,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-006-access-bilibili-gpt-5.6-luna-20260910-222454-c5aff7a6"
+}

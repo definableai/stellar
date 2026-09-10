@@ -1,0 +1,166 @@
+[harnessbench] run-task 078-local-api-cursor-retry-ledger (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 078-local-api-cursor-retry-ledger finished adapter_ok=True elapsed=124.102s
+{
+  "task_id": "078-local-api-cursor-retry-ledger",
+  "elapsed_sec": 124.102,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-078-local-api-cursor-retry-ledger-85a43052",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-stellar-luna-20260911-003549-27f2fc12/usage-proxy/requests.jsonl",
+    "request_count": 18,
+    "input_tokens": 25364,
+    "output_tokens": 15498,
+    "cache_read_tokens": 70809,
+    "cache_write_tokens": 0,
+    "total_tokens": 111671,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "078-local-api-cursor-retry-ledger",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-stellar-luna-20260911-003549-27f2fc12/workspace",
+    "checks": [
+      {
+        "id": "json_parse",
+        "label": "api_inventory.json parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_url",
+        "label": "source_base_url records the provided mock API",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "dataset_count",
+        "label": "dataset_count exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "artifact_count",
+        "label": "artifact_count follows a documented global-count interpretation",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "jobs_by_status",
+        "label": "jobs_by_status exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "datasets",
+        "label": "datasets exact",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_read",
+        "label": "retry_ledger.csv parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_header",
+        "label": "retry ledger header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_events",
+        "label": "ledger records 429, 503, and cursor recovery",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "visited_datasets",
+        "label": "server log includes /datasets",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_jobs",
+        "label": "server log includes /jobs",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_artifacts",
+        "label": "server log includes /artifacts",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_checkpoint",
+        "label": "server log includes /checkpoint",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "retry_observed",
+        "label": "server log shows retries",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "quality_terms",
+        "label": "quality report covers duplicate, orphan, cursor, 429, and 503",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-gpt-5.6-luna-20260911-003549-27f2fc12"
+}

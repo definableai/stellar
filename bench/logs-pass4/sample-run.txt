@@ -1,0 +1,15 @@
+tasks=14 jobs=7 wall=1800s judge=gpt-5.6-luna
+060-task-cancellation-cleanup rc=0 combined=0.97 outcome=1.0 process=0.97 elapsed=67.182s
+093-jsonl-sessionization-analysis rc=0 combined=0.4873 outcome=0.4939 process=0.9867 elapsed=70.167s
+091-financial-close-reconciliation rc=0 combined=0.7842 outcome=0.8197 process=0.9567 elapsed=71.486s
+106-release-approval-gate-plan rc=0 combined=0.4597 outcome=0.4675 process=0.9833 elapsed=78.077s
+090-timeseries-anomaly-attribution rc=0 combined=0.4143 outcome=0.4407 process=0.94 elapsed=85.441s
+092-schema-drift-audit rc=0 combined=0.3788 outcome=0.3826 process=0.99 elapsed=99.009s
+031-cross-doc-citation-check rc=0 combined=0.6645 outcome=0.6667 process=0.9967 elapsed=47.242s
+077-archive-manifest-defense rc=0 combined=0.4377 outcome=0.4828 process=0.9067 elapsed=123.217s
+022-local-rest-api-summary rc=0 combined=0.8348 outcome=0.8696 process=0.96 elapsed=54.507s
+079-smallfile-batch-reject-ledger rc=0 combined=0.4713 outcome=0.505 process=0.9333 elapsed=103.084s
+041-frontend-state-bug rc=0 combined=0.5431 outcome=0.5925 process=0.9167 elapsed=88.877s
+052-metric-definition-audit rc=0 combined=0.93 outcome=1.0 process=0.93 elapsed=71.153s
+098-three-source-decision-record-synthesis rc=0 combined=0.5387 outcome=0.5573 process=0.9667 elapsed=125.614s
+105-partial-batch-resume-ledger rc=0 combined=0.7315 outcome=0.77 process=0.95 elapsed=136.759s

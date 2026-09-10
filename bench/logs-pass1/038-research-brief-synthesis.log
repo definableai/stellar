@@ -1,0 +1,109 @@
+[harnessbench] run-task 038-research-brief-synthesis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 038-research-brief-synthesis finished adapter_ok=True elapsed=20.576s
+{
+  "task_id": "038-research-brief-synthesis",
+  "elapsed_sec": 20.576,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-038-research-brief-synthesis-c0bf710b",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-221220-554fb79f/usage-proxy/requests.jsonl",
+    "request_count": 5,
+    "input_tokens": 2201,
+    "output_tokens": 1604,
+    "cache_read_tokens": 1496,
+    "cache_write_tokens": 0,
+    "total_tokens": 5301,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "038-research-brief-synthesis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-221220-554fb79f/workspace",
+    "outcome_score": 0.54,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "brief_structure",
+        "label": "research_brief.md has required sections",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 5
+        }
+      },
+      {
+        "id": "brief_metrics",
+        "label": "brief includes required metrics and caveats",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "hits": 16,
+          "total": 16
+        }
+      },
+      {
+        "id": "no_external_fabrication",
+        "label": "brief does not claim external/current data",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "notes_parse",
+        "label": "source_notes.csv parseable",
+        "pass": false,
+        "weight": 0.25,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-221220-554fb79f/workspace/out/source_notes.csv'"
+      },
+      {
+        "id": "evidence_matrix_parse",
+        "label": "evidence_matrix.csv parseable",
+        "pass": false,
+        "weight": 0.2,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-221220-554fb79f/workspace/out/evidence_matrix.csv'"
+      },
+      {
+        "id": "assumptions_parse",
+        "label": "assumptions.json parseable",
+        "pass": false,
+        "weight": 0.1,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-221220-554fb79f/workspace/out/assumptions.json'"
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/038-research-brief-synthesis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.54,
+    "oracle_outcome_score": 0.54,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.54,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.54 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-038-research-brief-synthesis-gpt-5.6-luna-20260910-221220-554fb79f"
+}

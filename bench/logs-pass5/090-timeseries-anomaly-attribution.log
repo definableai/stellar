@@ -1,0 +1,166 @@
+[harnessbench] run-task 090-timeseries-anomaly-attribution (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 090-timeseries-anomaly-attribution finished adapter_ok=True elapsed=178.739s
+{
+  "task_id": "090-timeseries-anomaly-attribution",
+  "elapsed_sec": 178.739,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-090-timeseries-anomaly-attribution-93165fc3",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-090-timeseries-anomaly-attribution-stellar-luna-20260910-234645-78d88a9e/usage-proxy/requests.jsonl",
+    "request_count": 32,
+    "input_tokens": 40242,
+    "output_tokens": 20709,
+    "cache_read_tokens": 122933,
+    "cache_write_tokens": 0,
+    "total_tokens": 183884,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "090-timeseries-anomaly-attribution",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-090-timeseries-anomaly-attribution-stellar-luna-20260910-234645-78d88a9e/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_hourly_metrics.csv",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_deployments.csv",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_incident_calendar.csv",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_detection_rules.md",
+        "pass": true,
+        "weight": 0.015,
+        "detail": null
+      },
+      {
+        "id": "anomalies_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "anomalies_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "anomaly_exact_set",
+        "pass": false,
+        "weight": 0.36,
+        "detail": "got [{'anomaly_id': 'ANOM-001', 'timestamp': '2026-04-20T10:00:00Z', 'service': 'checkout', 'region': 'us-east', 'metric': 'error_rate', 'observed': '0.0938', 'expected': '0.0100', 'z_score': '8.4', 'severity': 'high', 'attributed_cause': 'deployment'}, {'anomaly_id': 'ANOM-002', 'timestamp': '2026-04-20T10:00:00Z', 'service': 'payments', 'region': 'eu-west', 'metric': 'latency_p95_ms', 'observed': '910', 'expected': '210', 'z_score': '7.0', 'severity': 'high', 'attributed_cause': 'third_party_incident'}, {'anomaly_id': 'ANOM-003', 'timestamp': '2026-04-20T11:00:00Z', 'service': 'search', 'region': 'global', 'metric': 'requests', 'observed': '410', 'expected': '1000', 'z_score': '-5.9', 'severity': 'medium', 'attributed_cause': 'marketing_calendar'}, {'anomaly_id': 'ANOM-004', 'timestamp': '2026-04-20T11:30:00Z', 'service': 'checkout', 'region': 'us-east', 'metric': 'latency_p95_ms', 'observed': '880', 'expected': '220', 'z_score': '6.6', 'severity': 'high', 'attributed_cause': 'deployment'}, {'anomaly_id': 'ANOM-005', 'timestamp': '2026-04-20T12:30:00Z', 'service': 'profile', 'region': 'global', 'metric': 'error_rate', 'observed': '0.0500', 'expected': '0.0100', 'z_score': '4.2', 'severity': 'medium', 'attributed_cause': 'unattributed'}, {'anomaly_id': 'ANOM-006', 'timestamp': '2026-04-20T12:30:00Z', 'service': 'profile', 'region': 'global', 'metric': 'latency_p95_ms', 'observed': '260', 'expected': '210', 'z_score': '3.1', 'severity': 'medium', 'attributed_cause': 'unattributed'}]"
+      },
+      {
+        "id": "low_volume_suppressed",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "attribution_priority",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "deployment/third-party attribution missing"
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "summary_ids",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got ['ANOM-001', 'ANOM-002', 'ANOM-003', 'ANOM-004', 'ANOM-005', 'ANOM-006']"
+      },
+      {
+        "id": "summary_counts",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "summary_impact",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "summary_unattributed",
+        "pass": false,
+        "weight": 0.04,
+        "detail": "got ['ANOM-005', 'ANOM-006']"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "notes_caveats",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.5254,
+    "score": 0.5254,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/090-timeseries-anomaly-attribution/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.86,
+        "consistency": 0.78,
+        "robustness": 0.9
+      },
+      "total": 0.8467,
+      "notes": "Used local inputs and appropriate validation, recovered from a checker error and initially missed qualifying latency anomaly, then correctly added it and verified six anomalies, totals, attribution, and required notes; some redundant inspection and premature verification reduced consistency.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.86,\"consistency\":0.78,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Used local inputs and appropriate validation, recovered from a checker error and initially missed qualifying latency anomaly, then correctly added it and verified six anomalies, totals, attribution, and required notes; some redundant inspection and premature verification reduced consistency.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8467,
+    "process_effective": 0.8467,
+    "security_score": 1.0,
+    "outcome_score": 0.5254,
+    "oracle_outcome_score": 0.5254,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4448,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.5254 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-090-timeseries-anomaly-attribution-gpt-5.6-luna-20260910-234645-78d88a9e"
+}

@@ -1,0 +1,125 @@
+[harnessbench] run-task 011-code-debug (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 011-code-debug finished adapter_ok=True elapsed=46.324s
+{
+  "task_id": "011-code-debug",
+  "elapsed_sec": 46.324,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-011-code-debug-2dc9938a",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-011-code-debug-stellar-luna-20260910-221338-9a339ba3/usage-proxy/requests.jsonl",
+    "request_count": 29,
+    "input_tokens": 4732,
+    "output_tokens": 782,
+    "cache_read_tokens": 49901,
+    "cache_write_tokens": 0,
+    "total_tokens": 55415,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "011-code-debug",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-011-code-debug-stellar-luna-20260910-221338-9a339ba3/workspace",
+    "outcome_score": 0.68,
+    "level": "pass",
+    "checks": [
+      {
+        "id": "layers_fixed",
+        "label": "修复层数: 4/5",
+        "pass": false,
+        "weight": 0.6,
+        "detail": {
+          "layers_fixed": 4,
+          "total": 5,
+          "per_layer": [
+            {
+              "layer": 1,
+              "snapshot_exists": true,
+              "run_passed": true
+            },
+            {
+              "layer": 2,
+              "snapshot_exists": true,
+              "run_passed": true
+            },
+            {
+              "layer": 3,
+              "snapshot_exists": true,
+              "run_passed": true
+            },
+            {
+              "layer": 4,
+              "snapshot_exists": true,
+              "run_passed": true
+            },
+            {
+              "layer": 5,
+              "snapshot_exists": false,
+              "run_passed": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "rounds_efficiency",
+        "label": "效率: 5轮 (最优5)",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "rounds_used": 5,
+          "efficiency": 0.8
+        }
+      },
+      {
+        "id": "fix_quality",
+        "label": "修复质量: 注释+日志+完成度",
+        "pass": false,
+        "weight": 0.15,
+        "detail": {
+          "quality_score": 0.0
+        }
+      }
+    ],
+    "summary": {
+      "layers_fixed": "4/5",
+      "rounds_used": 5,
+      "quality_score": 0.0,
+      "all_layers_fixed": false,
+      "used_runtime_summary": true
+    },
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/011-code-debug/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.68,
+    "oracle_outcome_score": 0.68,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.68,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.68 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-011-code-debug-gpt-5.6-luna-20260910-221338-9a339ba3"
+}

@@ -1,0 +1,127 @@
+[harnessbench] run-task 105-partial-batch-resume-ledger (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 105-partial-batch-resume-ledger finished adapter_ok=True elapsed=213.605s
+{
+  "task_id": "105-partial-batch-resume-ledger",
+  "elapsed_sec": 213.605,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-105-partial-batch-resume-ledger-cdcdd209",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-105-partial-batch-resume-ledger-stellar-luna-20260910-232829-ff1e7206/usage-proxy/requests.jsonl",
+    "request_count": 19,
+    "input_tokens": 28012,
+    "output_tokens": 13235,
+    "cache_read_tokens": 81134,
+    "cache_write_tokens": 0,
+    "total_tokens": 122381,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "105-partial-batch-resume-ledger",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-105-partial-batch-resume-ledger-stellar-luna-20260910-232829-ff1e7206/workspace",
+    "outcome_score": 0.77,
+    "checks": [
+      {
+        "id": "state",
+        "label": "state.json preserves attempts and records final resume state",
+        "pass": true,
+        "weight": 0.3,
+        "detail": {
+          "score": 1.0,
+          "attempt_counts": {
+            "ITEM-001": 1,
+            "ITEM-002": 1,
+            "ITEM-003": 1,
+            "ITEM-004": 1,
+            "ITEM-005": 1,
+            "ITEM-006": 2,
+            "ITEM-007": 1,
+            "ITEM-008": 0,
+            "ITEM-009": 1,
+            "ITEM-010": 1
+          }
+        }
+      },
+      {
+        "id": "final_results",
+        "label": "final_results.json merges partial and resumed results correctly",
+        "pass": true,
+        "weight": 0.3,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "ledger",
+        "label": "retry_ledger.csv distinguishes skipped, retried, new, and rejected items",
+        "pass": false,
+        "weight": 0.25,
+        "detail": {
+          "score": 0.35
+        }
+      },
+      {
+        "id": "partial_results",
+        "label": "partial_results.json records round 1 stop without processing later items",
+        "pass": true,
+        "weight": 0.0,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "report_and_inputs",
+        "label": "resume report/audit explain recovery, partial state is valid, and inputs remain unchanged",
+        "pass": false,
+        "weight": 0.15,
+        "detail": {
+          "source_unchanged": true,
+          "partial_score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/105-partial-batch-resume-ledger/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.82,
+        "consistency": 0.62,
+        "robustness": 0.7
+      },
+      "total": 0.7133,
+      "notes": "Round 1 was carefully executed and independently verified with correct state, attempts, ordering, and failure audit; however, the trace ends at the Round 2 prompt with no evidence of resume processing or creation of the retry ledger and final artifacts.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.82,\"consistency\":0.62,\"robustness\":0.7},\"security_gate\":1,\"notes\":\"Round 1 was carefully executed and independently verified with correct state, attempts, ordering, and failure audit; however, the trace ends at the Round 2 prompt with no evidence of resume processing or creation of the retry ledger and final artifacts.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.7133,
+    "process_effective": 0.7133,
+    "security_score": 1.0,
+    "outcome_score": 0.77,
+    "oracle_outcome_score": 0.77,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.5493,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.77 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-105-partial-batch-resume-ledger-gpt-5.6-luna-20260910-232829-ff1e7206"
+}

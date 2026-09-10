@@ -1,0 +1,111 @@
+[harnessbench] run-task 074-education-grading-feedback (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 074-education-grading-feedback finished adapter_ok=True elapsed=101.324s
+{
+  "task_id": "074-education-grading-feedback",
+  "elapsed_sec": 101.324,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-074-education-grading-feedback-139bf868",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-074-education-grading-feedback-stellar-luna-20260911-001624-7980c55e/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 10838,
+    "output_tokens": 8807,
+    "cache_read_tokens": 24992,
+    "cache_write_tokens": 0,
+    "total_tokens": 44637,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "074-education-grading-feedback",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-074-education-grading-feedback-stellar-luna-20260911-001624-7980c55e/workspace",
+    "outcome_score": 0.52,
+    "checks": [
+      {
+        "id": "grades_exists",
+        "label": "grades.csv exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "all_submissions",
+        "label": "grades include every submission",
+        "pass": true,
+        "weight": 0.16,
+        "detail": null
+      },
+      {
+        "id": "exact_scores",
+        "label": "scores match rubric expectations",
+        "pass": false,
+        "weight": 0.34,
+        "detail": ""
+      },
+      {
+        "id": "total_math",
+        "label": "total_score equals component sum",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "feedback_files",
+        "label": "one feedback file per submission",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "feedback_content",
+        "label": "feedback mentions submission id, strength, and improvement",
+        "pass": false,
+        "weight": 0.14,
+        "detail": ""
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/074-education-grading-feedback/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.95,
+        "consistency": 0.9,
+        "robustness": 0.94
+      },
+      "total": 0.93,
+      "notes": "Read the rubric and all submissions before grading, created and validated the requested outputs, and gave specific feedback for partial answers; recovered from an initial path/tooling error, though a later audit reported an unresolved score discrepancy.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.95,\"consistency\":0.9,\"robustness\":0.94},\"security_gate\":1,\"notes\":\"Read the rubric and all submissions before grading, created and validated the requested outputs, and gave specific feedback for partial answers; recovered from an initial path/tooling error, though a later audit reported an unresolved score discrepancy.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.93,
+    "process_effective": 0.93,
+    "security_score": 1.0,
+    "outcome_score": 0.52,
+    "oracle_outcome_score": 0.52,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4836,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.52 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-074-education-grading-feedback-gpt-5.6-luna-20260911-001624-7980c55e"
+}

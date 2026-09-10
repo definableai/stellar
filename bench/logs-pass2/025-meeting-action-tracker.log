@@ -1,0 +1,242 @@
+[harnessbench] run-task 025-meeting-action-tracker (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 025-meeting-action-tracker finished adapter_ok=True elapsed=40.949s
+{
+  "task_id": "025-meeting-action-tracker",
+  "elapsed_sec": 40.949,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-025-meeting-action-tracker-cb42bddf",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-025-meeting-action-tracker-stellar-luna-20260910-222436-02f2f146/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 6842,
+    "output_tokens": 2366,
+    "cache_read_tokens": 28469,
+    "cache_write_tokens": 0,
+    "total_tokens": 37677,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "025-meeting-action-tracker",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-025-meeting-action-tracker-stellar-luna-20260910-222436-02f2f146/workspace",
+    "outcome_score": 0.8889,
+    "checks": [
+      {
+        "id": "csv_parseable",
+        "label": "csv parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "csv_header_exact",
+        "label": "csv header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "action_id",
+          "owner",
+          "task",
+          "deadline",
+          "status",
+          "source"
+        ]
+      },
+      {
+        "id": "action_AT-101",
+        "label": "action AT-101",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "AT-101",
+          "owner": "Rita",
+          "task": "Prepare pricing FAQ",
+          "deadline": "2026-06-07",
+          "status": "open",
+          "source": "followup_emails.md"
+        }
+      },
+      {
+        "id": "action_AT-104",
+        "label": "action AT-104",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "AT-104",
+          "owner": "Owen",
+          "task_contains": "sandbox access checklist",
+          "deadline": "2026-06-13",
+          "status": "open",
+          "source_matches": [
+            "project_dependencies.json",
+            "transcript_part3.txt",
+            "transcript_part2.txt"
+          ]
+        }
+      },
+      {
+        "id": "action_NEW-01",
+        "label": "action NEW-01",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "NEW-01",
+          "owner": "Sam",
+          "task": "Prepare compliance signoff checklist",
+          "deadline": "2026-06-12",
+          "status": "open",
+          "source": "followup_emails.md"
+        }
+      },
+      {
+        "id": "action_NEW-02",
+        "label": "action NEW-02",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "NEW-02",
+          "owner": "Sam",
+          "task": "Prepare security audit brief",
+          "deadline": "2026-06-13",
+          "status": "open",
+          "source": "transcript_part3.txt"
+        }
+      },
+      {
+        "id": "action_NEW-03",
+        "label": "action NEW-03",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "NEW-03",
+          "owner": "Mina",
+          "task": "Collect two customer quotes for launch brief",
+          "deadline": "2026-06-11",
+          "status": "open",
+          "source": "transcript_part3.txt"
+        }
+      },
+      {
+        "id": "action_AT-106",
+        "label": "action AT-106",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "action_id": "AT-106",
+          "owner": "Alex",
+          "task": "Prepare partner onboarding session",
+          "deadline": "2026-06-14",
+          "status": "pending",
+          "source": "project_dependencies.json"
+        }
+      },
+      {
+        "id": "completed_previous_action_excluded",
+        "label": "completed previous action excluded",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "followups_exists",
+        "label": "followups exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "followups_cover_owners",
+        "label": "followups cover owners",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "followups_cover_deadlines",
+        "label": "followups cover deadlines",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "followups_note_blocked_dependencies",
+        "label": "followups note blocked dependencies",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "rationale_exists",
+        "label": "rationale exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "rationale_covers_merge_decisions",
+        "label": "rationale covers merge decisions",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "followup_emails"
+        ]
+      },
+      {
+        "id": "rationale_explains_dependencies",
+        "label": "rationale explains dependencies",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "rationale_explains_bulk_update",
+        "label": "rationale explains bulk update",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "rationale_explains_pending_status",
+        "label": "rationale explains pending status",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/025-meeting-action-tracker/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.8889,
+    "oracle_outcome_score": 0.8889,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8889,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8889 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-025-meeting-action-tracker-gpt-5.6-luna-20260910-222436-02f2f146"
+}

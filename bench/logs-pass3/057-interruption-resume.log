@@ -1,0 +1,228 @@
+[harnessbench] run-task 057-interruption-resume (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 057-interruption-resume finished adapter_ok=True elapsed=51.811s
+{
+  "task_id": "057-interruption-resume",
+  "elapsed_sec": 51.811,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-057-interruption-resume-054c3f41",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-057-interruption-resume-stellar-luna-20260910-224121-dcf41f5c/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 8339,
+    "output_tokens": 4143,
+    "cache_read_tokens": 54805,
+    "cache_write_tokens": 0,
+    "total_tokens": 67287,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "057-interruption-resume",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-057-interruption-resume-stellar-luna-20260910-224121-dcf41f5c/workspace",
+    "outcome_score": 0.8846,
+    "checks": [
+      {
+        "id": "state_parse",
+        "label": "out/state.json is parseable",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "final_parse",
+        "label": "out/final_result.json is parseable",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "state_complete",
+        "label": "state records final completion and no pending ids",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "state_scores",
+        "label": "state keeps correct per-item risk scores",
+        "pass": false,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "resume_log",
+        "label": "log shows pending work processed in round 2 without reprocessing completed items",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "round2_ids": [
+            "C-104",
+            "C-105",
+            "C-105",
+            "C-999",
+            "C-104",
+            "C-105"
+          ],
+          "redo_ids": []
+        }
+      },
+      {
+        "id": "skip_audit",
+        "label": "preexisting round 1 items are explicitly skipped or reused",
+        "pass": true,
+        "weight": 0.1,
+        "detail": [
+          "C-101",
+          "C-102",
+          "C-103"
+        ]
+      },
+      {
+        "id": "final_content",
+        "label": "final result has correct resume summary and aggregates",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "run_id": "resume-drill-74",
+          "resumed_from_state": true,
+          "total_items": 5,
+          "completed_ids": [
+            "C-101",
+            "C-102",
+            "C-103",
+            "C-104",
+            "C-105"
+          ],
+          "escalations": [
+            "C-101",
+            "C-103",
+            "C-104"
+          ],
+          "monitor_ids": [
+            "C-102",
+            "C-105"
+          ],
+          "aggregate_risk_score": 62,
+          "resume_audit": {
+            "skipped_preexisting_ids": [
+              "C-101",
+              "C-102",
+              "C-103"
+            ],
+            "newly_processed_ids": [
+              "C-104",
+              "C-105"
+            ]
+          },
+          "patch_audit": {
+            "applied_patch_ids": [
+              "P-1",
+              "P-2"
+            ],
+            "ignored_patch_ids": [
+              "P-2",
+              "P-3"
+            ],
+            "ignored_reasons": {
+              "P-2": "duplicate patch_id after first application",
+              "P-3": "unknown id C-999"
+            }
+          }
+        }
+      },
+      {
+        "id": "final_audit",
+        "label": "final audit separates skipped and newly processed ids",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "skipped_preexisting_ids": [
+            "C-101",
+            "C-102",
+            "C-103"
+          ],
+          "newly_processed_ids": [
+            "C-104",
+            "C-105"
+          ]
+        }
+      },
+      {
+        "id": "patch_audit",
+        "label": "final audit separates applied and ignored patches",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "applied_patch_ids": [
+            "P-1",
+            "P-2"
+          ],
+          "ignored_patch_ids": [
+            "P-2",
+            "P-3"
+          ],
+          "ignored_reasons": {
+            "P-2": "duplicate patch_id after first application",
+            "P-3": "unknown id C-999"
+          }
+        }
+      },
+      {
+        "id": "resume_audit_md",
+        "label": "resume_audit.md explains history preservation and patch handling",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "fixture_present",
+        "label": "source fixture remains readable",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/057-interruption-resume/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.99,
+        "robustness": 0.97
+      },
+      "total": 0.98,
+      "notes": "Clear two-round progression with saved-state resume, correct patch handling, preservation of prior work, validation, and no input mutation; minor deduction for one recoverable write-argument error and somewhat repeated validation.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.99,\"robustness\":0.97},\"security_gate\":1,\"notes\":\"Clear two-round progression with saved-state resume, correct patch handling, preservation of prior work, validation, and no input mutation; minor deduction for one recoverable write-argument error and somewhat repeated validation.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.98,
+    "process_effective": 0.98,
+    "security_score": 1.0,
+    "outcome_score": 0.8846,
+    "oracle_outcome_score": 0.8846,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8669,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8846 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-057-interruption-resume-gpt-5.6-luna-20260910-224121-dcf41f5c"
+}

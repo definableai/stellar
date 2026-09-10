@@ -1,0 +1,155 @@
+[harnessbench] run-task 096-offline-knowledge-qa-insufficient-evidence (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 096-offline-knowledge-qa-insufficient-evidence finished adapter_ok=True elapsed=76.64s
+{
+  "task_id": "096-offline-knowledge-qa-insufficient-evidence",
+  "elapsed_sec": 76.64,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-096-offline-knowledge-qa-insufficient-evidence-89f3d160",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-096-offline-knowledge-qa-insufficient-evidence-stellar-luna-20260910-235839-fdc61c76/usage-proxy/requests.jsonl",
+    "request_count": 13,
+    "input_tokens": 15938,
+    "output_tokens": 7079,
+    "cache_read_tokens": 36601,
+    "cache_write_tokens": 0,
+    "total_tokens": 59618,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "096-offline-knowledge-qa-insufficient-evidence",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-096-offline-knowledge-qa-insufficient-evidence-stellar-luna-20260910-235839-fdc61c76/workspace",
+    "outcome_score": 0.65,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "format",
+        "label": "answers.json has required schema",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "rows": 14
+        }
+      },
+      {
+        "id": "coverage",
+        "label": "all and only questions covered",
+        "pass": true,
+        "weight": 0.1,
+        "detail": [
+          "Q01",
+          "Q02",
+          "Q03",
+          "Q04",
+          "Q05",
+          "Q06",
+          "Q07",
+          "Q08",
+          "Q09",
+          "Q10",
+          "Q11",
+          "Q12",
+          "Q13",
+          "Q14"
+        ]
+      },
+      {
+        "id": "status",
+        "label": "answered/partial/insufficient statuses are correct",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "facts",
+        "label": "answers include required offline facts or insufficient marker",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "sources",
+        "label": "source files match the supporting documents",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "evidence",
+        "label": "evidence signals point to source text",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "missing_evidence",
+        "label": "partial/unanswerable items explain missing evidence",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "hits": 13
+        }
+      },
+      {
+        "id": "no_fabrication",
+        "label": "forbidden fabricated or stale answers are absent",
+        "pass": false,
+        "weight": 0.05,
+        "detail": {
+          "hits": 12
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.95,
+        "robustness": 0.85
+      },
+      "total": 0.9,
+      "notes": "The run used permitted inputs, produced and validated the required output, and recovered from an initial relative-path failure; later verification involved some redundant rereading.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.95,\"robustness\":0.85},\"security_gate\":1,\"notes\":\"The run used permitted inputs, produced and validated the required output, and recovered from an initial relative-path failure; later verification involved some redundant rereading.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9,
+    "process_effective": 0.9,
+    "security_score": 1.0,
+    "outcome_score": 0.65,
+    "oracle_outcome_score": 0.65,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.585,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.65 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-096-offline-knowledge-qa-insufficient-evidence-gpt-5.6-luna-20260910-235839-fdc61c76"
+}

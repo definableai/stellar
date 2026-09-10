@@ -1,0 +1,100 @@
+[harnessbench] run-task 067-canary-release-check (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 067-canary-release-check finished adapter_ok=True elapsed=102.158s
+{
+  "task_id": "067-canary-release-check",
+  "elapsed_sec": 102.158,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-067-canary-release-check-575cb3aa",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-067-canary-release-check-stellar-luna-20260910-235718-56c56ec0/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 19156,
+    "output_tokens": 10143,
+    "cache_read_tokens": 60627,
+    "cache_write_tokens": 0,
+    "total_tokens": 89926,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "067-canary-release-check",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-067-canary-release-check-stellar-luna-20260910-235718-56c56ec0/workspace",
+    "outcome_score": 0.9778,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "canary_decision",
+        "label": "canary_decision.json has rollback decision, breaches, and calculations",
+        "pass": true,
+        "weight": 0.74,
+        "detail": {
+          "score": 0.97,
+          "breached": [
+            "checkout_success_pct",
+            "error_rate_pct",
+            "p95_latency_ms"
+          ]
+        }
+      },
+      {
+        "id": "metric_evidence_csv",
+        "label": "metric_evidence.csv covers every metric, status, and breach flag",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "source_unchanged",
+        "label": "fixtures are not modified",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/067-canary-release-check/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.88,
+        "consistency": 0.93,
+        "robustness": 0.95
+      },
+      "total": 0.92,
+      "notes": "Clear evidence-grounded workflow with correct multi-window averaging, directional thresholds, rollback policy, missing-data and low-sample caveats, safe actions, and validation; minor deduction for redundant verification and an irrelevant find error.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.88,\"consistency\":0.93,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Clear evidence-grounded workflow with correct multi-window averaging, directional thresholds, rollback policy, missing-data and low-sample caveats, safe actions, and validation; minor deduction for redundant verification and an irrelevant find error.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.92,
+    "process_effective": 0.92,
+    "security_score": 1.0,
+    "outcome_score": 0.9778,
+    "oracle_outcome_score": 0.9778,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8996,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9778 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-067-canary-release-check-gpt-5.6-luna-20260910-235718-56c56ec0"
+}

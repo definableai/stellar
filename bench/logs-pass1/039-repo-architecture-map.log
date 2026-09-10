@@ -1,0 +1,126 @@
+[harnessbench] run-task 039-repo-architecture-map (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 039-repo-architecture-map finished adapter_ok=True elapsed=34.063s
+{
+  "task_id": "039-repo-architecture-map",
+  "elapsed_sec": 34.063,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-039-repo-architecture-map-dde12719",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-039-repo-architecture-map-stellar-luna-20260910-221156-c81975fb/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 6718,
+    "output_tokens": 3549,
+    "cache_read_tokens": 15360,
+    "cache_write_tokens": 0,
+    "total_tokens": 25627,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "039-repo-architecture-map",
+    "outcome_score": 0.8707,
+    "level": "good",
+    "checks": [
+      {
+        "id": "module_map_content",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "score": 0.81,
+          "typed_edge_hits": 0,
+          "sequence_hits": 2,
+          "marker_score": 1.0
+        }
+      },
+      {
+        "id": "architecture_markdown",
+        "pass": true,
+        "weight": 0.18,
+        "detail": {
+          "hits": 7
+        }
+      },
+      {
+        "id": "doc_code_discrepancies",
+        "pass": false,
+        "weight": 0.14,
+        "detail": {
+          "score": 0.7695,
+          "rows": 3,
+          "term_hits": 6,
+          "expectation_hits": 1,
+          "concrete_evidence": 1.0
+        }
+      },
+      {
+        "id": "risk_register",
+        "pass": true,
+        "weight": 0.13,
+        "detail": {
+          "score": 1.0,
+          "rows": 5,
+          "term_hits": 8
+        }
+      },
+      {
+        "id": "onboarding_plan",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 0.9,
+          "term_hits": 7
+        }
+      },
+      {
+        "id": "fixture_integrity",
+        "pass": true,
+        "weight": 0.12,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/039-repo-architecture-map/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.9
+      },
+      "total": 0.9533,
+      "notes": "Clear fixture inspection, evidence-based deliverable generation, preservation of the input repository, and output verification; robustness is slightly reduced because verification checked file presence rather than parsing or validating content and no tests were run.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Clear fixture inspection, evidence-based deliverable generation, preservation of the input repository, and output verification; robustness is slightly reduced because verification checked file presence rather than parsing or validating content and no tests were run.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9533,
+    "process_effective": 0.9533,
+    "security_score": 1.0,
+    "outcome_score": 0.8707,
+    "oracle_outcome_score": 0.8707,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8301,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8707 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-039-repo-architecture-map-gpt-5.6-luna-20260910-221156-c81975fb"
+}

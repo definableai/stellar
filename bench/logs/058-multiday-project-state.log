@@ -1,0 +1,180 @@
+[harnessbench] run-task 058-multiday-project-state (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 058-multiday-project-state finished adapter_ok=True elapsed=376.773s
+{
+  "task_id": "058-multiday-project-state",
+  "elapsed_sec": 376.773,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-058-multiday-project-state-f900581a",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260911-002646-a39d2778/usage-proxy/requests.jsonl",
+    "request_count": 63,
+    "input_tokens": 98582,
+    "output_tokens": 44301,
+    "cache_read_tokens": 408254,
+    "cache_write_tokens": 0,
+    "total_tokens": 551137,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "058-multiday-project-state",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260911-002646-a39d2778/workspace",
+    "outcome_score": 0.9219,
+    "checks": [
+      {
+        "id": "plan_parse",
+        "label": "final_plan.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "log_exists",
+        "label": "project_log.md exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "history_days",
+        "label": "change_history preserves Day 1/2/3 entries",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "Day 1",
+          "Day 2",
+          "Day 3"
+        ]
+      },
+      {
+        "id": "status_by_day",
+        "label": "status_by_day covers all three days",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "Day 1": {
+            "status": "baseline_initialized",
+            "budget": 120000,
+            "scope": "Three-workstream pilot scope recorded as tentative.",
+            "target_launch": "Day 30"
+          },
+          "Day 2": {
+            "status": "constraints_added",
+            "budget": 92000,
+            "owner_change": "WS-data owner changed from Marta to Priya.",
+            "new_information": [
+              "Analytics connector sandbox slips by 5 days.",
+              "Privacy/compliance review required before launch.",
+              "Stakeholder conflict recorded over in-app experimentation."
+            ]
+          },
+          "Day 3": {
+            "status": "final_conditional_go",
+            "security": "Security signoff required for production data export.",
+            "scope_change": "Executive sponsor removed in-app experimentation from pilot scope.",
+            "connector_dependency": "Connector sandbox can arrive by Day 12 if procurement approves the expedited order.",
+            "launch_recommendation": "conditional_go"
+          }
+        }
+      },
+      {
+        "id": "risks",
+        "label": "risk register includes all new and carried risks",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "R-connect-delay",
+          "R-budget",
+          "R-compliance",
+          "R-security"
+        ]
+      },
+      {
+        "id": "budget_decision",
+        "label": "final budget and recommendation are correct",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "owner_change",
+        "label": "WS-data owner changed to Priya",
+        "pass": true,
+        "weight": 0.1,
+        "detail": "Searched text for Priya"
+      },
+      {
+        "id": "conditions",
+        "label": "conditions cover compliance, security, and connector",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "compliance review",
+          "security signoff",
+          "connector sandbox"
+        ]
+      },
+      {
+        "id": "conflict_handling",
+        "label": "plan records stakeholder conflict without deleting history",
+        "pass": true,
+        "weight": 0.08,
+        "detail": [
+          "stakeholder",
+          "sales",
+          "privacy",
+          "conflict"
+        ]
+      },
+      {
+        "id": "log_content",
+        "label": "log records each day and major changes",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "decision_register",
+        "label": "decision_register.csv preserves reversed decisions",
+        "pass": false,
+        "weight": 0.1,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/058-multiday-project-state/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.9219,
+    "oracle_outcome_score": 0.9219,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9219,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9219 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-058-multiday-project-state-gpt-5.6-luna-20260911-002646-a39d2778"
+}

@@ -1,0 +1,114 @@
+[harnessbench] run-task 018-provider-failover-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 018-provider-failover-audit finished adapter_ok=True elapsed=59.437s
+{
+  "task_id": "018-provider-failover-audit",
+  "elapsed_sec": 59.437,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-018-provider-failover-audit-b3c8ad68",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-018-provider-failover-audit-stellar-luna-20260910-223434-6adc638e/usage-proxy/requests.jsonl",
+    "request_count": 12,
+    "input_tokens": 9825,
+    "output_tokens": 4799,
+    "cache_read_tokens": 69383,
+    "cache_write_tokens": 0,
+    "total_tokens": 84007,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "018-provider-failover-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-018-provider-failover-audit-stellar-luna-20260910-223434-6adc638e/workspace",
+    "outcome_score": 0.8448,
+    "level": "good",
+    "checks": [
+      {
+        "id": "scorecard",
+        "label": "provider_scorecard.json workload routing and metadata",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "score": 0.7804
+        }
+      },
+      {
+        "id": "config_patch",
+        "label": "openclaw_config_patch.json includes required routing/cache keys",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "score": 1.0,
+          "key_hits": 4
+        }
+      },
+      {
+        "id": "playbook",
+        "label": "failover_playbook.md has provider-specific failover guidance",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "score": 0.9083,
+          "phrase_hits": 5,
+          "workload_hits": 6
+        }
+      },
+      {
+        "id": "audit_notes",
+        "label": "audit_notes.md cites evidence and recommendations",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "score": 0.7
+        }
+      }
+    ],
+    "summary": {
+      "scorecard": 0.7804,
+      "config_patch": 1.0,
+      "playbook": 0.9083,
+      "audit_notes": 0.7
+    },
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/018-provider-failover-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.99,
+        "robustness": 0.96
+      },
+      "total": 0.98,
+      "notes": "Clear evidence-to-artifact progression using all required offline inputs; validation caught a wording/tool portability issue and was corrected successfully, with no material failure or unsafe activity.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.99,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Clear evidence-to-artifact progression using all required offline inputs; validation caught a wording/tool portability issue and was corrected successfully, with no material failure or unsafe activity.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.98,
+    "process_effective": 0.98,
+    "security_score": 1.0,
+    "outcome_score": 0.8448,
+    "oracle_outcome_score": 0.8448,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8279,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8448 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-018-provider-failover-audit-gpt-5.6-luna-20260910-223434-6adc638e"
+}

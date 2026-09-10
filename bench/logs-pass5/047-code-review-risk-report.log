@@ -1,0 +1,129 @@
+[harnessbench] run-task 047-code-review-risk-report (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 047-code-review-risk-report finished adapter_ok=True elapsed=105.726s
+{
+  "task_id": "047-code-review-risk-report",
+  "elapsed_sec": 105.726,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-047-code-review-risk-report-88da63de",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-047-code-review-risk-report-stellar-luna-20260910-235307-6c31a3cf/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 20159,
+    "output_tokens": 9061,
+    "cache_read_tokens": 71771,
+    "cache_write_tokens": 0,
+    "total_tokens": 100991,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "047-code-review-risk-report",
+    "outcome_score": 0.73,
+    "level": "pass",
+    "checks": [
+      {
+        "id": "json_shape",
+        "pass": true,
+        "weight": 0.18,
+        "detail": {
+          "findings": 9
+        }
+      },
+      {
+        "id": "finding_coverage",
+        "pass": true,
+        "weight": 0.56,
+        "detail": {
+          "finding_hits": {
+            "auth_bypass": 1.0,
+            "sql_injection": 0.9,
+            "token_logging": 1.0,
+            "archived_data_regression": 0.83,
+            "tenant_filter_regression": 0.9,
+            "webhook_idempotency_regression": 1.0,
+            "cache_scope_regression": 1.0,
+            "admin_query_escalation": 0.9,
+            "audit_export_tenant_leak": 0.9
+          }
+        }
+      },
+      {
+        "id": "severity_exactness",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "severity_hits": 9,
+          "expected": 9
+        }
+      },
+      {
+        "id": "test_coverage",
+        "pass": false,
+        "weight": 0.18,
+        "detail": {
+          "test_hits": 4,
+          "expected": 9
+        }
+      },
+      {
+        "id": "actionability",
+        "pass": true,
+        "weight": 0.16,
+        "detail": {
+          "recommendation_evidence_hits": 9
+        }
+      },
+      {
+        "id": "fixture_integrity",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/047-code-review-risk-report/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.95,
+        "robustness": 0.93
+      },
+      "total": 0.9467,
+      "notes": "Clear evidence-driven review with justified recovery from clipped reads, artifact/schema validation, and no fixture modification; some redundant rereading and limited semantic validation remain.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.95,\"robustness\":0.93},\"security_gate\":1,\"notes\":\"Clear evidence-driven review with justified recovery from clipped reads, artifact/schema validation, and no fixture modification; some redundant rereading and limited semantic validation remain.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9467,
+    "process_effective": 0.9467,
+    "security_score": 1.0,
+    "outcome_score": 0.73,
+    "oracle_outcome_score": 0.73,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6911,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.73 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-047-code-review-risk-report-gpt-5.6-luna-20260910-235307-6c31a3cf"
+}

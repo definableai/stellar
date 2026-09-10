@@ -1,0 +1,189 @@
+[harnessbench] run-task 091-financial-close-reconciliation (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 091-financial-close-reconciliation finished adapter_ok=True elapsed=49.062s
+{
+  "task_id": "091-financial-close-reconciliation",
+  "elapsed_sec": 49.062,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-091-financial-close-reconciliation-b2f75a59",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-091-financial-close-reconciliation-stellar-luna-20260910-223301-e4d76206/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 6801,
+    "output_tokens": 2998,
+    "cache_read_tokens": 20894,
+    "cache_write_tokens": 0,
+    "total_tokens": 30693,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "091-financial-close-reconciliation",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-091-financial-close-reconciliation-stellar-luna-20260910-223301-e4d76206/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_invoices.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_payments.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_refunds.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_fx_rates.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_bank_statement.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_close_policy.md",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "recon_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "recon_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "recon_amounts",
+        "pass": false,
+        "weight": 0.3,
+        "detail": "got [{'invoice_id': 'INV001', 'customer_id': 'C001', 'invoice_usd': '100.00', 'payment_usd': '100.00', 'refund_usd': '0.00', 'bank_fee_usd': '2.00', 'net_cash_usd': '98.00', 'reconciliation_status': 'RECONCILED'}, {'invoice_id': 'INV002', 'customer_id': 'C002', 'invoice_usd': '220.00', 'payment_usd': '220.00', 'refund_usd': '55.00', 'bank_fee_usd': '3.00', 'net_cash_usd': '162.00', 'reconciliation_status': 'UNRECONCILED'}, {'invoice_id': 'INV003', 'customer_id': 'C003', 'invoice_usd': '125.00', 'payment_usd': '0.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.00', 'net_cash_usd': '0.00', 'reconciliation_status': 'UNRECONCILED'}, {'invoice_id': 'INV004', 'customer_id': 'C004', 'invoice_usd': '0.00', 'payment_usd': '80.00', 'refund_usd': '0.00', 'bank_fee_usd': '1.00', 'net_cash_usd': '79.00', 'reconciliation_status': 'VOID_CASH;EXCLUDED'}, {'invoice_id': 'INV005', 'customer_id': 'C005', 'invoice_usd': '0.00', 'payment_usd': '0.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.00', 'net_cash_usd': '0.00', 'reconciliation_status': 'MISSING_FX;EXCLUDED'}, {'invoice_id': 'MISSING_INVOICE:P999', 'customer_id': '', 'invoice_usd': '0.00', 'payment_usd': '50.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.50', 'net_cash_usd': '49.50', 'reconciliation_status': 'MISSING_INVOICE'}]"
+      },
+      {
+        "id": "recon_statuses",
+        "pass": false,
+        "weight": 0.06,
+        "detail": "got [{'invoice_id': 'INV001', 'customer_id': 'C001', 'invoice_usd': '100.00', 'payment_usd': '100.00', 'refund_usd': '0.00', 'bank_fee_usd': '2.00', 'net_cash_usd': '98.00', 'reconciliation_status': 'RECONCILED'}, {'invoice_id': 'INV002', 'customer_id': 'C002', 'invoice_usd': '220.00', 'payment_usd': '220.00', 'refund_usd': '55.00', 'bank_fee_usd': '3.00', 'net_cash_usd': '162.00', 'reconciliation_status': 'UNRECONCILED'}, {'invoice_id': 'INV003', 'customer_id': 'C003', 'invoice_usd': '125.00', 'payment_usd': '0.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.00', 'net_cash_usd': '0.00', 'reconciliation_status': 'UNRECONCILED'}, {'invoice_id': 'INV004', 'customer_id': 'C004', 'invoice_usd': '0.00', 'payment_usd': '80.00', 'refund_usd': '0.00', 'bank_fee_usd': '1.00', 'net_cash_usd': '79.00', 'reconciliation_status': 'VOID_CASH;EXCLUDED'}, {'invoice_id': 'INV005', 'customer_id': 'C005', 'invoice_usd': '0.00', 'payment_usd': '0.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.00', 'net_cash_usd': '0.00', 'reconciliation_status': 'MISSING_FX;EXCLUDED'}, {'invoice_id': 'MISSING_INVOICE:P999', 'customer_id': '', 'invoice_usd': '0.00', 'payment_usd': '50.00', 'refund_usd': '0.00', 'bank_fee_usd': '0.50', 'net_cash_usd': '49.50', 'reconciliation_status': 'MISSING_INVOICE'}]"
+      },
+      {
+        "id": "refund_fx_fee_handled",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "missing_invoice_row",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rejects_exact",
+        "pass": false,
+        "weight": 0.14,
+        "detail": "got [{'item_id': 'INV005', 'item_type': 'invoice', 'reason': 'missing_fx_rate', 'notes': 'No USD FX rate for JPY on 2026-03-07; invoice amount.'}, {'item_id': 'R404', 'item_type': 'refund', 'reason': 'invalid_invoice', 'notes': 'Refund references invoice INV404, which does not exist.'}, {'item_id': 'P999', 'item_type': 'payment', 'reason': 'missing_invoice', 'notes': 'Payment references invoice INV999; synthetic reconciliation row created.'}, {'item_id': 'INV004', 'item_type': 'invoice', 'reason': 'void_with_cash', 'notes': 'Void invoice has payment cash; excluded from recognized invoice totals.'}]"
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_numbers",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "summary_exceptions",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'total_invoice_usd': 445.0, 'total_payment_usd': 450.0, 'total_refund_usd': 55.0, 'total_bank_fee_usd': 6.5, 'total_net_cash_usd': 388.5, 'unreconciled_count': 5, 'missing_invoice_payment_ids': ['P999'], 'rejected_invoice_ids': ['INV004', 'INV005']}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_required_topics",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.5246,
+    "score": 0.5246,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/091-financial-close-reconciliation/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.94,
+        "robustness": 0.91
+      },
+      "total": 0.9367,
+      "notes": "Clear local-only workflow with justified computation, exception handling, output creation, and repeated validation; no fixture modification or serious security misuse observed.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.94,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear local-only workflow with justified computation, exception handling, output creation, and repeated validation; no fixture modification or serious security misuse observed.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9367,
+    "process_effective": 0.9367,
+    "security_score": 1.0,
+    "outcome_score": 0.5246,
+    "oracle_outcome_score": 0.5246,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4914,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.5246 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-091-financial-close-reconciliation-gpt-5.6-luna-20260910-223301-e4d76206"
+}

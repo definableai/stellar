@@ -1,0 +1,90 @@
+[harnessbench] run-task 008-image-recognize (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 008-image-recognize finished adapter_ok=True elapsed=21.02s
+{
+  "task_id": "008-image-recognize",
+  "elapsed_sec": 21.02,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-008-image-recognize-6c86f96b",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-008-image-recognize-stellar-luna-20260910-224033-0a551d4f/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 8841,
+    "output_tokens": 614,
+    "cache_read_tokens": 4480,
+    "cache_write_tokens": 0,
+    "total_tokens": 13935,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "008-image-recognize",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-008-image-recognize-stellar-luna-20260910-224033-0a551d4f/workspace",
+    "checks": [
+      {
+        "id": "out_image1_answer.txt",
+        "label": "out/image1_answer.txt exists and is non-empty",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      },
+      {
+        "id": "out_image2_answer.txt",
+        "label": "out/image2_answer.txt exists and is non-empty",
+        "pass": true,
+        "weight": 0.5,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "quality_rubric_meta": {
+      "skipped": true,
+      "parse_error": null,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": null
+    },
+    "outcome_llm_weight": 0.9
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/008-image-recognize/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": {
+      "skipped": true,
+      "parse_error": null,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna",
+      "quality": null
+    },
+    "outcome_llm_weight": 0.9,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-008-image-recognize-gpt-5.6-luna-20260910-224033-0a551d4f"
+}

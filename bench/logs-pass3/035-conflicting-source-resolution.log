@@ -1,0 +1,176 @@
+[harnessbench] run-task 035-conflicting-source-resolution (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 035-conflicting-source-resolution finished adapter_ok=True elapsed=64.612s
+{
+  "task_id": "035-conflicting-source-resolution",
+  "elapsed_sec": 64.612,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-035-conflicting-source-resolution-d520e936",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-035-conflicting-source-resolution-stellar-luna-20260910-223712-db6544da/usage-proxy/requests.jsonl",
+    "request_count": 8,
+    "input_tokens": 7282,
+    "output_tokens": 4433,
+    "cache_read_tokens": 28055,
+    "cache_write_tokens": 0,
+    "total_tokens": 39770,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "035-conflicting-source-resolution",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-035-conflicting-source-resolution-stellar-luna-20260910-223712-db6544da/workspace",
+    "outcome_score": 0.84,
+    "level": "good",
+    "checks": [
+      {
+        "id": "format",
+        "label": "resolved_facts.json has required schema",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "facts",
+        "label": "resolved facts follow priority and local-coverage rules",
+        "pass": true,
+        "weight": 0.32,
+        "detail": {
+          "hits": 7
+        }
+      },
+      {
+        "id": "evidence",
+        "label": "evidence cites winning sources and priority reasons",
+        "pass": true,
+        "weight": 0.18,
+        "detail": {
+          "hits": 7
+        }
+      },
+      {
+        "id": "evidence_quotes",
+        "label": "evidence quotes contain fact-specific signals from the cited winning source",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "hits": 7
+        }
+      },
+      {
+        "id": "evidence_grounding",
+        "label": "evidence quotes are grounded in the cited source text",
+        "pass": true,
+        "weight": 0.04,
+        "detail": {
+          "hits": 7
+        }
+      },
+      {
+        "id": "priority_reasoning",
+        "label": "priority reasons explicitly explain override or rejection logic",
+        "pass": false,
+        "weight": 0.04,
+        "detail": {
+          "hits": 1
+        }
+      },
+      {
+        "id": "scoped_fields",
+        "label": "service scope and exception stay separated",
+        "pass": false,
+        "weight": 0.06,
+        "detail": {
+          "hits": 1
+        }
+      },
+      {
+        "id": "reject_low_priority",
+        "label": "low-priority contradicted claims are not adopted",
+        "pass": false,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "uncertainties",
+        "label": "uncertainties.md lists unconfirmed items",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "hits": 3
+        }
+      },
+      {
+        "id": "conflict_matrix",
+        "label": "conflict_matrix.csv explains winners, losers, and local coverage",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "score": 1.0,
+          "rows": 7,
+          "term_hits": 10
+        }
+      },
+      {
+        "id": "source_reliability",
+        "label": "source_reliability.json ranks and scopes every source",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 1.0,
+          "coverage": 1.0
+        }
+      },
+      {
+        "id": "decision_log",
+        "label": "decision_log.md explains scoped resolution and rejected rumors",
+        "pass": true,
+        "weight": 0.07,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/035-conflicting-source-resolution/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.97,
+        "consistency": 0.97,
+        "robustness": 0.91
+      },
+      "total": 0.95,
+      "notes": "Clear offline-only progression with source inspection, scoped conflict resolution, output creation, validation, and recovery from checker/tool compatibility errors.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.97,\"consistency\":0.97,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear offline-only progression with source inspection, scoped conflict resolution, output creation, validation, and recovery from checker/tool compatibility errors.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.95,
+    "process_effective": 0.95,
+    "security_score": 1.0,
+    "outcome_score": 0.84,
+    "oracle_outcome_score": 0.84,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.798,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.84 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-035-conflicting-source-resolution-gpt-5.6-luna-20260910-223712-db6544da"
+}

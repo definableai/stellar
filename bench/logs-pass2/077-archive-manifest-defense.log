@@ -1,0 +1,166 @@
+[harnessbench] run-task 077-archive-manifest-defense (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 077-archive-manifest-defense finished adapter_ok=True elapsed=59.478s
+{
+  "task_id": "077-archive-manifest-defense",
+  "elapsed_sec": 59.478,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-077-archive-manifest-defense-b11ec2e0",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-077-archive-manifest-defense-stellar-luna-20260910-222703-5927676c/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 8227,
+    "output_tokens": 3841,
+    "cache_read_tokens": 56685,
+    "cache_write_tokens": 0,
+    "total_tokens": 68753,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "077-archive-manifest-defense",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-077-archive-manifest-defense-stellar-luna-20260910-222703-5927676c/workspace",
+    "checks": [
+      {
+        "id": "source_incoming_a.zip",
+        "label": "in/incoming_a.zip unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_incoming_b.tar",
+        "label": "in/incoming_b.tar unchanged",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "manifest_parse",
+        "label": "manifest.json parses as object",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "manifest_required",
+        "label": "manifest contains all required safe files with hashes, sizes, and chains",
+        "pass": false,
+        "weight": 6.0,
+        "detail": "[{'archive_chain': ['incoming_a.zip'], 'logical_path': 'incoming_a/data/customers.csv', 'size_bytes': 22, 'sha256': 'c5ef5fc634c3ddd9dcd4493f551cf02382f05d4cdaf8c75ae9de8f62dc2aaaed', 'media_type': 'text/csv'}, {'archive_chain': ['incoming_a.zip'], 'logical_path': 'incoming_a/docs/readme.md', 'size_bytes': 12, 'sha256': 'd2fb3d2c7ec1031721eee2ac400d611e3d1cd57a2342fc7bce813bb14fd08c3e', 'media_type': 'text/markdown'}, {'archive_chain': ['incoming_a.zip', 'nested/payload.tar.gz'], 'logical_path': 'incoming_a/nested_payload/safe/config.json', 'size_bytes': 27, 'sha256': '3abab18d3fcd44f6932e2b7f18a7a619a3387a6b91fa71074144594604d8e0ee', 'media_type': 'application/json'}, {'archive_chain': ['incoming_a.zip', 'nested/payload.tar.gz'], 'logical_path': 'incoming_a/nested_payload/safe/reports/q1.csv', 'size_bytes': 23, 'sha256': '98e0445a284f84e07e5c0e5aa478ccac726e96c88434879e8ca0c3c133fddba6', 'media_type': 'text/csv'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/metadata.yaml', 'size_bytes': 24, 'sha256': '4eebd9a883afefb638c9f1dc1a611322e1423fc1347e73f7de9e4cafcf7cb6dc', 'media_type': 'text/yaml'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/notes/summary.txt', 'size_bytes': 11, 'sha256': '55f35818d8884246a0bbb958c9f00dac9be4e11cc95b6f3bd3faabc4bf264bcd', 'media_type': 'text/plain'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/reports/q2.csv', 'size_bytes': 16, 'sha256': '918a7435e61809b69f3c770d873d383766e34e2d3ce7c48d6ed629aecd579bec', 'media_type': 'text/csv'}]"
+      },
+      {
+        "id": "manifest_no_extra",
+        "label": "manifest has no extra accepted files",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "[{'archive_chain': ['incoming_a.zip'], 'logical_path': 'incoming_a/data/customers.csv', 'size_bytes': 22, 'sha256': 'c5ef5fc634c3ddd9dcd4493f551cf02382f05d4cdaf8c75ae9de8f62dc2aaaed', 'media_type': 'text/csv'}, {'archive_chain': ['incoming_a.zip'], 'logical_path': 'incoming_a/docs/readme.md', 'size_bytes': 12, 'sha256': 'd2fb3d2c7ec1031721eee2ac400d611e3d1cd57a2342fc7bce813bb14fd08c3e', 'media_type': 'text/markdown'}, {'archive_chain': ['incoming_a.zip', 'nested/payload.tar.gz'], 'logical_path': 'incoming_a/nested_payload/safe/config.json', 'size_bytes': 27, 'sha256': '3abab18d3fcd44f6932e2b7f18a7a619a3387a6b91fa71074144594604d8e0ee', 'media_type': 'application/json'}, {'archive_chain': ['incoming_a.zip', 'nested/payload.tar.gz'], 'logical_path': 'incoming_a/nested_payload/safe/reports/q1.csv', 'size_bytes': 23, 'sha256': '98e0445a284f84e07e5c0e5aa478ccac726e96c88434879e8ca0c3c133fddba6', 'media_type': 'text/csv'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/metadata.yaml', 'size_bytes': 24, 'sha256': '4eebd9a883afefb638c9f1dc1a611322e1423fc1347e73f7de9e4cafcf7cb6dc', 'media_type': 'text/yaml'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/notes/summary.txt', 'size_bytes': 11, 'sha256': '55f35818d8884246a0bbb958c9f00dac9be4e11cc95b6f3bd3faabc4bf264bcd', 'media_type': 'text/plain'}, {'archive_chain': ['incoming_b.tar'], 'logical_path': 'incoming_b/reports/q2.csv', 'size_bytes': 16, 'sha256': '918a7435e61809b69f3c770d873d383766e34e2d3ce7c48d6ed629aecd579bec', 'media_type': 'text/csv'}]"
+      },
+      {
+        "id": "manifest_sorted",
+        "label": "manifest sorted by logical_path",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "safe_files_required",
+        "label": "extracted_safe contains all required safe files with hashes",
+        "pass": true,
+        "weight": 4.0,
+        "detail": null
+      },
+      {
+        "id": "safe_files_no_extra",
+        "label": "extracted_safe has no extra files",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "no_escape_file",
+        "label": "path traversal did not materialize escape.txt",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "reject_read",
+        "label": "rejected_entries.csv parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reject_header",
+        "label": "reject header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reject_core_required",
+        "label": "reject rows include every required unsafe/unsupported entry and reason",
+        "pass": false,
+        "weight": 4.0,
+        "detail": "[{'archive_chain': 'incoming_a.zip', 'raw_name': 'bin/run.exe', 'reason': 'unsupported_extension', 'normalized_candidate': 'incoming_a/bin/run.exe'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': '../../escape.txt', 'reason': 'path_traversal', 'normalized_candidate': 'incoming_a/nested_payload/../../escape.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': '/abs/secret.txt', 'reason': 'absolute_path', 'normalized_candidate': 'incoming_a/nested_payload///abs/secret.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/ trailing.txt', 'reason': 'segment_whitespace', 'normalized_candidate': 'incoming_a/nested_payload/safe/ trailing.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/bad\\nname.txt', 'reason': 'control_character', 'normalized_candidate': 'incoming_a/nested_payload/safe/bad\\nname.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/large.txt', 'reason': 'size_limit', 'normalized_candidate': 'incoming_a/nested_payload/safe/large.txt'}, {'archive_chain': 'incoming_b.tar', 'raw_name': 'reports/Q2.csv', 'reason': 'duplicate_logical_path', 'normalized_candidate': 'incoming_b/reports/Q2.csv'}]"
+      },
+      {
+        "id": "reject_duplicate_required",
+        "label": "reject rows include duplicate logical path entries",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "reject_no_extra",
+        "label": "reject rows have no extra rejected entries",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[{'archive_chain': 'incoming_a.zip', 'raw_name': 'bin/run.exe', 'reason': 'unsupported_extension', 'normalized_candidate': 'incoming_a/bin/run.exe'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': '../../escape.txt', 'reason': 'path_traversal', 'normalized_candidate': 'incoming_a/nested_payload/../../escape.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': '/abs/secret.txt', 'reason': 'absolute_path', 'normalized_candidate': 'incoming_a/nested_payload///abs/secret.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/ trailing.txt', 'reason': 'segment_whitespace', 'normalized_candidate': 'incoming_a/nested_payload/safe/ trailing.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/bad\\nname.txt', 'reason': 'control_character', 'normalized_candidate': 'incoming_a/nested_payload/safe/bad\\nname.txt'}, {'archive_chain': 'incoming_a.zip > nested/payload.tar.gz', 'raw_name': 'safe/large.txt', 'reason': 'size_limit', 'normalized_candidate': 'incoming_a/nested_payload/safe/large.txt'}, {'archive_chain': 'incoming_b.tar', 'raw_name': 'reports/Q2.csv', 'reason': 'duplicate_logical_path', 'normalized_candidate': 'incoming_b/reports/Q2.csv'}]"
+      },
+      {
+        "id": "summary_terms",
+        "label": "audit summary mentions key rejection classes",
+        "pass": false,
+        "weight": 2.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.4827586206896552,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.4828,
+    "oracle_outcome_score": 0.4827586206896552,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4828,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.4828 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-077-archive-manifest-defense-gpt-5.6-luna-20260910-222703-5927676c"
+}

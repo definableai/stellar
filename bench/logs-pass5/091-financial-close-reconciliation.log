@@ -1,0 +1,190 @@
+[harnessbench] run-task 091-financial-close-reconciliation (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 091-financial-close-reconciliation finished adapter_ok=True elapsed=151.918s
+{
+  "task_id": "091-financial-close-reconciliation",
+  "elapsed_sec": 151.918,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-091-financial-close-reconciliation-18464341",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-091-financial-close-reconciliation-stellar-luna-20260910-234614-aea74ef9/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 21110,
+    "output_tokens": 14091,
+    "cache_read_tokens": 76271,
+    "cache_write_tokens": 0,
+    "total_tokens": 111472,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "091-financial-close-reconciliation",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-091-financial-close-reconciliation-stellar-luna-20260910-234614-aea74ef9/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_invoices.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_payments.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_refunds.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_fx_rates.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_bank_statement.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_close_policy.md",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "recon_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "recon_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "recon_amounts",
+        "pass": true,
+        "weight": 0.3,
+        "detail": null
+      },
+      {
+        "id": "recon_statuses",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "refund_fx_fee_handled",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "missing_invoice_row",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rejects_exact",
+        "pass": false,
+        "weight": 0.14,
+        "detail": "got [{'item_id': 'INV005', 'item_type': 'invoice', 'reason': 'missing_fx_rate', 'notes': 'No FX rate for JPY on invoice date 2026-03-07; invoice excluded from recognized totals.'}, {'item_id': 'R404', 'item_type': 'refund', 'reason': 'invalid_invoice', 'notes': 'Refund references invoice INV404, which is not present in invoices.csv; refund excluded from reconciliation.'}, {'item_id': 'P999', 'item_type': 'bank_payment', 'reason': 'missing_invoice', 'notes': 'Bank payment P999 references invoice INV999, which is not present in invoices.csv; included as synthetic cash exception row and excluded from recognized revenue.'}]"
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_numbers",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "summary_exceptions",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'total_invoice_usd': 445.0, 'total_payment_usd': 450.0, 'total_refund_usd': 55.0, 'total_bank_fee_usd': 6.5, 'total_net_cash_usd': 388.5, 'unreconciled_count': 3, 'missing_invoice_payment_ids': ['P999'], 'rejected_invoice_ids': ['INV005']}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_required_topics",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.8197,
+    "score": 0.8197,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/091-financial-close-reconciliation/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.95,
+        "robustness": 0.91
+      },
+      "total": 0.94,
+      "notes": "Clear local-only progression with policy and fixture inspection, correct output generation, verification, and recovery from path/tool-checker issues without modifying inputs or using unsafe operations.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.95,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear local-only progression with policy and fixture inspection, correct output generation, verification, and recovery from path/tool-checker issues without modifying inputs or using unsafe operations.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.94,
+    "process_effective": 0.94,
+    "security_score": 1.0,
+    "outcome_score": 0.8197,
+    "oracle_outcome_score": 0.8197,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7705,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8197 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-091-financial-close-reconciliation-gpt-5.6-luna-20260910-234614-aea74ef9"
+}

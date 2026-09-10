@@ -1,0 +1,124 @@
+[harnessbench] run-task 072-logistics-delay-response (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 072-logistics-delay-response finished adapter_ok=True elapsed=14.894s
+{
+  "task_id": "072-logistics-delay-response",
+  "elapsed_sec": 14.894,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-072-logistics-delay-response-24c31158",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-072-logistics-delay-response-stellar-luna-20260910-221054-96823c0c/usage-proxy/requests.jsonl",
+    "request_count": 5,
+    "input_tokens": 2516,
+    "output_tokens": 647,
+    "cache_read_tokens": 6413,
+    "cache_write_tokens": 0,
+    "total_tokens": 9576,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "072-logistics-delay-response",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-072-logistics-delay-response-stellar-luna-20260910-221054-96823c0c/workspace",
+    "outcome_score": 0.88,
+    "checks": [
+      {
+        "id": "actions_exists",
+        "label": "delay_actions.csv exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "messages_exists",
+        "label": "customer_messages.md exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "all_shipments",
+        "label": "one row per shipment",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "delay_status",
+        "label": "delays identified correctly",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "tiers",
+        "label": "customer tiers joined correctly",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "actions",
+        "label": "actions match delay and tier policy",
+        "pass": true,
+        "weight": 0.2,
+        "detail": null
+      },
+      {
+        "id": "compensation",
+        "label": "compensation or alternative recorded",
+        "pass": false,
+        "weight": 0.12,
+        "detail": ""
+      },
+      {
+        "id": "messages",
+        "label": "messages cover delayed shipments and avoid forbidden terms",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/072-logistics-delay-response/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 0.9,
+        "robustness": 0.95
+      },
+      "total": 0.95,
+      "notes": "Read all required inputs, joined shipments with carrier updates and customer tiers, created both outputs, and verified coverage; validation missed unquoted commas in CSV reason fields.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":0.9,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Read all required inputs, joined shipments with carrier updates and customer tiers, created both outputs, and verified coverage; validation missed unquoted commas in CSV reason fields.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.95,
+    "process_effective": 0.95,
+    "security_score": 1.0,
+    "outcome_score": 0.88,
+    "oracle_outcome_score": 0.88,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.836,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.88 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-072-logistics-delay-response-gpt-5.6-luna-20260910-221054-96823c0c"
+}

@@ -1,0 +1,124 @@
+[harnessbench] run-task 081-local-html-dom-form-extract (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 081-local-html-dom-form-extract finished adapter_ok=True elapsed=40.603s
+{
+  "task_id": "081-local-html-dom-form-extract",
+  "elapsed_sec": 40.603,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-081-local-html-dom-form-extract-13893acd",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-081-local-html-dom-form-extract-stellar-luna-20260910-222651-382e9f58/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 4680,
+    "output_tokens": 1988,
+    "cache_read_tokens": 32237,
+    "cache_write_tokens": 0,
+    "total_tokens": 38905,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "081-local-html-dom-form-extract",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-081-local-html-dom-form-extract-stellar-luna-20260910-222651-382e9f58/workspace",
+    "checks": [
+      {
+        "id": "json_parse",
+        "label": "dom_extract.json parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "result_exact",
+        "label": "dom extract exact",
+        "pass": true,
+        "weight": 8.0,
+        "detail": null
+      },
+      {
+        "id": "no_bait",
+        "label": "result excludes template bait and whole HTML",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "visited_index",
+        "label": "server log includes /",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_detail",
+        "label": "server log includes /detail",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_search",
+        "label": "server log includes /search",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_confirm",
+        "label": "server log includes /confirm",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "trace_terms",
+        "label": "interaction trace records token, hidden field, filters, confirmation",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "source_urls",
+        "label": "source_urls includes mock-site URLs",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-081-local-html-dom-form-extract-gpt-5.6-luna-20260910-222651-382e9f58"
+}

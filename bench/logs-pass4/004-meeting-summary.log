@@ -1,0 +1,132 @@
+[harnessbench] run-task 004-meeting-summary (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 004-meeting-summary finished adapter_ok=True elapsed=58.317s
+{
+  "task_id": "004-meeting-summary",
+  "elapsed_sec": 58.317,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-004-meeting-summary-c3682766",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-004-meeting-summary-stellar-luna-20260910-233620-d090dc7c/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 8210,
+    "output_tokens": 3809,
+    "cache_read_tokens": 16094,
+    "cache_write_tokens": 0,
+    "total_tokens": 28113,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "004-meeting-summary",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-004-meeting-summary-stellar-luna-20260910-233620-d090dc7c/workspace",
+    "checks": [
+      {
+        "id": "summary_length",
+        "label": "meeting_summary.txt char count in [500, 2800]",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_Q2",
+        "label": "summary contains 'Q2'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_budget",
+        "label": "summary contains 'budget'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_milestone",
+        "label": "summary contains 'milestone'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_OpenClaw",
+        "label": "summary contains 'OpenClaw'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_M1",
+        "label": "summary contains 'M1'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_risk",
+        "label": "summary contains 'risk'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_gateway",
+        "label": "summary contains 'gateway'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "phrase_action",
+        "label": "summary contains 'action'",
+        "pass": false,
+        "weight": 0.111111,
+        "detail": "substring not found"
+      }
+    ],
+    "outcome_score": 0.8889,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/004-meeting-summary/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.97,
+        "robustness": 0.96
+      },
+      "total": 0.9433,
+      "notes": "Read the transcript, wrote and verified the required two-paragraph UTF-8 summary with strong evidence coverage; redundant sub-agent auditing and creation of a review-scratch file were mildly unnecessary.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.97,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Read the transcript, wrote and verified the required two-paragraph UTF-8 summary with strong evidence coverage; redundant sub-agent auditing and creation of a review-scratch file were mildly unnecessary.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9433,
+    "process_effective": 0.9433,
+    "security_score": 1.0,
+    "outcome_score": 0.8889,
+    "oracle_outcome_score": 0.8889,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8385,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8889 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-004-meeting-summary-gpt-5.6-luna-20260910-233620-d090dc7c"
+}

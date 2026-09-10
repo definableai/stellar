@@ -1,0 +1,103 @@
+[harnessbench] run-task 012-doc-synthesis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 012-doc-synthesis finished adapter_ok=True elapsed=132.512s
+{
+  "task_id": "012-doc-synthesis",
+  "elapsed_sec": 132.512,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-012-doc-synthesis-b1294904",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-012-doc-synthesis-stellar-luna-20260910-233448-5263a485/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 21743,
+    "output_tokens": 11057,
+    "cache_read_tokens": 80553,
+    "cache_write_tokens": 0,
+    "total_tokens": 113353,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "012-doc-synthesis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-012-doc-synthesis-stellar-luna-20260910-233448-5263a485/workspace",
+    "outcome_score": 0.75,
+    "level": "good",
+    "checks": [
+      {
+        "id": "trust_assessment",
+        "label": "可信度评估准确度",
+        "pass": false,
+        "weight": 0.25,
+        "detail": {
+          "accuracy": 0.0
+        }
+      },
+      {
+        "id": "contradiction_detection",
+        "label": "矛盾点检出率 0/0",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "coverage": 1.0
+        }
+      },
+      {
+        "id": "report_quality",
+        "label": "报告元素覆盖 0/0",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "coverage": 1.0,
+          "length": 3305
+        }
+      }
+    ],
+    "summary": {
+      "trust_accuracy": 0.0,
+      "contradiction_coverage": 1.0,
+      "report_coverage": 1.0
+    },
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/012-doc-synthesis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.95
+      },
+      "total": 0.97,
+      "notes": "Thoroughly read all sources, synthesized evidence into the three requested outputs, recovered from JSON-format and validation issues, and completed successful read-back validation; minor deductions for an unsupported find option and an initial validation failure.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Thoroughly read all sources, synthesized evidence into the three requested outputs, recovered from JSON-format and validation issues, and completed successful read-back validation; minor deductions for an unsupported find option and an initial validation failure.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.97,
+    "process_effective": 0.97,
+    "security_score": 1.0,
+    "outcome_score": 0.75,
+    "oracle_outcome_score": 0.75,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7275,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.75 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-012-doc-synthesis-gpt-5.6-luna-20260910-233448-5263a485"
+}

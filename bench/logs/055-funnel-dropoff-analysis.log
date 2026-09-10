@@ -1,0 +1,206 @@
+[harnessbench] run-task 055-funnel-dropoff-analysis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 055-funnel-dropoff-analysis finished adapter_ok=True elapsed=197.43s
+{
+  "task_id": "055-funnel-dropoff-analysis",
+  "elapsed_sec": 197.43,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-055-funnel-dropoff-analysis-0e238b30",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-055-funnel-dropoff-analysis-stellar-luna-20260911-002545-982eb3c3/usage-proxy/requests.jsonl",
+    "request_count": 28,
+    "input_tokens": 42121,
+    "output_tokens": 18873,
+    "cache_read_tokens": 231494,
+    "cache_write_tokens": 0,
+    "total_tokens": 292488,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "055-funnel-dropoff-analysis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-055-funnel-dropoff-analysis-stellar-luna-20260911-002545-982eb3c3/workspace",
+    "checks": [
+      {
+        "id": "fixture_present",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "json_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "insights_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "cohort_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "stage_user_sets_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "stage_count",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "stage_order",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "stage_metrics_exact",
+        "pass": true,
+        "weight": 0.24,
+        "detail": null
+      },
+      {
+        "id": "largest_dropoff_exact",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "bot_exclusion_recorded",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "ignored_order_events_exact",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "deduplicated_stage_events_exact",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "largest_dropoff_lost_users",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "cohort_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "cohort_rows",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "third_cohort_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "stage_user_sets_exact",
+        "pass": true,
+        "weight": 0.2,
+        "detail": null
+      },
+      {
+        "id": "largest_dropoff_lost_user_ids_exact",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "ignored_order_user_ids_exact",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "deduplicated_stage_user_ids_exact",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "insights_mentions_transition",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "insights_has_followup",
+        "pass": false,
+        "weight": 0.03,
+        "detail": "no product follow-up"
+      },
+      {
+        "id": "insights_cohort_caveat",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.9836,
+    "score": 0.9836,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/055-funnel-dropoff-analysis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.9836,
+    "oracle_outcome_score": 0.9836,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9836,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9836 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-055-funnel-dropoff-analysis-gpt-5.6-luna-20260911-002545-982eb3c3"
+}

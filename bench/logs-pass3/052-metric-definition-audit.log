@@ -1,0 +1,171 @@
+[harnessbench] run-task 052-metric-definition-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 052-metric-definition-audit finished adapter_ok=True elapsed=22.973s
+{
+  "task_id": "052-metric-definition-audit",
+  "elapsed_sec": 22.973,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-052-metric-definition-audit-3b23c67d",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-052-metric-definition-audit-stellar-luna-20260910-223341-73bda642/usage-proxy/requests.jsonl",
+    "request_count": 5,
+    "input_tokens": 4363,
+    "output_tokens": 1599,
+    "cache_read_tokens": 11293,
+    "cache_write_tokens": 0,
+    "total_tokens": 17255,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "052-metric-definition-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-052-metric-definition-audit-stellar-luna-20260910-223341-73bda642/workspace",
+    "checks": [
+      {
+        "id": "definitions_present",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "dashboard_present",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "output_exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "only_mismatches",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "exact_rows",
+        "pass": false,
+        "weight": 0.32,
+        "detail": "got [{'metric_name': 'Average Fulfillment Time', 'dashboard_formula': 'AVG(shipped_at - created_at)', 'approved_formula': 'AVG(delivered_at - paid_at) FOR delivered_orders', 'affected_field': 'delivered_at,paid_at,status', 'severity': 'medium'}, {'metric_name': 'Enterprise ARR', 'dashboard_formula': 'SUM(contract_value)', 'approved_formula': \"SUM(contract_value) WHERE contract_status = 'active'\", 'affected_field': 'contract_value,contract_status', 'severity': 'low'}, {'metric_name': 'Inventory Stockout Count', 'dashboard_formula': 'COUNT(DISTINCT sku) WHERE stockout_hours > 0', 'approved_formula': 'COUNT(sku) WHERE stockout_hours > 0', 'affected_field': 'sku', 'severity': 'low'}, {'metric_name': 'Marketing Opt-in Rate', 'dashboard_formula': 'email_opted_in_users / eligible_users', 'approved_formula': 'opted_in_users / eligible_users', 'affected_field': 'opted_in_users,email_opted_in_users', 'severity': 'low'}, {'metric_name': 'Net Revenue', 'dashboard_formula': 'SUM(order_amount)', 'approved_formula': 'SUM(order_amount) - SUM(refund_amount)', 'affected_field': 'order_amount,refund_amount', 'severity': 'high'}, {'metric_name': 'Refund Rate', 'dashboard_formula': 'refunded_orders / total_orders', 'approved_formula': 'refunded_orders / eligible_orders', 'affected_field': 'refunded_orders,eligible_orders', 'severity': 'high'}, {'metric_name': 'Rolling Active Users', 'dashboard_formula': 'COUNT(DISTINCT user_id) WHERE activity_date >= report_date - 30 days', 'approved_formula': 'COUNT(DISTINCT user_id) WHERE activity_date >= report_date - 28 days', 'affected_field': 'user_id,activity_date,report_date', 'severity': 'low'}, {'metric_name': 'Seven Day Retention', 'dashboard_formula': 'retained_users_day_7 / total_signups', 'approved_formula': 'retained_users_day_7 / activated_users_cohort', 'affected_field': 'retained_users_day_7,activated_users_cohort', 'severity': 'high'}, {'metric_name': 'Support SLA Breach Rate', 'dashboard_formula': 'breached_tickets / open_tickets', 'approved_formula': 'breached_tickets / closed_tickets', 'affected_field': 'breached_tickets,closed_tickets', 'severity': 'medium'}, {'metric_name': 'Trial Conversion Rate', 'dashboard_formula': 'paid_trials / started_trials', 'approved_formula': 'paid_trials / eligible_trials', 'affected_field': 'paid_trials,eligible_trials', 'severity': 'high'}]"
+      },
+      {
+        "id": "severity_mapping",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got severities {'Net Revenue': 'high', 'Average Fulfillment Time': 'medium', 'Support SLA Breach Rate': 'medium', 'Trial Conversion Rate': 'high', 'Rolling Active Users': 'low', 'Marketing Opt-in Rate': 'low', 'Inventory Stockout Count': 'low', 'Refund Rate': 'high', 'Seven Day Retention': 'high', 'Enterprise ARR': 'low'}"
+      },
+      {
+        "id": "equivalent_formulas_not_flagged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "low_severity_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "window_medium_present",
+        "pass": false,
+        "weight": 0.04,
+        "detail": "got mediums ['Average Fulfillment Time', 'Support SLA Breach Rate']"
+      },
+      {
+        "id": "equivalence_audit_keys",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_mismatches",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_matching_metrics",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "equivalence_audit_severities",
+        "pass": false,
+        "weight": 0.1,
+        "detail": "got {'Net Revenue': 'high', 'Average Fulfillment Time': 'medium', 'Support SLA Breach Rate': 'medium', 'Trial Conversion Rate': 'high', 'Rolling Active Users': 'low', 'Marketing Opt-in Rate': 'low', 'Inventory Stockout Count': 'low', 'Refund Rate': 'high', 'Seven Day Retention': 'high', 'Enterprise ARR': 'low'}"
+      },
+      {
+        "id": "equivalence_audit_reason_classes",
+        "pass": true,
+        "weight": 0.16,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.6824,
+    "score": 0.6824,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/052-metric-definition-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.92,
+        "consistency": 0.9,
+        "robustness": 0.82
+      },
+      "total": 0.88,
+      "notes": "Clear fixture-read, mapping, output-generation, and parser-verification progression with no unsafe actions; final checks were somewhat shallow and did not independently verify copied source text, semantic classifications, or severity rules.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.92,\"consistency\":0.9,\"robustness\":0.82},\"security_gate\":1,\"notes\":\"Clear fixture-read, mapping, output-generation, and parser-verification progression with no unsafe actions; final checks were somewhat shallow and did not independently verify copied source text, semantic classifications, or severity rules.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.88,
+    "process_effective": 0.88,
+    "security_score": 1.0,
+    "outcome_score": 0.6824,
+    "oracle_outcome_score": 0.6824,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6005,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.6824 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-052-metric-definition-audit-gpt-5.6-luna-20260910-223341-73bda642"
+}

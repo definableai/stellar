@@ -1,0 +1,155 @@
+[harnessbench] run-task 031-cross-doc-citation-check (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 031-cross-doc-citation-check finished adapter_ok=True elapsed=99.247s
+{
+  "task_id": "031-cross-doc-citation-check",
+  "elapsed_sec": 99.247,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-031-cross-doc-citation-check-6d06447e",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-031-cross-doc-citation-check-stellar-luna-20260910-232513-77ee3c19/usage-proxy/requests.jsonl",
+    "request_count": 13,
+    "input_tokens": 14652,
+    "output_tokens": 7932,
+    "cache_read_tokens": 33826,
+    "cache_write_tokens": 0,
+    "total_tokens": 56410,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "031-cross-doc-citation-check",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-031-cross-doc-citation-check-stellar-luna-20260910-232513-77ee3c19/workspace",
+    "outcome_score": 0.6667,
+    "checks": [
+      {
+        "id": "audit_csv_parseable",
+        "label": "audit csv parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "audit_header_exact",
+        "label": "audit header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "citation_id",
+          "location",
+          "issue",
+          "expected_source",
+          "recommended_fix"
+        ]
+      },
+      {
+        "id": "exactly_three_audit_rows",
+        "label": "exactly three audit rows",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 3
+      },
+      {
+        "id": "audit_Claim_B",
+        "label": "audit Claim B",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "S2",
+          "location": "Claim B",
+          "issue_contains": "wrong title",
+          "expected_source": "sources/escalations.md"
+        }
+      },
+      {
+        "id": "audit_Claim_C",
+        "label": "audit Claim C",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "S4",
+          "location": "Claim C",
+          "issue_contains": "retired",
+          "expected_source": "sources/help_center.md"
+        }
+      },
+      {
+        "id": "audit_Claim_D",
+        "label": "audit Claim D",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "missing",
+          "location": "Claim D",
+          "issue_contains": "missing",
+          "expected_source": "sources/csat.md"
+        }
+      },
+      {
+        "id": "fixed_references_exists",
+        "label": "fixed references exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "fixed_references_complete",
+        "label": "fixed references complete",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "[S4] CSAT survey extract - sources/csat.md"
+        ]
+      },
+      {
+        "id": "fixed_references_avoid_retired_sources",
+        "label": "fixed references avoid retired sources",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/031-cross-doc-citation-check/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.97,
+        "robustness": 0.95
+      },
+      "total": 0.96,
+      "notes": "Clear evidence-based audit and repair with complete source coverage, recovery from path/parser mistakes, and independent output verification; minor redundant checks and a harmless find compatibility error.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.97,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Clear evidence-based audit and repair with complete source coverage, recovery from path/parser mistakes, and independent output verification; minor redundant checks and a harmless find compatibility error.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.96,
+    "process_effective": 0.96,
+    "security_score": 1.0,
+    "outcome_score": 0.6667,
+    "oracle_outcome_score": 0.6667,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.64,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.6667 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-031-cross-doc-citation-check-gpt-5.6-luna-20260910-232513-77ee3c19"
+}

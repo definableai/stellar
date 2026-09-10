@@ -1,0 +1,189 @@
+[harnessbench] run-task 094-metric-definition-migration-diff (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 094-metric-definition-migration-diff finished adapter_ok=True elapsed=46.46s
+{
+  "task_id": "094-metric-definition-migration-diff",
+  "elapsed_sec": 46.46,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-094-metric-definition-migration-diff-e2d93ee3",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-094-metric-definition-migration-diff-stellar-luna-20260910-223237-91a8d461/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 5760,
+    "output_tokens": 2126,
+    "cache_read_tokens": 30802,
+    "cache_write_tokens": 0,
+    "total_tokens": 38688,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "094-metric-definition-migration-diff",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-094-metric-definition-migration-diff-stellar-luna-20260910-223237-91a8d461/workspace",
+    "checks": [
+      {
+        "id": "fixture_present_old_metric_definitions.md",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_new_metric_definitions.md",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_dashboard_before.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_dashboard_after.csv",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "fixture_present_migration_policy.md",
+        "pass": true,
+        "weight": 0.01,
+        "detail": null
+      },
+      {
+        "id": "diff_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "diff_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "diff_coverage",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "diff_values",
+        "pass": false,
+        "weight": 0.16,
+        "detail": "hits 4/5 got [{'metric_name': 'arr', 'old_value': '100000.0000', 'new_value': '92000.0000', 'absolute_diff': '-8000.0000', 'relative_diff': '-0.0800', 'expected_direction': 'decrease_or_flat', 'classification': 'expected_definition_change'}, {'metric_name': 'activation_rate', 'old_value': '0.4000', 'new_value': '0.4500', 'absolute_diff': '0.0500', 'relative_diff': '0.1250', 'expected_direction': 'increase_or_flat', 'classification': 'expected_definition_change'}, {'metric_name': 'retention_rate', 'old_value': '0.7000', 'new_value': '0.6900', 'absolute_diff': '-0.0100', 'relative_diff': '-0.0143', 'expected_direction': 'must_use_new_cohort_users', 'classification': 'unexpected_regression'}, {'metric_name': 'support_sla', 'old_value': '0.9500', 'new_value': '0.9510', 'absolute_diff': '0.0010', 'relative_diff': '0.0011', 'expected_direction': 'no_material_change', 'classification': 'no_material_change'}, {'metric_name': 'gross_margin', 'old_value': '0.5500', 'new_value': '', 'absolute_diff': '', 'relative_diff': '0.0000', 'expected_direction': 'requires_after_metric', 'classification': 'requires_review'}]"
+      },
+      {
+        "id": "diff_classifications",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "diff_directions",
+        "pass": false,
+        "weight": 0.04,
+        "detail": "hits 3/5"
+      },
+      {
+        "id": "classification_distinguishes_expected_vs_regression",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "regression_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "regression_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "regression_required",
+        "pass": false,
+        "weight": 0.1,
+        "detail": "got [{'metric_name': 'retention_rate', 'bad_field': 'primary_field', 'policy_clause': 'Retention rate must use new_cohort_users after migration; after dashboard still uses old_cohort_users.', 'severity': 'high'}, {'metric_name': 'gross_margin', 'bad_field': 'missing_after_metric', 'policy_clause': 'Missing after metrics require review.', 'severity': 'medium'}]"
+      },
+      {
+        "id": "regression_no_extra",
+        "pass": false,
+        "weight": 0.04,
+        "detail": "got [{'metric_name': 'retention_rate', 'bad_field': 'primary_field', 'policy_clause': 'Retention rate must use new_cohort_users after migration; after dashboard still uses old_cohort_users.', 'severity': 'high'}, {'metric_name': 'gross_margin', 'bad_field': 'missing_after_metric', 'policy_clause': 'Missing after metrics require review.', 'severity': 'medium'}]"
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_exact",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "caveats_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "caveats_required",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.7043,
+    "score": 0.7043,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/094-metric-definition-migration-diff/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.97,
+        "consistency": 0.94,
+        "robustness": 0.86
+      },
+      "total": 0.9233,
+      "notes": "Clear local-file workflow with policy-grounded classification, complete tool-result progression, and validation; robustness is reduced because validation missed that missing gross_margin relative_diff was emitted as 0.0000 rather than blank, and absolute_diff values appear signed despite the field name.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.97,\"consistency\":0.94,\"robustness\":0.86},\"security_gate\":1,\"notes\":\"Clear local-file workflow with policy-grounded classification, complete tool-result progression, and validation; robustness is reduced because validation missed that missing gross_margin relative_diff was emitted as 0.0000 rather than blank, and absolute_diff values appear signed despite the field name.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9233,
+    "process_effective": 0.9233,
+    "security_score": 1.0,
+    "outcome_score": 0.7043,
+    "oracle_outcome_score": 0.7043,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6503,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7043 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-094-metric-definition-migration-diff-gpt-5.6-luna-20260910-223237-91a8d461"
+}

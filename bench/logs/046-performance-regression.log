@@ -1,0 +1,110 @@
+[harnessbench] run-task 046-performance-regression (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 046-performance-regression finished adapter_ok=True elapsed=121.331s
+{
+  "task_id": "046-performance-regression",
+  "elapsed_sec": 121.331,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-046-performance-regression-2431da59",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-046-performance-regression-stellar-luna-20260911-002657-14bef1fc/usage-proxy/requests.jsonl",
+    "request_count": 19,
+    "input_tokens": 20234,
+    "output_tokens": 11416,
+    "cache_read_tokens": 61074,
+    "cache_write_tokens": 0,
+    "total_tokens": 92724,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "046-performance-regression",
+    "outcome_score": 1.0,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "edge_semantics",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "got": {
+            "duplicate_once": [
+              "EDGE-001",
+              "EDGE-005"
+            ],
+            "arbitrary_sku": [
+              "EDGE-004"
+            ],
+            "missing": []
+          }
+        }
+      },
+      {
+        "id": "generated_correctness",
+        "pass": true,
+        "weight": 0.3,
+        "detail": null
+      },
+      {
+        "id": "performance",
+        "pass": true,
+        "weight": 0.3,
+        "detail": {
+          "elapsed": 0.027185,
+          "max": 0.12
+        }
+      },
+      {
+        "id": "implementation_shape",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "function_hits": 2,
+          "forbidden": [],
+          "expected_ok": true
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/046-performance-regression/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.95,
+        "robustness": 0.91
+      },
+      "total": 0.94,
+      "notes": "Clear indexed optimization with relevant edge-case, randomized, performance, protected-file, and artifact checks; minor robustness concern remains around missing order IDs on nonmatching nonempty lines.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.95,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear indexed optimization with relevant edge-case, randomized, performance, protected-file, and artifact checks; minor robustness concern remains around missing order IDs on nonmatching nonempty lines.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.94,
+    "process_effective": 0.94,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.94,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-046-performance-regression-gpt-5.6-luna-20260911-002657-14bef1fc"
+}

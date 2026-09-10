@@ -1,0 +1,153 @@
+[harnessbench] run-task 068-product-launch-ops (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 068-product-launch-ops finished adapter_ok=True elapsed=103.547s
+{
+  "task_id": "068-product-launch-ops",
+  "elapsed_sec": 103.547,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-068-product-launch-ops-c2eea811",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-068-product-launch-ops-stellar-luna-20260910-234536-7d2b40ec/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 17942,
+    "output_tokens": 9396,
+    "cache_read_tokens": 68778,
+    "cache_write_tokens": 0,
+    "total_tokens": 96116,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "068-product-launch-ops",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-068-product-launch-ops-stellar-luna-20260910-234536-7d2b40ec/workspace",
+    "outcome_score": 0.9322,
+    "checks": [
+      {
+        "id": "plan_exists",
+        "label": "launch_plan.md exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "pack_exists",
+        "label": "content_pack.json exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "checklist_exists",
+        "label": "launch_checklist.csv exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "sections",
+        "label": "plan contains required sections",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "audience",
+        "label": "plan mentions all audience segment names",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "timeline",
+        "label": "plan includes all required milestone dates",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "offline_webinar",
+        "label": "plan includes offline webinar",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "no_forbidden_claims",
+        "label": "plan avoids early availability and unavailable feature claims",
+        "pass": false,
+        "weight": 0.08,
+        "detail": ""
+      },
+      {
+        "id": "budget_bound",
+        "label": "no single planned spend exceeds approved total",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "dependency_compliance_terms",
+        "label": "plan covers compliance, dependencies, and excluded segment",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "content_pack_schema",
+        "label": "content_pack.json schema and required counts",
+        "pass": true,
+        "weight": 0.2,
+        "detail": null
+      },
+      {
+        "id": "launch_checklist",
+        "label": "launch_checklist.csv captures dependencies",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/068-product-launch-ops/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 0.95
+      },
+      "total": 0.9833,
+      "notes": "Read all required inputs before writing, produced and validated the three outputs with source-aligned constraints, and recovered from portable find, path, and regex audit errors.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":0.95},\"security_gate\":1,\"notes\":\"Read all required inputs before writing, produced and validated the three outputs with source-aligned constraints, and recovered from portable find, path, and regex audit errors.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9833,
+    "process_effective": 0.9833,
+    "security_score": 1.0,
+    "outcome_score": 0.9322,
+    "oracle_outcome_score": 0.9322,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9167,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.9322 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-068-product-launch-ops-gpt-5.6-luna-20260910-234536-7d2b40ec"
+}

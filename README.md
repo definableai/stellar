@@ -112,7 +112,8 @@ shell, browser, office documents, code repair, multi-round sessions — each
 scored as outcome × process × security, the last two by an LLM judge reading
 the agent's trace.
 
-stellar runs it through the bench's `generic_cli` adapter: one script that
+stellar runs it through the bench's `generic_cli` adapter, in [`bench/`](bench/):
+one script that
 builds an `Agent` on `core` and changes nothing in it. Five tools (`bash`,
 `read_file`, `write_file`, `edit_file`, `view_image`), a `Steps` cap, a
 `Budget`, a `Log` on the bus, and a system prompt that asks for a checklist
@@ -134,6 +135,7 @@ API at reasoning effort high.
 The stellar row is one full pass on 2026-09-11: all 106 tasks, twelve at a
 time, 17 minutes of wall clock, about $2.40 of tokens at list price. The other
 rows are the public leaderboard at harness-bench.ai as read on 2026-09-10.
+The wiring, every pass's per-task report and its logs are in [`bench/`](bench/).
 
 Read it with care. The leaderboard rows ran other models and were graded by
 their own judge; ours was judged by gpt-5.6-luna, with `temperature` left out

@@ -1,0 +1,125 @@
+[harnessbench] run-task 070-hr-resume-screening (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 070-hr-resume-screening finished adapter_ok=True elapsed=95.152s
+{
+  "task_id": "070-hr-resume-screening",
+  "elapsed_sec": 95.152,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-070-hr-resume-screening-ffe67339",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-070-hr-resume-screening-stellar-luna-20260911-001724-b38b6ba7/usage-proxy/requests.jsonl",
+    "request_count": 12,
+    "input_tokens": 12931,
+    "output_tokens": 8314,
+    "cache_read_tokens": 23776,
+    "cache_write_tokens": 0,
+    "total_tokens": 45021,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "070-hr-resume-screening",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-070-hr-resume-screening-stellar-luna-20260911-001724-b38b6ba7/workspace",
+    "outcome_score": 0.7,
+    "checks": [
+      {
+        "id": "matrix_exists",
+        "label": "candidate_matrix.csv exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "notes_exists",
+        "label": "screening_notes.md exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "all_candidates",
+        "label": "matrix includes one row per candidate",
+        "pass": true,
+        "weight": 0.14,
+        "detail": null
+      },
+      {
+        "id": "score_ranges",
+        "label": "scores are integer values from 0 to 5",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "shortlist",
+        "label": "shortlist decisions match job criteria",
+        "pass": false,
+        "weight": 0.18,
+        "detail": ""
+      },
+      {
+        "id": "rank_order",
+        "label": "rank order matches evidence strength",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "job_evidence",
+        "label": "notes/reasons cite job-related evidence",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "no_sensitive_terms",
+        "label": "outputs avoid sensitive attributes",
+        "pass": false,
+        "weight": 0.12,
+        "detail": ""
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/070-hr-resume-screening/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.98,
+        "robustness": 0.98
+      },
+      "total": 0.9733,
+      "notes": "Reviewed the job description, fairness policy, and all resumes; applied explicit must-have evidence criteria, handled gaps without invention, and validated both outputs, with only minor redundant audit activity.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.98,\"robustness\":0.98},\"security_gate\":1,\"notes\":\"Reviewed the job description, fairness policy, and all resumes; applied explicit must-have evidence criteria, handled gaps without invention, and validated both outputs, with only minor redundant audit activity.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9733,
+    "process_effective": 0.9733,
+    "security_score": 1.0,
+    "outcome_score": 0.7,
+    "oracle_outcome_score": 0.7,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6813,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-070-hr-resume-screening-gpt-5.6-luna-20260911-001724-b38b6ba7"
+}

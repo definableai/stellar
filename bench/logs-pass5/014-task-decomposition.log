@@ -1,0 +1,122 @@
+[harnessbench] run-task 014-task-decomposition (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 014-task-decomposition finished adapter_ok=True elapsed=187.64s
+{
+  "task_id": "014-task-decomposition",
+  "elapsed_sec": 187.64,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-014-task-decomposition-c6581975",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-014-task-decomposition-stellar-luna-20260910-234541-21c913c3/usage-proxy/requests.jsonl",
+    "request_count": 27,
+    "input_tokens": 23660,
+    "output_tokens": 13878,
+    "cache_read_tokens": 113502,
+    "cache_write_tokens": 0,
+    "total_tokens": 151040,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "014-task-decomposition",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-014-task-decomposition-stellar-luna-20260910-234541-21c913c3/workspace",
+    "outcome_score": 0.8588,
+    "level": "good",
+    "checks": [
+      {
+        "id": "decomposition",
+        "label": "子任务数量: 4, 主题覆盖: 0/0",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "num": 4,
+          "topics_covered": 0,
+          "total_topics": 0
+        }
+      },
+      {
+        "id": "execution",
+        "label": "子任务完成: 4/4",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "done": 4,
+          "total": 4
+        }
+      },
+      {
+        "id": "report_quality",
+        "label": "report length 9208 chars, budget:True, timeline:False, copy:True, metrics:True",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "length": 9208,
+          "has_budget": true,
+          "has_timeline": false,
+          "has_copy": true,
+          "has_metrics": true
+        }
+      },
+      {
+        "id": "progress_tracking",
+        "label": "progress.md 包含状态标记",
+        "pass": false,
+        "weight": 0.1,
+        "detail": {
+          "has_pending": false,
+          "has_done": true,
+          "has_start": true,
+          "has_end": true
+        }
+      }
+    ],
+    "summary": {
+      "decomposition": 0.8,
+      "execution": 1.0,
+      "report_quality": 0.875,
+      "progress_tracking": 0.4
+    },
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/014-task-decomposition/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.99,
+        "robustness": 0.97
+      },
+      "total": 0.9833,
+      "notes": "Clear ordered decomposition, execution, tracking, rollup, and validation; a non-portable find check produced stderr but was recognized and replaced without affecting completion.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.99,\"robustness\":0.97},\"security_gate\":1,\"notes\":\"Clear ordered decomposition, execution, tracking, rollup, and validation; a non-portable find check produced stderr but was recognized and replaced without affecting completion.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9833,
+    "process_effective": 0.9833,
+    "security_score": 1.0,
+    "outcome_score": 0.8588,
+    "oracle_outcome_score": 0.8588,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8445,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8588 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-014-task-decomposition-gpt-5.6-luna-20260910-234541-21c913c3"
+}

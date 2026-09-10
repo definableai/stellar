@@ -1,0 +1,124 @@
+[harnessbench] run-task 044-ci-config-repair (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 044-ci-config-repair finished adapter_ok=True elapsed=39.733s
+{
+  "task_id": "044-ci-config-repair",
+  "elapsed_sec": 39.733,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-044-ci-config-repair-3feffcee",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-044-ci-config-repair-stellar-luna-20260910-222246-368e68a4/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 6456,
+    "output_tokens": 2185,
+    "cache_read_tokens": 23363,
+    "cache_write_tokens": 0,
+    "total_tokens": 32004,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "044-ci-config-repair",
+    "outcome_score": 1.0,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "yaml_parse",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "ci_structure",
+        "pass": true,
+        "weight": 0.18,
+        "detail": {
+          "term_hits": 17,
+          "forbidden": [],
+          "paths_ok": true,
+          "app_paths_ok": true,
+          "test_paths_ok": true,
+          "permissions_ok": true,
+          "concurrency_ok": true,
+          "timeout_ok": true
+        }
+      },
+      {
+        "id": "path_filter_simulation",
+        "pass": true,
+        "weight": 0.18,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "local_tests",
+        "pass": true,
+        "weight": 0.14,
+        "detail": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/hash/work/stellar/bench/harness-bench\nconfigfile: pyproject.toml\nplugins: anyio-4.15.1\ncollected 2 items\n\ntest_mathutil.py ..                                                      [100%]\n\n============================== 2 passed in 0.01s ===============================\n"
+      },
+      {
+        "id": "smoke_commands",
+        "pass": true,
+        "weight": 0.18,
+        "detail": [
+          {
+            "cmd": "python -c \"from app.mathutil import normalize_percent; normalize_percent(50)\"",
+            "returncode": 0,
+            "stderr": ""
+          }
+        ]
+      },
+      {
+        "id": "ci_design_notes",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "code_integrity",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/044-ci-config-repair/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-044-ci-config-repair-gpt-5.6-luna-20260910-222246-368e68a4"
+}

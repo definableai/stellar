@@ -1,0 +1,226 @@
+[harnessbench] run-task 050-multitable-join-analysis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 050-multitable-join-analysis finished adapter_ok=True elapsed=133.594s
+{
+  "task_id": "050-multitable-join-analysis",
+  "elapsed_sec": 133.594,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-050-multitable-join-analysis-cebab356",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-050-multitable-join-analysis-stellar-luna-20260910-234832-c4c88345/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 23445,
+    "output_tokens": 12254,
+    "cache_read_tokens": 89379,
+    "cache_write_tokens": 0,
+    "total_tokens": 125078,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "050-multitable-join-analysis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-050-multitable-join-analysis-stellar-luna-20260910-234832-c4c88345/workspace",
+    "checks": [
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "fixture_customers_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "fixture_orders_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "fixture_refunds_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "fixture_payments_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "fixture_fx_rates_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "fixture_chargebacks_unchanged",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "output_exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "all_canonical_customers_once",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "exact_metric_rows",
+        "pass": true,
+        "weight": 0.26,
+        "detail": null
+      },
+      {
+        "id": "multi_alias_merge",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "refund_and_chargeback_deducted",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "cancelled_order_excluded",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "same_order_different_amount_additive",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "platinum_boundary",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "money_format",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "region_summary_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "region_summary_values",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "reconciliation_audit_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "reconciliation_audit_keys",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "reconciliation_audit_exact",
+        "pass": true,
+        "weight": 0.22,
+        "detail": null
+      },
+      {
+        "id": "audit_chargeback_classification",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "audit_refund_anomaly_classification",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "notes_anomalies",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/050-multitable-join-analysis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.96
+      },
+      "total": 0.9733,
+      "notes": "Thoroughly inspected all inputs, applied the stated joins and reconciliation rules, generated and read back all deliverables, and passed focused validation; one non-material portability error in the file listing was recovered.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Thoroughly inspected all inputs, applied the stated joins and reconciliation rules, generated and read back all deliverables, and passed focused validation; one non-material portability error in the file listing was recovered.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9733,
+    "process_effective": 0.9733,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9733,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-050-multitable-join-analysis-gpt-5.6-luna-20260910-234832-c4c88345"
+}

@@ -1,0 +1,116 @@
+[harnessbench] run-task 040-test-coverage-fill (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 040-test-coverage-fill finished adapter_ok=True elapsed=60.666s
+{
+  "task_id": "040-test-coverage-fill",
+  "elapsed_sec": 60.666,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-040-test-coverage-fill-9e17d9c4",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-040-test-coverage-fill-stellar-luna-20260910-223419-9d5010fe/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 9315,
+    "output_tokens": 3972,
+    "cache_read_tokens": 93325,
+    "cache_write_tokens": 0,
+    "total_tokens": 106612,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "040-test-coverage-fill",
+    "outcome_score": 1.0,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "pytest_passes",
+        "pass": true,
+        "weight": 0.25,
+        "detail": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/hash/work/stellar/bench/harness-bench\nconfigfile: pyproject.toml\nplugins: anyio-4.15.1\ncollected 20 items\n\ntests/test_pricing_basic.py ..                                           [ 10%]\ntests/test_pricing_contract.py ..................                        [100%]\n\n============================== 20 passed in 0.03s ==============================\n"
+      },
+      {
+        "id": "mutation_checks",
+        "pass": true,
+        "weight": 0.35,
+        "detail": {
+          "killed": 8,
+          "details": [
+            "vip_discount_removed:killed",
+            "bulk_threshold_off_by_one:killed",
+            "shipping_threshold_before_5000:killed",
+            "round_half_even:killed",
+            "coupon_ignored:killed",
+            "expedite_ignored:killed",
+            "bulk_per_line_only:killed",
+            "vip_wrong_rate:killed"
+          ]
+        }
+      },
+      {
+        "id": "test_intent",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "term_hits": 9,
+          "assertions": 16,
+          "forbidden": []
+        }
+      },
+      {
+        "id": "test_intent_doc",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "source_integrity",
+        "pass": true,
+        "weight": 0.12,
+        "detail": "ordercalc/pricing.py must not change"
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/040-test-coverage-fill/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.95,
+        "consistency": 0.92,
+        "robustness": 0.9
+      },
+      "total": 0.9233,
+      "notes": "Clear contract-driven test workflow with appropriate reads, test-only edits, recovery from syntax/import and expectation errors, final passing pytest run, intent documentation, and source-unchanged verification.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.95,\"consistency\":0.92,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Clear contract-driven test workflow with appropriate reads, test-only edits, recovery from syntax/import and expectation errors, final passing pytest run, intent documentation, and source-unchanged verification.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9233,
+    "process_effective": 0.9233,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9233,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-040-test-coverage-fill-gpt-5.6-luna-20260910-223419-9d5010fe"
+}

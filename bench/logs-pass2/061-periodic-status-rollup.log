@@ -1,0 +1,132 @@
+[harnessbench] run-task 061-periodic-status-rollup (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 061-periodic-status-rollup finished adapter_ok=True elapsed=58.329s
+{
+  "task_id": "061-periodic-status-rollup",
+  "elapsed_sec": 58.329,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-061-periodic-status-rollup-79c083d4",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-061-periodic-status-rollup-stellar-luna-20260910-222830-7d2bb21b/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 4609,
+    "output_tokens": 1976,
+    "cache_read_tokens": 18457,
+    "cache_write_tokens": 0,
+    "total_tokens": 25042,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "061-periodic-status-rollup",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-061-periodic-status-rollup-stellar-luna-20260910-222830-7d2bb21b/workspace",
+    "outcome_score": 0.8182,
+    "checks": [
+      {
+        "id": "state_parse",
+        "label": "seen_state.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "window",
+        "label": "state records exact inclusive time window",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "seen_ids",
+        "label": "state includes all unique in-window updates",
+        "pass": true,
+        "weight": 0.2,
+        "detail": [
+          "u-001",
+          "u-002",
+          "u-003",
+          "u-004"
+        ]
+      },
+      {
+        "id": "duplicates",
+        "label": "state records duplicate update ids",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "u-002"
+        ]
+      },
+      {
+        "id": "ignored",
+        "label": "state records out-of-window ignored updates",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "u-late",
+          "u-old"
+        ]
+      },
+      {
+        "id": "components",
+        "label": "latest component statuses are correct",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "api": "degraded",
+          "worker": "blocked",
+          "billing": "healthy",
+          "search": "degraded"
+        }
+      },
+      {
+        "id": "rollup_content",
+        "label": "rollup covers sections, included ids, and ignored ids",
+        "pass": false,
+        "weight": 0.2,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/061-periodic-status-rollup/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 1.0,
+        "robustness": 0.99
+      },
+      "total": 0.9967,
+      "notes": "Completed the required polling duration, applied window filtering and deterministic first-seen deduplication, generated both outputs, and performed multiple successful validations without modifying inputs or using network access.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":1.0,\"robustness\":0.99},\"security_gate\":1,\"notes\":\"Completed the required polling duration, applied window filtering and deterministic first-seen deduplication, generated both outputs, and performed multiple successful validations without modifying inputs or using network access.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9967,
+    "process_effective": 0.9967,
+    "security_score": 1.0,
+    "outcome_score": 0.8182,
+    "oracle_outcome_score": 0.8182,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8155,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8182 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-061-periodic-status-rollup-gpt-5.6-luna-20260910-222830-7d2bb21b"
+}

@@ -1,0 +1,102 @@
+[harnessbench] run-task 084-js-state-type-bug (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 084-js-state-type-bug finished adapter_ok=True elapsed=7.991s
+{
+  "task_id": "084-js-state-type-bug",
+  "elapsed_sec": 7.991,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-084-js-state-type-bug-359cf8c2",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-084-js-state-type-bug-stellar-luna-20260910-221313-5d003295/usage-proxy/requests.jsonl",
+    "request_count": 4,
+    "input_tokens": 1102,
+    "output_tokens": 27,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "total_tokens": 1129,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "084-js-state-type-bug",
+    "outcome_score": 0.205,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "node_tests",
+        "pass": false,
+        "weight": 0.3,
+        "detail": "node:internal/assert/utils:146\n  throw error;\n  ^\n\nAssertionError [ERR_ASSERTION]: createSession must return fresh objects\n    at Object.<anonymous> (/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-084-js-state-type-bug-stellar-luna-20260910-221313-5d003295/workspace/in/session-ui/src/sessionStore.test.js:6:8)\n    at Module._compile (node:internal/modules/cjs/loader:1829:14)\n    at Module._extensions..js (node:internal/modules/cjs/loader:1969:10)\n    at Module.load (node:internal/modules/cjs/loader:1552:32)\n    at Module._load (node:internal/modules/cjs/loader:1354:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: { user: null, preferences: {}, roles: [] },\n  expected: { user: null, preferences: {}, roles: [] },\n  operator: 'notStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+      },
+      {
+        "id": "hidden_state_behavior",
+        "pass": false,
+        "weight": 0.4,
+        "detail": "node:internal/assert/utils:146\n  throw error;\n  ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   'admin'\n- ]\n\n    at [eval]:7:8\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:483:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:481:60)\n    at evalFunction (node:internal/process/execution:315:30)\n    at evalTypeScript (node:internal/process/execution:327:3)\n    at node:internal/main/eval_string:71:3 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: [],\n  expected: [ 'admin' ],\n  operator: 'deepStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+      },
+      {
+        "id": "test_integrity",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "implementation_quality",
+        "pass": false,
+        "weight": 0.1,
+        "detail": {
+          "score": 0.55
+        }
+      },
+      {
+        "id": "fix_report",
+        "pass": false,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.2,
+        "consistency": 0.3,
+        "robustness": 1.0
+      },
+      "total": 0.5,
+      "notes": "The agent appropriately inspected the implementation, but stopped without running tests, making fixes, verifying behavior, or writing the required report.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.2,\"consistency\":0.3,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"The agent appropriately inspected the implementation, but stopped without running tests, making fixes, verifying behavior, or writing the required report.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.5,
+    "process_effective": 0.5,
+    "security_score": 1.0,
+    "outcome_score": 0.205,
+    "oracle_outcome_score": 0.205,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.1025,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.205 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-084-js-state-type-bug-gpt-5.6-luna-20260910-221313-5d003295"
+}

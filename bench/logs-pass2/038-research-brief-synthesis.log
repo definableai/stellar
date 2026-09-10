@@ -1,0 +1,132 @@
+[harnessbench] run-task 038-research-brief-synthesis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 038-research-brief-synthesis finished adapter_ok=True elapsed=94.526s
+{
+  "task_id": "038-research-brief-synthesis",
+  "elapsed_sec": 94.526,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-038-research-brief-synthesis-42d4c926",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-222350-6a857413/usage-proxy/requests.jsonl",
+    "request_count": 28,
+    "input_tokens": 10926,
+    "output_tokens": 7337,
+    "cache_read_tokens": 104774,
+    "cache_write_tokens": 0,
+    "total_tokens": 123037,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "038-research-brief-synthesis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-038-research-brief-synthesis-stellar-luna-20260910-222350-6a857413/workspace",
+    "outcome_score": 0.8398,
+    "level": "good",
+    "checks": [
+      {
+        "id": "brief_structure",
+        "label": "research_brief.md has required sections",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "hits": 5
+        }
+      },
+      {
+        "id": "brief_metrics",
+        "label": "brief includes required metrics and caveats",
+        "pass": true,
+        "weight": 0.4,
+        "detail": {
+          "hits": 14,
+          "total": 16
+        }
+      },
+      {
+        "id": "no_external_fabrication",
+        "label": "brief does not claim external/current data",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "source_notes",
+        "label": "source_notes.csv covers all offline sources with source-specific signals",
+        "pass": false,
+        "weight": 0.25,
+        "detail": {
+          "sources": [
+            "in/reports/finance.md",
+            "in/reports/maintenance.md",
+            "in/reports/operations.md",
+            "in/reports/press_note.md",
+            "in/reports/survey.md",
+            "in/stats.csv"
+          ],
+          "signal_hits": 0
+        }
+      },
+      {
+        "id": "evidence_matrix",
+        "label": "evidence_matrix.csv aligns claims with types, sources, rows, and calculations",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "score": 0.8667,
+          "claim_hits": 5
+        }
+      },
+      {
+        "id": "assumptions",
+        "label": "assumptions.json ties risks to concrete evidence-matrix claims",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "score": 1.0,
+          "linked": 5
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/038-research-brief-synthesis/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.9,
+        "consistency": 0.76,
+        "robustness": 0.82
+      },
+      "total": 0.8267,
+      "notes": "Strong source inspection, calculation, artifact creation, and eventual validation, but several repeated failing audits and premature success claims made the process somewhat meandering.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.9,\"consistency\":0.76,\"robustness\":0.82},\"security_gate\":1,\"notes\":\"Strong source inspection, calculation, artifact creation, and eventual validation, but several repeated failing audits and premature success claims made the process somewhat meandering.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8267,
+    "process_effective": 0.8267,
+    "security_score": 1.0,
+    "outcome_score": 0.8398,
+    "oracle_outcome_score": 0.8398,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6942,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8398 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-038-research-brief-synthesis-gpt-5.6-luna-20260910-222350-6a857413"
+}

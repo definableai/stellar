@@ -1,0 +1,124 @@
+[harnessbench] run-task 080-schema-roundtrip-conversion (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 080-schema-roundtrip-conversion finished adapter_ok=True elapsed=42.829s
+{
+  "task_id": "080-schema-roundtrip-conversion",
+  "elapsed_sec": 42.829,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-080-schema-roundtrip-conversion-db601cb4",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-080-schema-roundtrip-conversion-stellar-luna-20260910-221318-5843fc14/usage-proxy/requests.jsonl",
+    "request_count": 13,
+    "input_tokens": 7375,
+    "output_tokens": 4541,
+    "cache_read_tokens": 35219,
+    "cache_write_tokens": 0,
+    "total_tokens": 47135,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "080-schema-roundtrip-conversion",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-080-schema-roundtrip-conversion-stellar-luna-20260910-221318-5843fc14/workspace",
+    "checks": [
+      {
+        "id": "json_parse",
+        "label": "canonical JSON parses",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-080-schema-roundtrip-conversion-stellar-luna-20260910-221318-5843fc14/workspace/out/canonical_records.json'"
+      },
+      {
+        "id": "json_exact",
+        "label": "canonical JSON exact",
+        "pass": false,
+        "weight": 6.0,
+        "detail": "None"
+      },
+      {
+        "id": "type_preservation",
+        "label": "string ids, nulls, arrays preserved",
+        "pass": false,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "yaml_parse",
+        "label": "canonical YAML parses",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-080-schema-roundtrip-conversion-stellar-luna-20260910-221318-5843fc14/workspace/out/canonical_records.yaml'"
+      },
+      {
+        "id": "yaml_semantics",
+        "label": "canonical YAML semantics match JSON",
+        "pass": false,
+        "weight": 4.0,
+        "detail": "None"
+      },
+      {
+        "id": "csv_exact",
+        "label": "canonical CSV exact",
+        "pass": false,
+        "weight": 4.0,
+        "detail": "''"
+      },
+      {
+        "id": "report_parse",
+        "label": "conversion_report parses",
+        "pass": false,
+        "weight": 1.0,
+        "detail": "[Errno 2] No such file or directory: '/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-080-schema-roundtrip-conversion-stellar-luna-20260910-221318-5843fc14/workspace/out/conversion_report.json'"
+      },
+      {
+        "id": "report_terms",
+        "label": "report mentions all sources and conflicts",
+        "pass": false,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "conflicts",
+        "label": "expected conflicts reported",
+        "pass": false,
+        "weight": 2.0,
+        "detail": "None"
+      }
+    ],
+    "outcome_score": 0.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.0,
+    "oracle_outcome_score": 0.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-080-schema-roundtrip-conversion-gpt-5.6-luna-20260910-221318-5843fc14"
+}

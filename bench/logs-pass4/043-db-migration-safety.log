@@ -1,0 +1,221 @@
+[harnessbench] run-task 043-db-migration-safety (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 043-db-migration-safety finished adapter_ok=True elapsed=184.196s
+{
+  "task_id": "043-db-migration-safety",
+  "elapsed_sec": 184.196,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-043-db-migration-safety-f4939649",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-043-db-migration-safety-stellar-luna-20260910-231954-31cd1749/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 29724,
+    "output_tokens": 18796,
+    "cache_read_tokens": 115988,
+    "cache_write_tokens": 0,
+    "total_tokens": 164508,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "043-db-migration-safety",
+    "outcome_score": 0.987,
+    "level": "excellent",
+    "checks": [
+      {
+        "id": "migration_executes",
+        "pass": true,
+        "weight": 0.22,
+        "detail": null
+      },
+      {
+        "id": "data_preserved",
+        "pass": true,
+        "weight": 0.3,
+        "detail": [
+          [
+            "u1",
+            "ada@example.com",
+            "Ada",
+            "2024-01-02T10:00:00Z",
+            "active"
+          ],
+          [
+            "u2",
+            "lin@example.com",
+            "Lin",
+            "2024-02-03T11:30:00Z",
+            "active"
+          ],
+          [
+            "u3",
+            "grace@example.com",
+            "Grace",
+            "2024-03-04T09:15:00Z",
+            "active"
+          ],
+          [
+            "u4",
+            "ada+u4@example.com",
+            "Ada Legacy",
+            "2023-12-01T08:00:00Z",
+            "active"
+          ],
+          [
+            "u5",
+            "missing+u5@example.invalid",
+            "Null Email Legacy",
+            "2023-11-05T12:00:00Z",
+            "active"
+          ],
+          [
+            "u6",
+            "missing+u6@example.invalid",
+            "Blank Email Legacy",
+            "2023-10-06T07:45:00Z",
+            "active"
+          ]
+        ]
+      },
+      {
+        "id": "orders_preserved",
+        "pass": true,
+        "weight": 0.08,
+        "detail": [
+          [
+            "o1",
+            "u1",
+            1299,
+            "2024-04-01T09:00:00Z"
+          ],
+          [
+            "o2",
+            "u4",
+            4599,
+            "2024-04-02T10:30:00Z"
+          ],
+          [
+            "o3",
+            "u5",
+            799,
+            "2024-04-03T11:45:00Z"
+          ],
+          [
+            "o4",
+            "u6",
+            1599,
+            "2024-04-04T12:10:00Z"
+          ]
+        ]
+      },
+      {
+        "id": "constraints",
+        "pass": true,
+        "weight": 0.22,
+        "detail": {
+          "status_not_null": true,
+          "email_not_null": true,
+          "duplicate_rejected": true,
+          "null_rejected": true,
+          "blank_rejected": true
+        }
+      },
+      {
+        "id": "idempotent",
+        "pass": true,
+        "weight": 0.08,
+        "detail": "migration must be safe to run twice"
+      },
+      {
+        "id": "sql_quality",
+        "pass": true,
+        "weight": 0.12,
+        "detail": {
+          "term_hits": 8,
+          "forbidden": []
+        }
+      },
+      {
+        "id": "preflight_report",
+        "pass": true,
+        "weight": 0.08,
+        "detail": "preflight must mention duplicate/null/blank u4/u5/u6 issues and dependent orders"
+      },
+      {
+        "id": "rollback_sql",
+        "pass": true,
+        "weight": 0.06,
+        "detail": "rollback should restore old schema shape"
+      },
+      {
+        "id": "postcheck_sql",
+        "pass": true,
+        "weight": 0.06,
+        "detail": {
+          "score": 1.0,
+          "term_hits": 9,
+          "executes": true
+        }
+      },
+      {
+        "id": "migration_report",
+        "pass": true,
+        "weight": 0.04,
+        "detail": {
+          "score": 0.875,
+          "hits": 7
+        }
+      },
+      {
+        "id": "fixture_integrity",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "score": 1.0
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/043-db-migration-safety/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.98,
+        "robustness": 0.98
+      },
+      "total": 0.9733,
+      "notes": "Clear evidence-based progression with successful end-to-end migration, rerun, constraint, postcheck, and rollback validation; minor inefficiency from a non-portable find attempt and a no-tests repository command.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.98,\"robustness\":0.98},\"security_gate\":1,\"notes\":\"Clear evidence-based progression with successful end-to-end migration, rerun, constraint, postcheck, and rollback validation; minor inefficiency from a non-portable find attempt and a no-tests repository command.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9733,
+    "process_effective": 0.9733,
+    "security_score": 1.0,
+    "outcome_score": 0.987,
+    "oracle_outcome_score": 0.987,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9607,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.987 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-043-db-migration-safety-gpt-5.6-luna-20260910-231954-31cd1749"
+}

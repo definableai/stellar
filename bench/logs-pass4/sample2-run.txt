@@ -1,0 +1,15 @@
+tasks=14 jobs=7 wall=1800s judge=gpt-5.6-luna
+093-jsonl-sessionization-analysis rc=0 combined=0.5346 outcome=0.5918 process=0.9033 elapsed=111.577s
+060-task-cancellation-cleanup rc=0 combined=0.9133 outcome=1.0 process=0.9133 elapsed=118.857s
+090-timeseries-anomaly-attribution rc=0 combined=0.4084 outcome=0.4407 process=0.9267 elapsed=124.991s
+106-release-approval-gate-plan rc=0 combined=0.8807 outcome=0.9206 process=0.9567 elapsed=142.654s
+091-financial-close-reconciliation rc=0 combined=0.5176 outcome=0.5246 process=0.9867 elapsed=168.02s
+077-archive-manifest-defense rc=0 combined=0.6782 outcome=0.7241 process=0.9367 elapsed=201.47s
+022-local-rest-api-summary rc=0 combined=0.8406 outcome=0.8696 process=0.9667 elapsed=70.547s
+031-cross-doc-citation-check rc=0 combined=0.5482 outcome=0.5556 process=0.9867 elapsed=88.956s
+092-schema-drift-audit rc=0 combined=0.6602 outcome=0.6783 process=0.9733 elapsed=256.29s
+098-three-source-decision-record-synthesis rc=0 combined=0.6074 outcome=0.6135 process=0.99 elapsed=163.201s
+052-metric-definition-audit rc=0 combined=0.99 outcome=1.0 process=0.99 elapsed=70.121s
+079-smallfile-batch-reject-ledger rc=0 combined=0.5723 outcome=0.611 process=0.9367 elapsed=263.029s
+105-partial-batch-resume-ledger rc=0 combined=0.5313 outcome=0.5881 process=0.9033 elapsed=242.099s
+041-frontend-state-bug rc=0 combined=0.9333 outcome=1.0 process=0.9333 elapsed=230.12s

@@ -1,0 +1,181 @@
+[harnessbench] run-task 059-event-update-replan (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 059-event-update-replan finished adapter_ok=True elapsed=55.453s
+{
+  "task_id": "059-event-update-replan",
+  "elapsed_sec": 55.453,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-059-event-update-replan-fd9a61d2",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-059-event-update-replan-stellar-luna-20260910-224117-a368761a/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 10204,
+    "output_tokens": 3882,
+    "cache_read_tokens": 57191,
+    "cache_write_tokens": 0,
+    "total_tokens": 71277,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "059-event-update-replan",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-059-event-update-replan-stellar-luna-20260910-224117-a368761a/workspace",
+    "outcome_score": 1.0,
+    "checks": [
+      {
+        "id": "original_parse",
+        "label": "original_plan.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "revised_parse",
+        "label": "revised_plan.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "required_blocks",
+        "label": "revised plan contains all required blocks",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "setup",
+          "rehearsal",
+          "accessibility_check",
+          "live_support",
+          "teardown"
+        ]
+      },
+      {
+        "id": "room_constraint",
+        "label": "live support moved to Room B",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "id": "live_support",
+          "room": "Room B",
+          "start": "13:00",
+          "end": "14:30",
+          "assigned_people": [
+            "Ava",
+            "Ben",
+            "Dia"
+          ],
+          "assumptions": [
+            "Moved to Room B as required.",
+            "Chen is excluded because he is unavailable after 13:00; Ava covers AV and accessibility, Ben covers operations, and Dia covers support and notes."
+          ]
+        }
+      },
+      {
+        "id": "chen_removed",
+        "label": "Chen is not assigned after 13:00 live support",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "Ava",
+          "Ben",
+          "Dia"
+        ]
+      },
+      {
+        "id": "rehearsal_time",
+        "label": "rehearsal ends before or at 11:00",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "id": "rehearsal",
+          "room": "Room A",
+          "start": "10:00",
+          "end": "10:45",
+          "assigned_people": [
+            "Ava",
+            "Chen"
+          ],
+          "assumptions": [
+            "Preserved from the original plan and ends before 11:00.",
+            "Ava supports AV and accessibility rehearsal; Chen supports speakers and operations."
+          ]
+        }
+      },
+      {
+        "id": "accessibility_check",
+        "label": "15-minute accessibility check immediately precedes live support",
+        "pass": true,
+        "weight": 0.15,
+        "detail": {
+          "id": "accessibility_check",
+          "room": "Room B",
+          "start": "12:45",
+          "end": "13:00",
+          "assigned_people": [
+            "Ava",
+            "Dia"
+          ],
+          "assumptions": [
+            "New 15-minute check scheduled immediately before live_support.",
+            "Ava performs the accessibility check; Dia provides support and notes."
+          ]
+        }
+      },
+      {
+        "id": "preserve_setup",
+        "label": "setup assignment is preserved from original when unaffected",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "diff_content",
+        "label": "diff.md lists added, removed, changed items and new constraints",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/059-event-update-replan/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.98,
+        "robustness": 0.98
+      },
+      "total": 0.9833,
+      "notes": "Clear initial plan, evidence-based revision applying every late constraint, explicit added/removed/changed diff, and successful validation; only minor redundant final read-back checks and a harmless find portability warning.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.98,\"robustness\":0.98},\"security_gate\":1,\"notes\":\"Clear initial plan, evidence-based revision applying every late constraint, explicit added/removed/changed diff, and successful validation; only minor redundant final read-back checks and a harmless find portability warning.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9833,
+    "process_effective": 0.9833,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9833,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-059-event-update-replan-gpt-5.6-luna-20260910-224117-a368761a"
+}

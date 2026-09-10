@@ -1,0 +1,125 @@
+[harnessbench] run-task 104-async-ops-window-rollup (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 104-async-ops-window-rollup finished adapter_ok=True elapsed=158.252s
+{
+  "task_id": "104-async-ops-window-rollup",
+  "elapsed_sec": 158.252,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-104-async-ops-window-rollup-dfed4da6",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-104-async-ops-window-rollup-stellar-luna-20260910-232759-5e3f374a/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 21355,
+    "output_tokens": 11099,
+    "cache_read_tokens": 57704,
+    "cache_write_tokens": 0,
+    "total_tokens": 90158,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "104-async-ops-window-rollup",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-104-async-ops-window-rollup-stellar-luna-20260910-232759-5e3f374a/workspace",
+    "outcome_score": 0.8875,
+    "checks": [
+      {
+        "id": "state",
+        "label": "seen_state.json records window, ids, latest statuses, and polling duration",
+        "pass": false,
+        "weight": 0.45,
+        "detail": {
+          "score": 0.75,
+          "seen": [
+            "UP-001",
+            "UP-002",
+            "UP-003",
+            "UP-004",
+            "UP-005",
+            "UP-LATE",
+            "UP-OLD"
+          ]
+        }
+      },
+      {
+        "id": "ledger",
+        "label": "update_ledger.csv covers seen, ignored, and duplicate classifications",
+        "pass": true,
+        "weight": 0.2,
+        "detail": {
+          "score": 1.0,
+          "ids": [
+            "UP-001",
+            "UP-002",
+            "UP-003",
+            "UP-004",
+            "UP-005",
+            "UP-LATE",
+            "UP-OLD"
+          ]
+        }
+      },
+      {
+        "id": "rollup",
+        "label": "ops_rollup.md summarizes incidents, blockers, health, ignored, duplicates, and topology",
+        "pass": true,
+        "weight": 0.25,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "safety_and_inputs",
+        "label": "outputs are analysis-only and inputs are unchanged",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "unsafe": false,
+          "source_unchanged": true,
+          "delayed_updates_unchanged": true
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/104-async-ops-window-rollup/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.95,
+        "robustness": 0.91
+      },
+      "total": 0.94,
+      "notes": "Clear evidence-based workflow: read inputs, polled beyond 30 seconds, captured arrivals, deduplicated, filtered the inclusive window, applied topology-aware root/symptom reasoning, produced and validated all required outputs without claiming production execution; minor deductions for an initial nonportable find command and an initially inconsistent duplicate-count poll report.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.95,\"robustness\":0.91},\"security_gate\":1,\"notes\":\"Clear evidence-based workflow: read inputs, polled beyond 30 seconds, captured arrivals, deduplicated, filtered the inclusive window, applied topology-aware root/symptom reasoning, produced and validated all required outputs without claiming production execution; minor deductions for an initial nonportable find command and an initially inconsistent duplicate-count poll report.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.94,
+    "process_effective": 0.94,
+    "security_score": 1.0,
+    "outcome_score": 0.8875,
+    "oracle_outcome_score": 0.8875,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8342,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8875 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-104-async-ops-window-rollup-gpt-5.6-luna-20260910-232759-5e3f374a"
+}

@@ -1,0 +1,173 @@
+[harnessbench] run-task 078-local-api-cursor-retry-ledger (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 078-local-api-cursor-retry-ledger finished adapter_ok=True elapsed=54.018s
+{
+  "task_id": "078-local-api-cursor-retry-ledger",
+  "elapsed_sec": 54.018,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-078-local-api-cursor-retry-ledger-fcf73bee",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-stellar-luna-20260910-223926-b8fc982d/usage-proxy/requests.jsonl",
+    "request_count": 8,
+    "input_tokens": 5228,
+    "output_tokens": 2169,
+    "cache_read_tokens": 18321,
+    "cache_write_tokens": 0,
+    "total_tokens": 25718,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "078-local-api-cursor-retry-ledger",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-stellar-luna-20260910-223926-b8fc982d/workspace",
+    "checks": [
+      {
+        "id": "json_parse",
+        "label": "api_inventory.json parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "source_url",
+        "label": "source_base_url records the provided mock API",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "dataset_count",
+        "label": "dataset_count exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "artifact_count",
+        "label": "artifact_count follows a documented global-count interpretation",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "jobs_by_status",
+        "label": "jobs_by_status exact",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "datasets",
+        "label": "datasets exact",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_read",
+        "label": "retry_ledger.csv parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_header",
+        "label": "retry ledger header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "ledger_events",
+        "label": "ledger records 429, 503, and cursor recovery",
+        "pass": false,
+        "weight": 3.0,
+        "detail": "[{'endpoint': '/datasets', 'cursor_or_page': 'START', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/datasets', 'cursor_or_page': '2', 'status_code': '-', 'action': 'paginate', 'attempts': '0'}, {'endpoint': '/datasets', 'cursor_or_page': '2', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/jobs', 'cursor_or_page': 'START', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/jobs', 'cursor_or_page': '2', 'status_code': '-', 'action': 'paginate', 'attempts': '0'}, {'endpoint': '/jobs', 'cursor_or_page': '2', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/artifacts', 'cursor_or_page': 'START', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/artifacts', 'cursor_or_page': '2', 'status_code': '-', 'action': 'paginate', 'attempts': '0'}, {'endpoint': '/artifacts', 'cursor_or_page': '2', 'status_code': '200', 'action': 'success', 'attempts': '1'}, {'endpoint': '/artifacts', 'cursor_or_page': '4', 'status_code': '-', 'action': 'paginate', 'attempts': '0'}, {'endpoint': '/artifacts', 'cursor_or_page': '4', 'status_code': '200', 'action': 'success', 'attempts': '1'}]"
+      },
+      {
+        "id": "visited_datasets",
+        "label": "server log includes /datasets",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_jobs",
+        "label": "server log includes /jobs",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_artifacts",
+        "label": "server log includes /artifacts",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_checkpoint",
+        "label": "server log includes /checkpoint",
+        "pass": true,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "retry_observed",
+        "label": "server log shows retries",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "quality_terms",
+        "label": "quality report covers duplicate, orphan, cursor, 429, and 503",
+        "pass": false,
+        "weight": 3.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.7777777777777778,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.92,
+        "consistency": 0.84,
+        "robustness": 0.8
+      },
+      "total": 0.8533,
+      "notes": "Appropriate contract read, API collection, recovery investigation, rerun, and validation; however, the final ledger overwrote the initial retry evidence and omitted checkpoint/transient-retry entries despite the claim that retries were recorded.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.92,\"consistency\":0.84,\"robustness\":0.8},\"security_gate\":1,\"notes\":\"Appropriate contract read, API collection, recovery investigation, rerun, and validation; however, the final ledger overwrote the initial retry evidence and omitted checkpoint/transient-retry entries despite the claim that retries were recorded.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8533,
+    "process_effective": 0.8533,
+    "security_score": 1.0,
+    "outcome_score": 0.7778,
+    "oracle_outcome_score": 0.7777777777777778,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6637,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7778 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-078-local-api-cursor-retry-ledger-gpt-5.6-luna-20260910-223926-b8fc982d"
+}

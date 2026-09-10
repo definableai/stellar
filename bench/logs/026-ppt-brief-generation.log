@@ -1,0 +1,143 @@
+[harnessbench] run-task 026-ppt-brief-generation (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 026-ppt-brief-generation finished adapter_ok=True elapsed=61.047s
+{
+  "task_id": "026-ppt-brief-generation",
+  "elapsed_sec": 61.047,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-026-ppt-brief-generation-9aac5039",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-026-ppt-brief-generation-stellar-luna-20260911-003149-eac48a7a/usage-proxy/requests.jsonl",
+    "request_count": 15,
+    "input_tokens": 16679,
+    "output_tokens": 7269,
+    "cache_read_tokens": 47323,
+    "cache_write_tokens": 0,
+    "total_tokens": 71271,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "026-ppt-brief-generation",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-026-ppt-brief-generation-stellar-luna-20260911-003149-eac48a7a/workspace",
+    "outcome_score": 1.0,
+    "checks": [
+      {
+        "id": "outline_json_parseable",
+        "label": "outline json parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "six_slides",
+        "label": "six slides",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 6
+      },
+      {
+        "id": "titles_follow_template_order",
+        "label": "titles follow template order",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "Executive snapshot",
+          "Customer pain",
+          "What is launching",
+          "Proof points",
+          "Renewal expansion angle",
+          "Ask and next steps"
+        ]
+      },
+      {
+        "id": "slide_schema_complete",
+        "label": "slide schema complete",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "all_metrics_referenced",
+        "label": "all metrics referenced",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "M-ADMIN",
+          "M-ONBOARD",
+          "M-RENEW",
+          "M-TICKET"
+        ]
+      },
+      {
+        "id": "no_unknown_metric_refs",
+        "label": "no unknown metric refs",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "speaker_notes_exists",
+        "label": "speaker notes exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "speaker_notes_cover_all_slides",
+        "label": "speaker notes cover all slides",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "speaker_notes_cover_value_props",
+        "label": "speaker notes cover value props",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "forbidden_unapproved_feature_omitted",
+        "label": "forbidden unapproved feature omitted",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/026-ppt-brief-generation/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 1.0,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-026-ppt-brief-generation-gpt-5.6-luna-20260911-003149-eac48a7a"
+}

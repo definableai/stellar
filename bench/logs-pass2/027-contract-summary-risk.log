@@ -1,0 +1,197 @@
+[harnessbench] run-task 027-contract-summary-risk (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 027-contract-summary-risk finished adapter_ok=True elapsed=26.78s
+{
+  "task_id": "027-contract-summary-risk",
+  "elapsed_sec": 26.78,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-027-contract-summary-risk-a321f996",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-027-contract-summary-risk-stellar-luna-20260910-222435-3b9a29a9/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 3636,
+    "output_tokens": 1618,
+    "cache_read_tokens": 13616,
+    "cache_write_tokens": 0,
+    "total_tokens": 18870,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "027-contract-summary-risk",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-027-contract-summary-risk-stellar-luna-20260910-222435-3b9a29a9/workspace",
+    "outcome_score": 0.7857,
+    "checks": [
+      {
+        "id": "risk_csv_parseable",
+        "label": "risk csv parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "risk_csv_header_exact",
+        "label": "risk csv header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "clause_id",
+          "risk_type",
+          "quote",
+          "recommended_action",
+          "severity"
+        ]
+      },
+      {
+        "id": "exactly_six_risk_rows",
+        "label": "exactly six risk rows",
+        "pass": true,
+        "weight": 1.0,
+        "detail": 6
+      },
+      {
+        "id": "severity_values_valid",
+        "label": "severity values valid",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "risk_C-01_auto-renewal_notice",
+        "label": "risk C-01 auto-renewal notice",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-01",
+          "risk_type": "auto-renewal notice",
+          "quote_contains": "30 days notice",
+          "action_contains": "60 days"
+        }
+      },
+      {
+        "id": "risk_C-02_payment_terms",
+        "label": "risk C-02 payment terms",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-02",
+          "risk_type": "payment terms",
+          "quote_contains": "net 60",
+          "action_contains": "CFO"
+        }
+      },
+      {
+        "id": "risk_C-03_data_residency",
+        "label": "risk C-03 data residency",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-03",
+          "risk_type": "data residency",
+          "quote_contains": "any region",
+          "action_contains": "approved regions"
+        }
+      },
+      {
+        "id": "risk_C-03_security_notice",
+        "label": "risk C-03 security notice",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-03",
+          "risk_type": "security notice",
+          "quote_contains": "10 business days",
+          "action_contains": "72 hours"
+        }
+      },
+      {
+        "id": "risk_C-04_liability",
+        "label": "risk C-04 liability",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-04",
+          "risk_type": "liability",
+          "quote_contains": "unlimited",
+          "action_contains": "cap"
+        }
+      },
+      {
+        "id": "risk_C-05_termination_notice",
+        "label": "risk C-05 termination notice",
+        "pass": true,
+        "weight": 1.0,
+        "detail": {
+          "clause_id": "C-05",
+          "risk_type": "termination notice",
+          "quote_contains": "15 days notice",
+          "action_contains": "30 days"
+        }
+      },
+      {
+        "id": "summary_exists",
+        "label": "summary exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "summary_covers_key_terms",
+        "label": "summary covers key terms",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "auto-renews"
+        ]
+      },
+      {
+        "id": "summary_has_policy_risks_section",
+        "label": "summary has policy risks section",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "summary_avoids_forbidden_advice",
+        "label": "summary avoids forbidden advice",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/027-contract-summary-risk/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.7857,
+    "oracle_outcome_score": 0.7857,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7857,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7857 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-027-contract-summary-risk-gpt-5.6-luna-20260910-222435-3b9a29a9"
+}

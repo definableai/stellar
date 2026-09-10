@@ -1,0 +1,165 @@
+[harnessbench] run-task 092-schema-drift-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 092-schema-drift-audit finished adapter_ok=True elapsed=45.727s
+{
+  "task_id": "092-schema-drift-audit",
+  "elapsed_sec": 45.727,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-092-schema-drift-audit-fad89083",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260910-222038-d7abe587/usage-proxy/requests.jsonl",
+    "request_count": 11,
+    "input_tokens": 6920,
+    "output_tokens": 3212,
+    "cache_read_tokens": 44275,
+    "cache_write_tokens": 0,
+    "total_tokens": 54407,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "092-schema-drift-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260910-222038-d7abe587/workspace",
+    "checks": [
+      {
+        "id": "schema_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "drift_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_identity",
+        "pass": false,
+        "weight": 0.18,
+        "detail": "hits 5/6 got [{'extract_date': '2026-04-28', 'field_name': 'marketing_consent_v2', 'drift_type': 'new_unapproved_field', 'expected': 'not present in approved schema', 'observed': 'present in extract header', 'severity': 'high'}, {'extract_date': '2026-04-30', 'field_name': 'customer_id', 'drift_type': 'missing_required_field', 'expected': 'required field', 'observed': 'present in approved schema but absent from extract header', 'severity': 'high'}, {'extract_date': '2026-04-29', 'field_name': 'event_ts', 'drift_type': 'date_format_drift', 'expected': 'ISO-8601 timestamp (YYYY-MM-DDTHH:MM:SSZ)', 'observed': '04/29/2026 11:00', 'severity': 'medium'}, {'extract_date': '2026-04-29', 'field_name': 'customer_id', 'drift_type': 'nullability_violation', 'expected': 'non-null value', 'observed': 'empty value in row 2', 'severity': 'high'}, {'extract_date': '2026-04-30', 'field_name': 'amount_usd', 'drift_type': 'type_change', 'expected': 'decimal', 'observed': 'non-decimal value \"zero\" in row 2', 'severity': 'medium'}]"
+      },
+      {
+        "id": "drift_details",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 5/6"
+      },
+      {
+        "id": "drift_severity",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 3/6"
+      },
+      {
+        "id": "schema_vs_data_drift_covered",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "missing drift type"
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_identity",
+        "pass": false,
+        "weight": 0.13,
+        "detail": "hits 5/5 got [{'extract_date': '2026-04-28', 'source_row': '2', 'record_id': 'E004', 'reason': 'invalid_enum', 'notes': \"event_type 'trial_pause' is not one of signup|purchase|cancel\"}, {'extract_date': '2026-04-29', 'source_row': '1', 'record_id': 'E005', 'reason': 'invalid_timestamp', 'notes': \"event_ts '04/29/2026 11:00' is not ISO-8601 UTC format\"}, {'extract_date': '2026-04-29', 'source_row': '2', 'record_id': 'E006', 'reason': 'missing_required', 'notes': 'customer_id is empty'}, {'extract_date': '2026-04-30', 'source_row': '1', 'record_id': 'E007', 'reason': 'missing_required', 'notes': 'customer_id field is absent from extract'}, {'extract_date': '2026-04-30', 'source_row': '2', 'record_id': 'E008', 'reason': 'missing_required', 'notes': 'customer_id field is absent from extract'}, {'extract_date': '2026-04-30', 'source_row': '2', 'record_id': 'E008', 'reason': 'invalid_type', 'notes': \"amount_usd 'zero' is not a decimal\"}]"
+      },
+      {
+        "id": "rejects_notes",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_dates_counts",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 1, '2026-04-29': 2, '2026-04-30': 2}, 'high_severity_count': 3, 'rejected_row_count': 6, 'changelog_mismatches': ['2026-04-28: change log says marketing_consent_v2 was added, but it is not approved in the warehouse schema; extract contains it as an unapproved field.', '2026-04-30: change log says no required fields were removed, but customer_id is absent from the extract header.']}"
+      },
+      {
+        "id": "summary_rejects_mismatches",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 1, '2026-04-29': 2, '2026-04-30': 2}, 'high_severity_count': 3, 'rejected_row_count': 6, 'changelog_mismatches': ['2026-04-28: change log says marketing_consent_v2 was added, but it is not approved in the warehouse schema; extract contains it as an unapproved field.', '2026-04-30: change log says no required fields were removed, but customer_id is absent from the extract header.']}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_distinguish",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.3826,
+    "score": 0.3826,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/092-schema-drift-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.8,
+        "consistency": 0.65,
+        "robustness": 0.6
+      },
+      "total": 0.6833,
+      "notes": "Used appropriate local inspection, parsing, writing, and validation with good recovery from a count mismatch, but incorrectly classified row-level timestamp, nullability, and decimal issues as schema drift and claimed ordering/categorization corrections that were not fully reflected.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.8,\"consistency\":0.65,\"robustness\":0.6},\"security_gate\":1,\"notes\":\"Used appropriate local inspection, parsing, writing, and validation with good recovery from a count mismatch, but incorrectly classified row-level timestamp, nullability, and decimal issues as schema drift and claimed ordering/categorization corrections that were not fully reflected.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.6833,
+    "process_effective": 0.6833,
+    "security_score": 1.0,
+    "outcome_score": 0.3826,
+    "oracle_outcome_score": 0.3826,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.2614,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.3826 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-092-schema-drift-audit-gpt-5.6-luna-20260910-222038-d7abe587"
+}

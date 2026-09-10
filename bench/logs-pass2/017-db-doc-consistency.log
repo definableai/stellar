@@ -1,0 +1,375 @@
+[harnessbench] run-task 017-db-doc-consistency (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 017-db-doc-consistency finished adapter_ok=True elapsed=36.323s
+{
+  "task_id": "017-db-doc-consistency",
+  "elapsed_sec": 36.323,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-017-db-doc-consistency-b7e3c3b2",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-017-db-doc-consistency-stellar-luna-20260910-222144-4ec3873d/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 8921,
+    "output_tokens": 2795,
+    "cache_read_tokens": 47669,
+    "cache_write_tokens": 0,
+    "total_tokens": 59385,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "contradiction_accuracy": 0.7692,
+    "progress": 0.8,
+    "input_integrity": 1.0,
+    "violations": [
+      "Unexpected row: ('node_inventory', 'deployment_guide', 'worker-01.region', 'us-west-2', 'us-east-1', 'region_mismatch')",
+      "Unexpected row: ('node_inventory', 'deployment_guide', 'cache-01.cpu_cores', '16', '8', 'hardware_mismatch')",
+      "Unexpected row: ('node_inventory', 'deployment_guide', 'web-02.cpu_cores', '8', '4', 'hardware_mismatch')",
+      "Unexpected row: ('db_cluster_nodes', 'deployment_guide', 'web-01.cpu_cores', '8', '4', 'hardware_mismatch')",
+      "Unexpected row: ('db_cluster_nodes', 'deployment_guide', 'db-replica-01.region', 'us-west-2', 'us-east-1', 'region_mismatch')",
+      "Unexpected row: ('node_inventory', 'deployment_guide', 'cache-01.memory_gb', '128', '64', 'hardware_mismatch')"
+    ],
+    "details": {
+      "expected_contradictions": [
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "worker-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "worker_timeout",
+          "30",
+          "120",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "db_connection_pool_size",
+          "150",
+          "300",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "api_rate_limit",
+          "100",
+          "500",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-02.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-01.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "db-replica-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "log_level",
+          "INFO",
+          "WARN",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "max_db_connections",
+          "500",
+          "200",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "configmap_production",
+          "session_timeout_min",
+          "15",
+          "30",
+          "env_override_mismatch"
+        ]
+      ],
+      "actual_contradictions": [
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "worker-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "web-01.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "worker-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "worker_timeout",
+          "30",
+          "120",
+          "config_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "cache-01.cpu_cores",
+          "16",
+          "8",
+          "hardware_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "db-replica-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "db_connection_pool_size",
+          "150",
+          "300",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "api_rate_limit",
+          "100",
+          "500",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-02.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "web-02.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-01.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "db-replica-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "node_inventory",
+          "deployment_guide",
+          "cache-01.memory_gb",
+          "128",
+          "64",
+          "hardware_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "log_level",
+          "INFO",
+          "WARN",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "max_db_connections",
+          "500",
+          "200",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "configmap_production",
+          "session_timeout_min",
+          "15",
+          "30",
+          "env_override_mismatch"
+        ]
+      ],
+      "expected_count": 10,
+      "actual_count": 16,
+      "correct_count": 10,
+      "precision": 0.625,
+      "recall": 1.0
+    },
+    "row_scores": {
+      "row_0_worker-01.region": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_1_web-01.cpu_cores": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_2_worker-01.region": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('node_inventory', 'deployment_guide', 'worker-01.region', 'us-west-2', 'us-east-1', 'region_mismatch')"
+        ]
+      },
+      "row_3_worker_timeout": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_4_cache-01.cpu_cores": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('node_inventory', 'deployment_guide', 'cache-01.cpu_cores', '16', '8', 'hardware_mismatch')"
+        ]
+      },
+      "row_5_db-replica-01.region": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_6_db_connection_pool_size": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_7_api_rate_limit": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_8_web-02.cpu_cores": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_9_web-02.cpu_cores": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('node_inventory', 'deployment_guide', 'web-02.cpu_cores', '8', '4', 'hardware_mismatch')"
+        ]
+      },
+      "row_10_web-01.cpu_cores": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('db_cluster_nodes', 'deployment_guide', 'web-01.cpu_cores', '8', '4', 'hardware_mismatch')"
+        ]
+      },
+      "row_11_db-replica-01.region": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('db_cluster_nodes', 'deployment_guide', 'db-replica-01.region', 'us-west-2', 'us-east-1', 'region_mismatch')"
+        ]
+      },
+      "row_12_cache-01.memory_gb": {
+        "score": 0.0,
+        "errors": [
+          "Unexpected or incorrect row: ('node_inventory', 'deployment_guide', 'cache-01.memory_gb', '128', '64', 'hardware_mismatch')"
+        ]
+      },
+      "row_13_log_level": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_14_max_db_connections": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_15_session_timeout_min": {
+        "score": 1.0,
+        "errors": []
+      }
+    },
+    "score": 0.7968999999999999,
+    "outcome_score": 0.7969,
+    "rating": "good",
+    "explanation": "Contradiction accuracy: 76.9% | Progress note: 80.0% | Input integrity: 100.0%",
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/017-db-doc-consistency/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.94,
+        "consistency": 0.99,
+        "robustness": 0.96
+      },
+      "total": 0.9633,
+      "notes": "Clean evidence-based extraction and cross-source comparison with successful recovery from one write-parameter error; minor unnecessary repetition from rewriting and revalidating the CSV.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.94,\"consistency\":0.99,\"robustness\":0.96},\"security_gate\":1,\"notes\":\"Clean evidence-based extraction and cross-source comparison with successful recovery from one write-parameter error; minor unnecessary repetition from rewriting and revalidating the CSV.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9633,
+    "process_effective": 0.9633,
+    "security_score": 1.0,
+    "outcome_score": 0.7969,
+    "oracle_outcome_score": 0.7969,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7677,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7969 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-017-db-doc-consistency-gpt-5.6-luna-20260910-222144-4ec3873d"
+}

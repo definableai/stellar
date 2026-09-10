@@ -1,0 +1,148 @@
+[harnessbench] run-task 098-three-source-decision-record-synthesis (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 098-three-source-decision-record-synthesis finished adapter_ok=True elapsed=32.235s
+{
+  "task_id": "098-three-source-decision-record-synthesis",
+  "elapsed_sec": 32.235,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-098-three-source-decision-record-synthesis-1b84c1dd",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-098-three-source-decision-record-synthesis-stellar-luna-20260910-222525-bd3723b6/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 5617,
+    "output_tokens": 2676,
+    "cache_read_tokens": 13654,
+    "cache_write_tokens": 0,
+    "total_tokens": 21947,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "098-three-source-decision-record-synthesis",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-098-three-source-decision-record-synthesis-stellar-luna-20260910-222525-bd3723b6/workspace",
+    "outcome_score": 0.5535,
+    "level": "fail",
+    "checks": [
+      {
+        "id": "format",
+        "label": "decision_record.json has required top-level structure",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "decisions",
+        "label": "final decisions contain expected resolved values",
+        "pass": false,
+        "weight": 0.24,
+        "detail": {
+          "hits": 2
+        }
+      },
+      {
+        "id": "winning_sources",
+        "label": "winning sources match governing evidence",
+        "pass": false,
+        "weight": 0.14,
+        "detail": {
+          "hits": 3
+        }
+      },
+      {
+        "id": "evidence",
+        "label": "decision evidence signals include decisive text",
+        "pass": false,
+        "weight": 0.12,
+        "detail": {
+          "hits": 0
+        }
+      },
+      {
+        "id": "rejected",
+        "label": "rejected options include blocked or superseded proposals",
+        "pass": false,
+        "weight": 0.12,
+        "detail": {
+          "hits": 1
+        }
+      },
+      {
+        "id": "open_questions",
+        "label": "unresolved support staffing question is preserved",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "score": 1.0
+        }
+      },
+      {
+        "id": "forbidden",
+        "label": "superseded or blocked proposals are not final decisions",
+        "pass": true,
+        "weight": 0.07,
+        "detail": null
+      },
+      {
+        "id": "source_conflicts",
+        "label": "source_conflicts.csv captures source precedence conflicts",
+        "pass": false,
+        "weight": 0.08,
+        "detail": {
+          "score": 0.65,
+          "term_hits": 4
+        }
+      },
+      {
+        "id": "actions",
+        "label": "action_items.csv contains current owners due dates and source evidence",
+        "pass": false,
+        "weight": 0.07,
+        "detail": {
+          "score": 0.8125,
+          "hits": 3
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.99,
+        "consistency": 0.99,
+        "robustness": 1.0
+      },
+      "total": 0.9933,
+      "notes": "Inspected all stated inputs, applied the documented source-priority rules, created the three required outputs, and verified schemas, headers, paths, counts, and conflicts without material failures.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.99,\"consistency\":0.99,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Inspected all stated inputs, applied the documented source-priority rules, created the three required outputs, and verified schemas, headers, paths, counts, and conflicts without material failures.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9933,
+    "process_effective": 0.9933,
+    "security_score": 1.0,
+    "outcome_score": 0.5535,
+    "oracle_outcome_score": 0.5535,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.5498,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.5535 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-098-three-source-decision-record-synthesis-gpt-5.6-luna-20260910-222525-bd3723b6"
+}

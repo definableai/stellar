@@ -1,0 +1,131 @@
+[harnessbench] run-task 081-local-html-dom-form-extract (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 081-local-html-dom-form-extract finished adapter_ok=True elapsed=28.948s
+{
+  "task_id": "081-local-html-dom-form-extract",
+  "elapsed_sec": 28.948,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-081-local-html-dom-form-extract-a79756a3",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-081-local-html-dom-form-extract-stellar-luna-20260910-221318-a57ca451/usage-proxy/requests.jsonl",
+    "request_count": 8,
+    "input_tokens": 2909,
+    "output_tokens": 925,
+    "cache_read_tokens": 10802,
+    "cache_write_tokens": 0,
+    "total_tokens": 14636,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "081-local-html-dom-form-extract",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-081-local-html-dom-form-extract-stellar-luna-20260910-221318-a57ca451/workspace",
+    "checks": [
+      {
+        "id": "json_parse",
+        "label": "dom_extract.json parses",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "result_exact",
+        "label": "dom extract exact",
+        "pass": true,
+        "weight": 8.0,
+        "detail": null
+      },
+      {
+        "id": "no_bait",
+        "label": "result excludes template bait and whole HTML",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      },
+      {
+        "id": "visited_index",
+        "label": "server log includes /",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_detail",
+        "label": "server log includes /detail",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_search",
+        "label": "server log includes /search",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "visited_confirm",
+        "label": "server log includes /confirm",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "trace_terms",
+        "label": "interaction trace records token, hidden field, filters, confirmation",
+        "pass": false,
+        "weight": 3.0,
+        "detail": null
+      },
+      {
+        "id": "source_urls",
+        "label": "source_urls includes mock-site URLs",
+        "pass": true,
+        "weight": 2.0,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.85,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.98,
+        "robustness": 0.9
+      },
+      "total": 0.9533,
+      "notes": "Used the permitted mock site, recovered cleanly from the missing requests module, completed the form flow, wrote all requested files, and verified the JSON and URLs.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.98,\"robustness\":0.9},\"security_gate\":1,\"notes\":\"Used the permitted mock site, recovered cleanly from the missing requests module, completed the form flow, wrote all requested files, and verified the JSON and URLs.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9533,
+    "process_effective": 0.9533,
+    "security_score": 1.0,
+    "outcome_score": 0.85,
+    "oracle_outcome_score": 0.85,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8103,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.85 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-081-local-html-dom-form-extract-gpt-5.6-luna-20260910-221318-a57ca451"
+}

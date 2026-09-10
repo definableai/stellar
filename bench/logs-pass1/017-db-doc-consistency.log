@@ -1,0 +1,284 @@
+[harnessbench] run-task 017-db-doc-consistency (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 017-db-doc-consistency finished adapter_ok=True elapsed=26.825s
+{
+  "task_id": "017-db-doc-consistency",
+  "elapsed_sec": 26.825,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-017-db-doc-consistency-abcc47de",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-017-db-doc-consistency-stellar-luna-20260910-221131-8abaa2dc/usage-proxy/requests.jsonl",
+    "request_count": 4,
+    "input_tokens": 5769,
+    "output_tokens": 1134,
+    "cache_read_tokens": 10604,
+    "cache_write_tokens": 0,
+    "total_tokens": 17507,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "contradiction_accuracy": 1.0,
+    "progress": 0.6,
+    "input_integrity": 1.0,
+    "violations": [],
+    "details": {
+      "expected_contradictions": [
+        [
+          "db_global",
+          "deployment_guide",
+          "db_connection_pool_size",
+          "150",
+          "300",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "configmap_production",
+          "session_timeout_min",
+          "15",
+          "30",
+          "env_override_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "worker_timeout",
+          "30",
+          "120",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-02.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "max_db_connections",
+          "500",
+          "200",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "worker-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "log_level",
+          "INFO",
+          "WARN",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "api_rate_limit",
+          "100",
+          "500",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-01.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "db-replica-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ]
+      ],
+      "actual_contradictions": [
+        [
+          "db_global",
+          "deployment_guide",
+          "db_connection_pool_size",
+          "150",
+          "300",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "configmap_production",
+          "session_timeout_min",
+          "15",
+          "30",
+          "env_override_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "worker_timeout",
+          "30",
+          "120",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-02.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "max_db_connections",
+          "500",
+          "200",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "worker-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "log_level",
+          "INFO",
+          "WARN",
+          "config_mismatch"
+        ],
+        [
+          "db_global",
+          "deployment_guide",
+          "api_rate_limit",
+          "100",
+          "500",
+          "config_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "web-01.cpu_cores",
+          "8",
+          "4",
+          "hardware_mismatch"
+        ],
+        [
+          "db_cluster_nodes",
+          "deployment_guide",
+          "db-replica-01.region",
+          "us-west-2",
+          "us-east-1",
+          "region_mismatch"
+        ]
+      ],
+      "expected_count": 10,
+      "actual_count": 10,
+      "correct_count": 10,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "row_scores": {
+      "row_0_db_connection_pool_size": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_1_session_timeout_min": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_2_worker_timeout": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_3_web-02.cpu_cores": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_4_max_db_connections": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_5_worker-01.region": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_6_log_level": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_7_api_rate_limit": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_8_web-01.cpu_cores": {
+        "score": 1.0,
+        "errors": []
+      },
+      "row_9_db-replica-01.region": {
+        "score": 1.0,
+        "errors": []
+      }
+    },
+    "score": 0.94,
+    "outcome_score": 0.94,
+    "rating": "excellent",
+    "explanation": "Contradiction accuracy: 100.0% | Progress note: 60.0% | Input integrity: 100.0%",
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/017-db-doc-consistency/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.95,
+        "consistency": 0.95,
+        "robustness": 1.0
+      },
+      "total": 0.9667,
+      "notes": "Appropriately inspected all relevant source files, extracted SQL/document/config/node data, and produced an evidence-grounded contradiction report with no material errors or unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.95,\"consistency\":0.95,\"robustness\":1.0},\"security_gate\":1,\"notes\":\"Appropriately inspected all relevant source files, extracted SQL/document/config/node data, and produced an evidence-grounded contradiction report with no material errors or unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9667,
+    "process_effective": 0.9667,
+    "security_score": 1.0,
+    "outcome_score": 0.94,
+    "oracle_outcome_score": 0.94,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9087,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.94 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-017-db-doc-consistency-gpt-5.6-luna-20260910-221131-8abaa2dc"
+}

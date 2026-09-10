@@ -1,0 +1,210 @@
+[harnessbench] run-task 024-calendar-scheduling-conflict (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 024-calendar-scheduling-conflict finished adapter_ok=True elapsed=24.199s
+{
+  "task_id": "024-calendar-scheduling-conflict",
+  "elapsed_sec": 24.199,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-024-calendar-scheduling-conflict-49a17a49",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-024-calendar-scheduling-conflict-stellar-luna-20260910-221238-09b20829/usage-proxy/requests.jsonl",
+    "request_count": 8,
+    "input_tokens": 4369,
+    "output_tokens": 1782,
+    "cache_read_tokens": 15336,
+    "cache_write_tokens": 0,
+    "total_tokens": 21487,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "024-calendar-scheduling-conflict",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-024-calendar-scheduling-conflict-stellar-luna-20260910-221238-09b20829/workspace",
+    "outcome_score": 0.8889,
+    "checks": [
+      {
+        "id": "proposed_slots_parseable",
+        "label": "proposed slots parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "exactly_three_slots",
+        "label": "exactly three slots",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          {
+            "start": "2026-05-12T11:15",
+            "end": "2026-05-12T12:00",
+            "timezone": "America/New_York",
+            "participants": [
+              {
+                "name": "Alex Chen",
+                "email": "alex@example.com"
+              },
+              {
+                "name": "Priya Rao",
+                "email": "priya@example.com"
+              },
+              {
+                "name": "Marco Silva",
+                "email": "marco@example.com"
+              },
+              {
+                "name": "Dana Morris",
+                "email": "dana@northwind.example"
+              }
+            ],
+            "rationale": "All required participants are within working hours and free; this avoids the listed calendar conflicts."
+          },
+          {
+            "start": "2026-05-12T12:00",
+            "end": "2026-05-12T12:45",
+            "timezone": "America/New_York",
+            "participants": [
+              {
+                "name": "Alex Chen",
+                "email": "alex@example.com"
+              },
+              {
+                "name": "Priya Rao",
+                "email": "priya@example.com"
+              },
+              {
+                "name": "Marco Silva",
+                "email": "marco@example.com"
+              },
+              {
+                "name": "Dana Morris",
+                "email": "dana@northwind.example"
+              }
+            ],
+            "rationale": "All required participants are within working hours and free; this avoids the listed calendar conflicts."
+          },
+          {
+            "start": "2026-05-13T11:30",
+            "end": "2026-05-13T12:15",
+            "timezone": "America/New_York",
+            "participants": [
+              {
+                "name": "Alex Chen",
+                "email": "alex@example.com"
+              },
+              {
+                "name": "Priya Rao",
+                "email": "priya@example.com"
+              },
+              {
+                "name": "Marco Silva",
+                "email": "marco@example.com"
+              },
+              {
+                "name": "Dana Morris",
+                "email": "dana@northwind.example"
+              }
+            ],
+            "rationale": "All required participants are within working hours and free; this avoids the listed calendar conflicts."
+          }
+        ]
+      },
+      {
+        "id": "slot_times_are_valid_nonconflicting_options",
+        "label": "slot times are valid nonconflicting options",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          [
+            "2026-05-12T11:15",
+            "2026-05-12T12:00"
+          ],
+          [
+            "2026-05-12T12:00",
+            "2026-05-12T12:45"
+          ],
+          [
+            "2026-05-13T11:30",
+            "2026-05-13T12:15"
+          ]
+        ]
+      },
+      {
+        "id": "slot_schema_complete",
+        "label": "slot schema complete",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "timezone_is_new_york",
+        "label": "timezone is new york",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "all_required_participants_each_slot",
+        "label": "all required participants each slot",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "invite_draft_exists",
+        "label": "invite draft exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "invite_contains_required_facts",
+        "label": "invite contains required facts",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      },
+      {
+        "id": "invite_avoids_forbidden_promises",
+        "label": "invite avoids forbidden promises",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/024-calendar-scheduling-conflict/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.8889,
+    "oracle_outcome_score": 0.8889,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.8889,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8889 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-024-calendar-scheduling-conflict-gpt-5.6-luna-20260910-221238-09b20829"
+}

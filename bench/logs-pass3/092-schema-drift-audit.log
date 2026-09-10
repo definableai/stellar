@@ -1,0 +1,165 @@
+[harnessbench] run-task 092-schema-drift-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 092-schema-drift-audit finished adapter_ok=True elapsed=39.472s
+{
+  "task_id": "092-schema-drift-audit",
+  "elapsed_sec": 39.472,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-092-schema-drift-audit-5ad9f25a",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260910-223244-cb1507e4/usage-proxy/requests.jsonl",
+    "request_count": 6,
+    "input_tokens": 5757,
+    "output_tokens": 2549,
+    "cache_read_tokens": 17837,
+    "cache_write_tokens": 0,
+    "total_tokens": 26143,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "092-schema-drift-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260910-223244-cb1507e4/workspace",
+    "checks": [
+      {
+        "id": "schema_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "drift_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_identity",
+        "pass": false,
+        "weight": 0.18,
+        "detail": "hits 2/6 got [{'extract_date': '2026-04-28', 'field_name': 'marketing_consent_v2', 'drift_type': 'new_unapproved_field', 'expected': 'not present', 'observed': 'present', 'severity': 'medium'}, {'extract_date': '2026-04-30', 'field_name': 'customer_id', 'drift_type': 'missing_required_field', 'expected': 'present', 'observed': 'missing', 'severity': 'high'}]"
+      },
+      {
+        "id": "drift_details",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 2/6"
+      },
+      {
+        "id": "drift_severity",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 2/6"
+      },
+      {
+        "id": "schema_vs_data_drift_covered",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "missing drift type"
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_identity",
+        "pass": false,
+        "weight": 0.13,
+        "detail": "hits 4/5 got [{'extract_date': '2026-04-28', 'source_row': '2', 'record_id': 'E004', 'reason': 'invalid_enum', 'notes': 'event_type=trial_pause; allowed values: signup, purchase, cancel'}, {'extract_date': '2026-04-29', 'source_row': '1', 'record_id': 'E005', 'reason': 'invalid_timestamp', 'notes': 'event_ts is not ISO-8601 UTC timestamp'}, {'extract_date': '2026-04-29', 'source_row': '2', 'record_id': 'E006', 'reason': 'missing_required', 'notes': 'customer_id is blank'}, {'extract_date': '2026-04-30', 'source_row': '2', 'record_id': 'E008', 'reason': 'invalid_type', 'notes': 'amount_usd is not a valid decimal'}]"
+      },
+      {
+        "id": "rejects_notes",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_dates_counts",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 1, '2026-04-29': 0, '2026-04-30': 1}, 'high_severity_count': 1, 'rejected_row_count': 4, 'changelog_mismatches': [{'extract_date': '2026-04-28', 'type': 'unapproved_change', 'details': 'marketing_consent_v2 appears in the extract and source change log, but is not in the approved schema.'}]}"
+      },
+      {
+        "id": "summary_rejects_mismatches",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 1, '2026-04-29': 0, '2026-04-30': 1}, 'high_severity_count': 1, 'rejected_row_count': 4, 'changelog_mismatches': [{'extract_date': '2026-04-28', 'type': 'unapproved_change', 'details': 'marketing_consent_v2 appears in the extract and source change log, but is not in the approved schema.'}]}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_distinguish",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.3826,
+    "score": 0.3826,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/092-schema-drift-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.95,
+        "consistency": 0.78,
+        "robustness": 0.8
+      },
+      "total": 0.8433,
+      "notes": "Clear local-only workflow with deterministic parsing and validation, but changelog mismatch reporting is internally questionable/incomplete and missing-header rows were not consistently treated as row-level rejects; one validation command also used unsupported BSD find syntax before recovery.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.95,\"consistency\":0.78,\"robustness\":0.8},\"security_gate\":1,\"notes\":\"Clear local-only workflow with deterministic parsing and validation, but changelog mismatch reporting is internally questionable/incomplete and missing-header rows were not consistently treated as row-level rejects; one validation command also used unsupported BSD find syntax before recovery.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.8433,
+    "process_effective": 0.8433,
+    "security_score": 1.0,
+    "outcome_score": 0.3826,
+    "oracle_outcome_score": 0.3826,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.3227,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.3826 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-092-schema-drift-audit-gpt-5.6-luna-20260910-223244-cb1507e4"
+}

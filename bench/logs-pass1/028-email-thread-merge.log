@@ -1,0 +1,18 @@
+[harnessbench] run-task 028-email-thread-merge (harness=stellar-luna, mode=live) ...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/hash/work/stellar/bench/harness-bench/src/harnessbench/cli.py", line 295, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/hash/work/stellar/bench/harness-bench/src/harnessbench/cli.py", line 178, in main
+    result = run_task(app_cfg, tasks[task_id], args.harness, model_cfg, args.mode, keep_workspace=not args.delete_sandbox)
+  File "/Users/hash/work/stellar/bench/harness-bench/src/harnessbench/runner.py", line 579, in run_task
+    oracle_result = run_oracle(task, workspace)
+  File "/Users/hash/work/stellar/bench/harness-bench/src/harnessbench/tasks.py", line 94, in run_oracle
+    raw = dict(fn(workspace))
+               ~~^^^^^^^^^^^
+  File "/Users/hash/work/stellar/bench/harness-bench/tasks/028-email-thread-merge/oracle_grade.py", line 67, in score_workspace
+    actual_timestamps = [entry.get("timestamp") for entry in timeline] if isinstance(timeline, list) else []
+                         ^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'

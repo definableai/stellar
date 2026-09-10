@@ -1,0 +1,131 @@
+[harnessbench] run-task 010-office-docs (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 010-office-docs finished adapter_ok=True elapsed=54.905s
+{
+  "task_id": "010-office-docs",
+  "elapsed_sec": 54.905,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-010-office-docs-9ee305ae",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-010-office-docs-stellar-luna-20260911-003752-704b202d/usage-proxy/requests.jsonl",
+    "request_count": 10,
+    "input_tokens": 13186,
+    "output_tokens": 6159,
+    "cache_read_tokens": 19817,
+    "cache_write_tokens": 0,
+    "total_tokens": 39162,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "010-office-docs",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-010-office-docs-stellar-luna-20260911-003752-704b202d/workspace",
+    "checks": [
+      {
+        "id": "policy_id",
+        "label": "summary.policy_id",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "exclude_status",
+        "label": "summary.exclude_status",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "totals_by_region",
+        "label": "summary.totals_by_region",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "grand_total",
+        "label": "summary.grand_total",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "docx_contains_POLICY_2024_Q3",
+        "label": "report.docx contains 'POLICY-2024-Q3'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "docx_contains_1300",
+        "label": "report.docx contains integer value '1300'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "docx_contains_500",
+        "label": "report.docx contains integer value '500'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "docx_contains_400",
+        "label": "report.docx contains integer value '400'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      },
+      {
+        "id": "docx_contains_2200",
+        "label": "report.docx contains integer value '2200'",
+        "pass": true,
+        "weight": 0.111111,
+        "detail": null
+      }
+    ],
+    "outcome_score": 1.0,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/010-office-docs/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 1.0,
+        "consistency": 0.99,
+        "robustness": 0.99
+      },
+      "total": 0.9933,
+      "notes": "Used appropriate tools to inspect inputs, generate both deliverables, and perform substantive validation; recovered from a non-impactful find option error without repetition or unsafe actions.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":1.0,\"consistency\":0.99,\"robustness\":0.99},\"security_gate\":1,\"notes\":\"Used appropriate tools to inspect inputs, generate both deliverables, and perform substantive validation; recovered from a non-impactful find option error without repetition or unsafe actions.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.9933,
+    "process_effective": 0.9933,
+    "security_score": 1.0,
+    "outcome_score": 1.0,
+    "oracle_outcome_score": 1.0,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.9933,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=1.0 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-010-office-docs-gpt-5.6-luna-20260911-003752-704b202d"
+}

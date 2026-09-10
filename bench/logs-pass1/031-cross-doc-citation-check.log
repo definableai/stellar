@@ -1,0 +1,150 @@
+[harnessbench] run-task 031-cross-doc-citation-check (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 031-cross-doc-citation-check finished adapter_ok=True elapsed=17.268s
+{
+  "task_id": "031-cross-doc-citation-check",
+  "elapsed_sec": 17.268,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-031-cross-doc-citation-check-7035150a",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-031-cross-doc-citation-check-stellar-luna-20260910-221224-ac07af00/usage-proxy/requests.jsonl",
+    "request_count": 9,
+    "input_tokens": 2190,
+    "output_tokens": 667,
+    "cache_read_tokens": 6226,
+    "cache_write_tokens": 0,
+    "total_tokens": 9083,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "031-cross-doc-citation-check",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-031-cross-doc-citation-check-stellar-luna-20260910-221224-ac07af00/workspace",
+    "outcome_score": 0.4444,
+    "checks": [
+      {
+        "id": "audit_csv_parseable",
+        "label": "audit csv parseable",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "audit_header_exact",
+        "label": "audit header exact",
+        "pass": true,
+        "weight": 1.0,
+        "detail": [
+          "citation_id",
+          "location",
+          "issue",
+          "expected_source",
+          "recommended_fix"
+        ]
+      },
+      {
+        "id": "exactly_three_audit_rows",
+        "label": "exactly three audit rows",
+        "pass": false,
+        "weight": 1.0,
+        "detail": 5
+      },
+      {
+        "id": "audit_Claim_B",
+        "label": "audit Claim B",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "S2",
+          "location": "Claim B",
+          "issue_contains": "wrong title",
+          "expected_source": "sources/escalations.md"
+        }
+      },
+      {
+        "id": "audit_Claim_C",
+        "label": "audit Claim C",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "S4",
+          "location": "Claim C",
+          "issue_contains": "retired",
+          "expected_source": "sources/help_center.md"
+        }
+      },
+      {
+        "id": "audit_Claim_D",
+        "label": "audit Claim D",
+        "pass": false,
+        "weight": 1.0,
+        "detail": {
+          "citation_id": "missing",
+          "location": "Claim D",
+          "issue_contains": "missing",
+          "expected_source": "sources/csat.md"
+        }
+      },
+      {
+        "id": "fixed_references_exists",
+        "label": "fixed references exists",
+        "pass": true,
+        "weight": 1.0,
+        "detail": null
+      },
+      {
+        "id": "fixed_references_complete",
+        "label": "fixed references complete",
+        "pass": false,
+        "weight": 1.0,
+        "detail": [
+          "[S1] Support latency dashboard - sources/latency.md",
+          "[S2] Escalation trend memo - sources/escalations.md",
+          "[S3] Help center analytics - sources/help_center.md",
+          "[S4] CSAT survey extract - sources/csat.md"
+        ]
+      },
+      {
+        "id": "fixed_references_avoid_retired_sources",
+        "label": "fixed references avoid retired sources",
+        "pass": true,
+        "weight": 1.0,
+        "detail": []
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/031-cross-doc-citation-check/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.4444,
+    "oracle_outcome_score": 0.4444,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.4444,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.4444 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-031-cross-doc-citation-check-gpt-5.6-luna-20260910-221224-ac07af00"
+}

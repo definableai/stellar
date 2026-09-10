@@ -1,0 +1,181 @@
+[harnessbench] run-task 097-research-claims-batch-evidence-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 097-research-claims-batch-evidence-audit finished adapter_ok=True elapsed=274.218s
+{
+  "task_id": "097-research-claims-batch-evidence-audit",
+  "elapsed_sec": 274.218,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-097-research-claims-batch-evidence-audit-88af9e8a",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-097-research-claims-batch-evidence-audit-stellar-luna-20260910-232911-98a0e33d/usage-proxy/requests.jsonl",
+    "request_count": 37,
+    "input_tokens": 62693,
+    "output_tokens": 32129,
+    "cache_read_tokens": 219162,
+    "cache_write_tokens": 0,
+    "total_tokens": 313984,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "097-research-claims-batch-evidence-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-097-research-claims-batch-evidence-audit-stellar-luna-20260910-232911-98a0e33d/workspace",
+    "outcome_score": 0.72,
+    "level": "pass",
+    "checks": [
+      {
+        "id": "format",
+        "label": "claim_audit.csv header is exact",
+        "pass": true,
+        "weight": 0.08,
+        "detail": [
+          "claim_id",
+          "claim_text",
+          "status",
+          "primary_source",
+          "evidence_location",
+          "evidence_signal",
+          "secondary_sources",
+          "rationale"
+        ]
+      },
+      {
+        "id": "coverage",
+        "label": "all and only claims covered",
+        "pass": true,
+        "weight": 0.08,
+        "detail": [
+          "CL-01",
+          "CL-02",
+          "CL-03",
+          "CL-04",
+          "CL-05",
+          "CL-06",
+          "CL-07",
+          "CL-08",
+          "CL-09",
+          "CL-10",
+          "CL-11",
+          "CL-12",
+          "CL-13",
+          "CL-14"
+        ]
+      },
+      {
+        "id": "status",
+        "label": "claim statuses match evidence",
+        "pass": true,
+        "weight": 0.24,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "sources",
+        "label": "primary sources match decisive evidence",
+        "pass": true,
+        "weight": 0.14,
+        "detail": {
+          "hits": 13
+        }
+      },
+      {
+        "id": "locations",
+        "label": "evidence locations cite sections rows or fields",
+        "pass": false,
+        "weight": 0.12,
+        "detail": {
+          "hits": 10
+        }
+      },
+      {
+        "id": "signals",
+        "label": "evidence signals contain decisive tokens",
+        "pass": false,
+        "weight": 0.16,
+        "detail": {
+          "hits": 10
+        }
+      },
+      {
+        "id": "secondary",
+        "label": "multi-source claims include required secondary sources",
+        "pass": true,
+        "weight": 0.08,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "repro_gaps",
+        "label": "not_reproducible claims cite missing artifacts",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "overstatement",
+        "label": "overstated claim preserves scope limitation",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "hits": 14
+        }
+      },
+      {
+        "id": "evidence_matrix_json",
+        "label": "evidence_matrix.json mirrors claim statuses with evidence and repro gaps",
+        "pass": true,
+        "weight": 0.05,
+        "detail": {
+          "score": 0.9625,
+          "status_hits": 14
+        }
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.98,
+        "consistency": 0.97,
+        "robustness": 0.93
+      },
+      "total": 0.96,
+      "notes": "Systematic offline-source audit with appropriate writes and schema checks; recovered from row-reference assertion/validation issues and finished with strict verification.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.98,\"consistency\":0.97,\"robustness\":0.93},\"security_gate\":1,\"notes\":\"Systematic offline-source audit with appropriate writes and schema checks; recovered from row-reference assertion/validation issues and finished with strict verification.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.96,
+    "process_effective": 0.96,
+    "security_score": 1.0,
+    "outcome_score": 0.72,
+    "oracle_outcome_score": 0.72,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6912,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.72 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-097-research-claims-batch-evidence-audit-gpt-5.6-luna-20260910-232911-98a0e33d"
+}

@@ -1,0 +1,166 @@
+[harnessbench] run-task 092-schema-drift-audit (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 092-schema-drift-audit finished adapter_ok=True elapsed=179.164s
+{
+  "task_id": "092-schema-drift-audit",
+  "elapsed_sec": 179.164,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-092-schema-drift-audit-339fcb86",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260911-001831-bf8c1554/usage-proxy/requests.jsonl",
+    "request_count": 16,
+    "input_tokens": 16943,
+    "output_tokens": 17202,
+    "cache_read_tokens": 64829,
+    "cache_write_tokens": 0,
+    "total_tokens": 98974,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "092-schema-drift-audit",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-092-schema-drift-audit-stellar-luna-20260911-001831-bf8c1554/workspace",
+    "checks": [
+      {
+        "id": "schema_present",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "drift_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_header",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "drift_identity",
+        "pass": false,
+        "weight": 0.18,
+        "detail": "hits 5/6 got [{'extract_date': '2026-04-28', 'field_name': 'event_type', 'drift_type': 'enum_expansion', 'expected': 'signup|purchase|cancel', 'observed': 'trial_pause', 'severity': 'medium'}, {'extract_date': '2026-04-28', 'field_name': 'marketing_consent_v2', 'drift_type': 'new_unapproved_field', 'expected': 'not present in approved schema', 'observed': 'present in extract header', 'severity': 'medium'}, {'extract_date': '2026-04-29', 'field_name': 'customer_id', 'drift_type': 'nullability_violation', 'expected': 'non-null', 'observed': 'null at source_row 2', 'severity': 'high'}, {'extract_date': '2026-04-29', 'field_name': 'event_ts', 'drift_type': 'date_format_drift', 'expected': 'timestamp_iso', 'observed': '04/29/2026 11:00 at source_row 1', 'severity': 'medium'}, {'extract_date': '2026-04-30', 'field_name': 'customer_id', 'drift_type': 'missing_required_field', 'expected': 'required field present in header', 'observed': 'missing from extract header', 'severity': 'high'}]"
+      },
+      {
+        "id": "drift_details",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 5/6"
+      },
+      {
+        "id": "drift_severity",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "hits 4/6"
+      },
+      {
+        "id": "schema_vs_data_drift_covered",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "missing drift type"
+      },
+      {
+        "id": "rejects_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_header",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "rejects_identity",
+        "pass": true,
+        "weight": 0.13,
+        "detail": null
+      },
+      {
+        "id": "rejects_notes",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_exists",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "summary_dates_counts",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 2, '2026-04-29': 2, '2026-04-30': 1}, 'high_severity_count': 2, 'rejected_row_count': 5, 'changelog_mismatches': [{'extract_date': '2026-04-29', 'logged': 'No schema changes expected.', 'observed': ['event_ts date-format drift', 'customer_id nullability violation']}, {'extract_date': '2026-04-30', 'logged': 'No required fields removed.', 'observed': ['customer_id missing from extract header']}]}"
+      },
+      {
+        "id": "summary_rejects_mismatches",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "got {'extract_dates': ['2026-04-27', '2026-04-28', '2026-04-29', '2026-04-30'], 'drift_count_by_date': {'2026-04-27': 0, '2026-04-28': 2, '2026-04-29': 2, '2026-04-30': 1}, 'high_severity_count': 2, 'rejected_row_count': 5, 'changelog_mismatches': [{'extract_date': '2026-04-29', 'logged': 'No schema changes expected.', 'observed': ['event_ts date-format drift', 'customer_id nullability violation']}, {'extract_date': '2026-04-30', 'logged': 'No required fields removed.', 'observed': ['customer_id missing from extract header']}]}"
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_distinguish",
+        "pass": false,
+        "weight": 0.05,
+        "detail": "notes must distinguish schema drift, row-level bad data, and change log mismatch"
+      }
+    ],
+    "outcome_score": 0.4522,
+    "score": 0.4522,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/092-schema-drift-audit/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.85,
+        "consistency": 0.55,
+        "robustness": 0.55
+      },
+      "total": 0.65,
+      "notes": "Good local evidence gathering, artifact creation, and structural checks, but the audit conflates row-level enum/timestamp/nullability problems with schema drift and fails to recover after validation revealed an expected-versus-actual drift-count discrepancy; one platform-specific find error was handled.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.85,\"consistency\":0.55,\"robustness\":0.55},\"security_gate\":1,\"notes\":\"Good local evidence gathering, artifact creation, and structural checks, but the audit conflates row-level enum/timestamp/nullability problems with schema drift and fails to recover after validation revealed an expected-versus-actual drift-count discrepancy; one platform-specific find error was handled.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.65,
+    "process_effective": 0.65,
+    "security_score": 1.0,
+    "outcome_score": 0.4522,
+    "oracle_outcome_score": 0.4522,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.2939,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.4522 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-092-schema-drift-audit-gpt-5.6-luna-20260911-001831-bf8c1554"
+}

@@ -1,0 +1,160 @@
+[harnessbench] run-task 058-multiday-project-state (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 058-multiday-project-state finished adapter_ok=True elapsed=46.787s
+{
+  "task_id": "058-multiday-project-state",
+  "elapsed_sec": 46.787,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-058-multiday-project-state-5654e217",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260910-221137-f0c6e152/usage-proxy/requests.jsonl",
+    "request_count": 13,
+    "input_tokens": 12630,
+    "output_tokens": 5802,
+    "cache_read_tokens": 60924,
+    "cache_write_tokens": 0,
+    "total_tokens": 79356,
+    "providers": [
+      "openai"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "058-multiday-project-state",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-058-multiday-project-state-stellar-luna-20260910-221137-f0c6e152/workspace",
+    "outcome_score": 0.7812,
+    "checks": [
+      {
+        "id": "plan_parse",
+        "label": "final_plan.json is valid JSON",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "log_exists",
+        "label": "project_log.md exists",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "history_days",
+        "label": "change_history preserves Day 1/2/3 entries",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "Day 1",
+          "Day 2",
+          "Day 3"
+        ]
+      },
+      {
+        "id": "status_by_day",
+        "label": "status_by_day covers all three days",
+        "pass": true,
+        "weight": 0.1,
+        "detail": {
+          "Day 1": "Baseline initialized: 120000 budget, Day 30 target, three workstreams, tentative pilot scope.",
+          "Day 2": "Budget reduced to 92000; connector sandbox delayed 5 days; compliance review added; WS-data owner changed to Priya; in-app experimentation conflict recorded.",
+          "Day 3": "Security signoff added; in-app experimentation removed from scope and prior tentative experiment decision reversed; connector may arrive by Day 12 subject to expedited procurement."
+        }
+      },
+      {
+        "id": "risks",
+        "label": "risk register includes all new and carried risks",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "R-connect-delay",
+          "R-budget",
+          "R-compliance",
+          "R-security"
+        ]
+      },
+      {
+        "id": "budget_decision",
+        "label": "final budget and recommendation are correct",
+        "pass": true,
+        "weight": 0.15,
+        "detail": null
+      },
+      {
+        "id": "owner_change",
+        "label": "WS-data owner changed to Priya",
+        "pass": true,
+        "weight": 0.1,
+        "detail": "Searched text for Priya"
+      },
+      {
+        "id": "conditions",
+        "label": "conditions cover compliance, security, and connector",
+        "pass": true,
+        "weight": 0.15,
+        "detail": [
+          "compliance review",
+          "security signoff",
+          "connector sandbox"
+        ]
+      },
+      {
+        "id": "conflict_handling",
+        "label": "plan records stakeholder conflict without deleting history",
+        "pass": false,
+        "weight": 0.08,
+        "detail": [
+          "stakeholder",
+          "sales",
+          "privacy",
+          "conflict"
+        ]
+      },
+      {
+        "id": "log_content",
+        "label": "log records each day and major changes",
+        "pass": false,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "decision_register",
+        "label": "decision_register.csv preserves reversed decisions",
+        "pass": false,
+        "weight": 0.1,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/058-multiday-project-state/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": true,
+      "reason": "HTTP Error 429: Too Many Requests",
+      "scores": {},
+      "total": null,
+      "notes": "",
+      "rubric_model": "gpt-5.6-luna"
+    },
+    "process_score": null,
+    "process_effective": 1.0,
+    "security_score": 1.0,
+    "outcome_score": 0.7812,
+    "oracle_outcome_score": 0.7812,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7812,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.7812 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security default 1 (no rubric judgment)"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-058-multiday-project-state-gpt-5.6-luna-20260910-221137-f0c6e152"
+}

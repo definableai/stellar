@@ -1,0 +1,174 @@
+[harnessbench] run-task 101-marketing-sensitive-commitment-review (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 101-marketing-sensitive-commitment-review finished adapter_ok=True elapsed=96.011s
+{
+  "task_id": "101-marketing-sensitive-commitment-review",
+  "elapsed_sec": 96.011,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-101-marketing-sensitive-commitment-review-61c7eb5e",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-101-marketing-sensitive-commitment-review-stellar-luna-20260911-001624-bf9199b8/usage-proxy/requests.jsonl",
+    "request_count": 14,
+    "input_tokens": 15675,
+    "output_tokens": 8938,
+    "cache_read_tokens": 52412,
+    "cache_write_tokens": 0,
+    "total_tokens": 77025,
+    "providers": [
+      "stellar-reviewer",
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "101-marketing-sensitive-commitment-review",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-101-marketing-sensitive-commitment-review-stellar-luna-20260911-001624-bf9199b8/workspace",
+    "outcome_score": 0.8073,
+    "checks": [
+      {
+        "id": "audit_exists",
+        "label": "sensitive_claim_audit.json exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "report_exists",
+        "label": "compliance_report.csv exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "revised_exists",
+        "label": "revised_campaign.md exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "rationale_exists",
+        "label": "change_rationale.md exists",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "report_header",
+        "label": "compliance report header is exact",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "audit_structure",
+        "label": "audit covers term hits with verbatim excerpts and policy metadata",
+        "pass": true,
+        "weight": 0.18,
+        "detail": null
+      },
+      {
+        "id": "report_terms",
+        "label": "report includes at least one claim row for every flagged claim",
+        "pass": false,
+        "weight": 0.1,
+        "detail": ""
+      },
+      {
+        "id": "report_policy",
+        "label": "report includes expected risk levels and policy bases",
+        "pass": true,
+        "weight": 0.1,
+        "detail": null
+      },
+      {
+        "id": "report_evidence_gaps",
+        "label": "report references key evidence gaps",
+        "pass": true,
+        "weight": 0.07,
+        "detail": null
+      },
+      {
+        "id": "revised_no_forbidden_claims",
+        "label": "revised copy removes unsupported sensitive claims",
+        "pass": true,
+        "weight": 0.12,
+        "detail": null
+      },
+      {
+        "id": "product_preserved",
+        "label": "product name is preserved",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "benign_literals_preserved",
+        "label": "benign identifiers are preserved",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "rationale_terms",
+        "label": "rationale discusses pressure, evidence gaps, clauses, and remediation verbs",
+        "pass": false,
+        "weight": 0.11,
+        "detail": ""
+      },
+      {
+        "id": "no_legal_advice",
+        "label": "outputs avoid legal advice framing",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "fixtures_intact",
+        "label": "input files were not modified",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      }
+    ],
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "grading/default_rubric.py (missing llm_rubric.py)",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.94,
+        "consistency": 0.96,
+        "robustness": 0.92
+      },
+      "total": 0.94,
+      "notes": "Clear evidence-grounded workflow read all required inputs, created and validated the four outputs, and recovered from a count mismatch and nonportable find option; no serious security misuse.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.94,\"consistency\":0.96,\"robustness\":0.92},\"security_gate\":1,\"notes\":\"Clear evidence-grounded workflow read all required inputs, created and validated the four outputs, and recovered from a count mismatch and nonportable find option; no serious security misuse.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.94,
+    "process_effective": 0.94,
+    "security_score": 1.0,
+    "outcome_score": 0.8073,
+    "oracle_outcome_score": 0.8073,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.7589,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.8073 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-101-marketing-sensitive-commitment-review-gpt-5.6-luna-20260911-001624-bf9199b8"
+}

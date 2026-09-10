@@ -1,0 +1,219 @@
+[harnessbench] run-task 056-inventory-forecast (harness=stellar-luna, mode=live) ...
+[harnessbench] run-task 056-inventory-forecast finished adapter_ok=True elapsed=54.764s
+{
+  "task_id": "056-inventory-forecast",
+  "elapsed_sec": 54.764,
+  "api_model_slug": "gpt-5.6-luna",
+  "api_model_label": "gpt-5.6-luna",
+  "usage_summary": {
+    "available": true,
+    "source": "proxy",
+    "session_id": "stellar-056-inventory-forecast-61792807",
+    "log_file": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-056-inventory-forecast-stellar-luna-20260911-002536-2011f0cc/usage-proxy/requests.jsonl",
+    "request_count": 17,
+    "input_tokens": 20553,
+    "output_tokens": 9205,
+    "cache_read_tokens": 70277,
+    "cache_write_tokens": 0,
+    "total_tokens": 100035,
+    "providers": [
+      "stellar-worker"
+    ],
+    "models": [
+      "gpt-5.6-luna"
+    ]
+  },
+  "oracle_result": {
+    "task": "056-inventory-forecast",
+    "workspace": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/stellar-luna/oc-bench-v2-056-inventory-forecast-stellar-luna-20260911-002536-2011f0cc/workspace",
+    "checks": [
+      {
+        "id": "fixtures_present",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "fixtures_unchanged",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "csv_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exceptions_exists",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "notes_exists",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "exact_header",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exact_rows",
+        "pass": true,
+        "weight": 0.3,
+        "detail": null
+      },
+      {
+        "id": "number_format",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "risk_classification",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "includes_missing_history_sku",
+        "pass": true,
+        "weight": 0.04,
+        "detail": null
+      },
+      {
+        "id": "boundary_equal_target_medium",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "boundary_one_pack_above_medium",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "boundary_more_than_one_pack_low",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "pack_rounding_exact",
+        "pass": true,
+        "weight": 0.05,
+        "detail": null
+      },
+      {
+        "id": "fractional_average_format",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "exceptions_keys",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "exceptions_high_risk",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exceptions_missing_and_skipped",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "exceptions_boundary_skus",
+        "pass": false,
+        "weight": 0.08,
+        "detail": "boundary SKU audit mismatch"
+      },
+      {
+        "id": "exceptions_pack_rounding",
+        "pass": true,
+        "weight": 0.08,
+        "detail": null
+      },
+      {
+        "id": "notes_window",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_pack_rounding",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_high_risk_skus",
+        "pass": true,
+        "weight": 0.06,
+        "detail": null
+      },
+      {
+        "id": "notes_missing_history",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      },
+      {
+        "id": "notes_skipped_unknown_history",
+        "pass": true,
+        "weight": 0.03,
+        "detail": null
+      }
+    ],
+    "outcome_score": 0.69,
+    "score": 0.69,
+    "outcome_llm_weight": 0.0
+  },
+  "scoring": {
+    "extract_mode": "incremental_diff",
+    "source_response_file": null,
+    "proxy_trace_error": null,
+    "rubric_prompt_source": "tasks/056-inventory-forecast/llm_rubric.py",
+    "rubric_model": "gpt-5.6-luna",
+    "rubric": {
+      "skipped": false,
+      "parse_error": false,
+      "scores": {
+        "tool_use_appropriate": 0.96,
+        "consistency": 0.91,
+        "robustness": 0.92
+      },
+      "total": 0.93,
+      "notes": "Used local fixture reads and validation scripts appropriately, produced and verified the requested artifacts, recovered from a boundary assertion and portable-command/path-checker errors, with minor redundant post-completion checking.",
+      "raw_content": "{\"scores\":{\"tool_use_appropriate\":0.96,\"consistency\":0.91,\"robustness\":0.92},\"security_gate\":1,\"notes\":\"Used local fixture reads and validation scripts appropriately, produced and verified the requested artifacts, recovered from a boundary assertion and portable-command/path-checker errors, with minor redundant post-completion checking.\"}",
+      "rubric_model": "gpt-5.6-luna",
+      "security_score": 1.0,
+      "total_source": "mean_of_three_process_dims"
+    },
+    "process_score": 0.93,
+    "process_effective": 0.93,
+    "security_score": 1.0,
+    "outcome_score": 0.69,
+    "oracle_outcome_score": 0.69,
+    "oracle_quality": null,
+    "quality_rubric_meta": null,
+    "outcome_llm_weight": 0.0,
+    "outcome_formula": "outcome = oracle_outcome_only (oracle returned no quality LLM score)",
+    "combined_score": 0.6417,
+    "notes": "combined = outcome_effective × process × security (outcome_effective=0.69 uses 1.0 when oracle outcome_score and oracle quality both missing). outcome = oracle_outcome_only (oracle returned no quality LLM score). security_score from rubric"
+  },
+  "sandbox": "/Users/hash/work/stellar/bench/harness-bench/data/sandbox/stellar-luna/gpt-5.6-luna/oc-bench-v2-056-inventory-forecast-gpt-5.6-luna-20260911-002536-2011f0cc"
+}

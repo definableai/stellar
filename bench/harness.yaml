@@ -1,0 +1,16 @@
+# Harness-Bench entry for stellar. Selected with --harness stellar-luna.
+models:
+  stellar-luna:
+    adapter: generic_cli
+    command: /Users/hash/work/stellar/bench/.venv/bin/python
+    session_prefix: stellar
+    timeout_sec: 1700        # crash guard only; stellar_cli enforces the task's own timeout
+    args:
+      - /Users/hash/work/stellar/bench/stellar_cli.py
+      - run
+      - --workspace
+      - "{workspace}"
+      - --prompt-file
+      - "{prompt_file}"
+      - --session-id
+      - "{session_id}"
