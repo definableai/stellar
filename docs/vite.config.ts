@@ -4,6 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
+import rehypePrettyCode from "rehype-pretty-code";
+import { transformerNotationDiff } from "@shikijs/transformers";
+import { codeMeta } from "./src/mdx/code-meta.js";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
@@ -22,6 +25,15 @@ const pages = mdx({
       properties: { className: ["anchor"], ariaHidden: true, tabIndex: -1 },
     }],
     // ==== task 02: rehype-pretty-code goes here ====
+    // Both themes ride along, as CSS variables on every token; prose.css picks
+    // one. Fences only: an inline `code` stays the prose's own.
+    [rehypePrettyCode, {
+      theme: { light: "github-light-default", dark: "dark-plus" },
+      keepBackground: false,
+      defaultLang: { block: "text" },
+      transformers: [transformerNotationDiff()],
+    }],
+    codeMeta,
   ],
 });
 

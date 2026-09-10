@@ -190,3 +190,58 @@
   margin: 24px 0;
   border-radius: 12px;
 }
+
+/* Code blocks: shiki's two themes, and the fence's flags. */
+
+/* Every token carries both themes as variables; the class picks one. */
+.shiki span {
+  color: var(--shiki-light);
+}
+.dark .shiki span {
+  color: var(--shiki-dark);
+}
+
+/* The rows carry the side padding, so a marked one runs the whole width. */
+.shiki [data-line] {
+  padding: 0 16px;
+}
+
+.shiki [data-highlighted-line] {
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+.dark .shiki [data-highlighted-line] {
+  background: color-mix(in oklab, var(--color-primary-light) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-primary-light);
+}
+
+/* `# [!code ++]` / `# [!code --]`: the transformer marks the row, the marker goes. */
+.shiki .diff.add {
+  background: rgb(34 197 94 / 0.12);
+  box-shadow: inset 2px 0 0 rgb(34 197 94 / 0.7);
+}
+.shiki .diff.remove {
+  background: rgb(239 68 68 / 0.12);
+  box-shadow: inset 2px 0 0 rgb(239 68 68 / 0.7);
+}
+
+/* `lines`: a counter, never text, so a copy cannot pick the numbers up. */
+.shiki[data-lines] code {
+  counter-reset: line;
+}
+.shiki[data-lines] [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  min-width: 20px;
+  margin-right: 16px;
+  text-align: right;
+  color: var(--color-gray-600);
+  user-select: none;
+}
+
+/* `wrap`: a long line folds instead of scrolling. */
+.shiki[data-wrap] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
