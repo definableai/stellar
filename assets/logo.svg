@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="stellar">
+  <defs>
+    <radialGradient id="core" cx="42%" cy="38%" r="60%">
+      <stop offset="0" stop-color="#FFF6D6"/>
+      <stop offset=".35" stop-color="#F5C451"/>
+      <stop offset=".8" stop-color="#D9A62E"/>
+      <stop offset="1" stop-color="#B8891F"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#F5C451" stop-opacity=".4"/>
+      <stop offset=".5" stop-color="#F5C451" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#F5C451" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0A0D0D"/>
+  <rect x="1" y="1" width="510" height="510" rx="111" fill="none" stroke="#F5C451" stroke-opacity=".18" stroke-width="2"/>
+  <!-- the mark: a star's core, and the loop that runs around it -->
+  <g id="mark">
+    <circle cx="256" cy="256" r="190" fill="url(#glow)"/>
+    <circle cx="256" cy="256" r="210" fill="none" stroke="#B8891F" stroke-opacity=".7" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 14"/>
+    <circle cx="256" cy="256" r="172" fill="none" stroke="#D9A62E" stroke-width="6" stroke-linecap="round" stroke-dasharray="660 421" transform="rotate(100 256 256)"/>
+    <circle cx="256" cy="256" r="128" fill="none" stroke="#F5C451" stroke-width="10" stroke-linecap="round" stroke-dasharray="670 134" transform="rotate(-125 256 256)"/>
+    <circle cx="256" cy="256" r="78" fill="url(#core)"/>
+    <circle cx="428" cy="256" r="9" fill="#F5C451" transform="rotate(-40 256 256)"/>
+    <circle cx="466" cy="256" r="6" fill="#F5C451" fill-opacity=".9" transform="rotate(150 256 256)"/>
+  </g>
+</svg>

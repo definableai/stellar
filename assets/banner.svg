@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 500" width="1600" height="500" role="img" aria-label="stellar: a minified agent core">
+  <defs>
+    <radialGradient id="core" cx="42%" cy="38%" r="60%">
+      <stop offset="0" stop-color="#FFF6D6"/>
+      <stop offset=".35" stop-color="#F5C451"/>
+      <stop offset=".8" stop-color="#D9A62E"/>
+      <stop offset="1" stop-color="#B8891F"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#F5C451" stop-opacity=".4"/>
+      <stop offset=".5" stop-color="#F5C451" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#F5C451" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFF6D6"/>
+      <stop offset=".55" stop-color="#F5C451"/>
+      <stop offset="1" stop-color="#D9A62E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="500" rx="24" fill="#0A0D0D"/>
+  <rect x="1" y="1" width="1598" height="498" rx="23" fill="none" stroke="#F5C451" stroke-opacity=".18" stroke-width="2"/>
+  <g>
+    <circle cx="525" cy="89" r="1" fill="#FFF6D6" fill-opacity="0.19"/>
+    <circle cx="167" cy="288" r="1" fill="#F5C451" fill-opacity="0.17"/>
+    <circle cx="112" cy="280" r="1" fill="#FFF6D6" fill-opacity="0.47"/>
+    <circle cx="1543" cy="41" r="1" fill="#F5C451" fill-opacity="0.29"/>
+    <circle cx="1084" cy="67" r="2" fill="#F5C451" fill-opacity="0.47"/>
+    <circle cx="1232" cy="234" r="1.2" fill="#F5C451" fill-opacity="0.3"/>
+    <circle cx="839" cy="423" r="1.5" fill="#F5C451" fill-opacity="0.29"/>
+    <circle cx="204" cy="212" r="1" fill="#F5C451" fill-opacity="0.62"/>
+    <circle cx="81" cy="327" r="2" fill="#F5C451" fill-opacity="0.44"/>
+    <circle cx="1263" cy="52" r="1" fill="#F5C451" fill-opacity="0.62"/>
+    <circle cx="1107" cy="50" r="1.2" fill="#FFF6D6" fill-opacity="0.47"/>
+    <circle cx="1063" cy="30" r="1.5" fill="#FFF6D6" fill-opacity="0.33"/>
+    <circle cx="203" cy="47" r="1.2" fill="#F5C451" fill-opacity="0.21"/>
+    <circle cx="641" cy="442" r="1.5" fill="#F5C451" fill-opacity="0.19"/>
+    <circle cx="1559" cy="334" r="1.5" fill="#F5C451" fill-opacity="0.63"/>
+    <circle cx="149" cy="90" r="1" fill="#FFF6D6" fill-opacity="0.16"/>
+    <circle cx="216" cy="415" r="2" fill="#FFF6D6" fill-opacity="0.48"/>
+    <circle cx="104" cy="434" r="2" fill="#F5C451" fill-opacity="0.35"/>
+    <circle cx="317" cy="473" r="1.5" fill="#F5C451" fill-opacity="0.23"/>
+    <circle cx="957" cy="67" r="2" fill="#F5C451" fill-opacity="0.23"/>
+    <circle cx="1500" cy="302" r="1" fill="#FFF6D6" fill-opacity="0.59"/>
+    <circle cx="607" cy="312" r="2" fill="#F5C451" fill-opacity="0.33"/>
+    <circle cx="200" cy="245" r="1.5" fill="#F5C451" fill-opacity="0.39"/>
+    <circle cx="340" cy="458" r="1.2" fill="#FFF6D6" fill-opacity="0.22"/>
+    <circle cx="1023" cy="62" r="1.2" fill="#F5C451" fill-opacity="0.41"/>
+    <circle cx="393" cy="204" r="1" fill="#F5C451" fill-opacity="0.41"/>
+    <circle cx="1160" cy="475" r="1.2" fill="#F5C451" fill-opacity="0.39"/>
+    <circle cx="1100" cy="460" r="1.5" fill="#FFF6D6" fill-opacity="0.55"/>
+    <circle cx="1561" cy="459" r="1.2" fill="#F5C451" fill-opacity="0.19"/>
+    <circle cx="994" cy="434" r="1" fill="#FFF6D6" fill-opacity="0.39"/>
+    <circle cx="557" cy="316" r="1" fill="#FFF6D6" fill-opacity="0.6"/>
+    <circle cx="1251" cy="173" r="1.5" fill="#FFF6D6" fill-opacity="0.38"/>
+    <circle cx="218" cy="90" r="1.5" fill="#F5C451" fill-opacity="0.55"/>
+    <circle cx="53" cy="388" r="1" fill="#F5C451" fill-opacity="0.41"/>
+    <circle cx="697" cy="421" r="1" fill="#F5C451" fill-opacity="0.16"/>
+    <circle cx="930" cy="436" r="1.5" fill="#FFF6D6" fill-opacity="0.56"/>
+    <circle cx="224" cy="90" r="2" fill="#F5C451" fill-opacity="0.16"/>
+    <circle cx="1231" cy="300" r="1" fill="#F5C451" fill-opacity="0.24"/>
+    <circle cx="986" cy="75" r="1" fill="#FFF6D6" fill-opacity="0.31"/>
+    <circle cx="848" cy="242" r="2" fill="#F5C451" fill-opacity="0.18"/>
+    <circle cx="896" cy="370" r="1.5" fill="#FFF6D6" fill-opacity="0.31"/>
+    <circle cx="406" cy="261" r="1.2" fill="#F5C451" fill-opacity="0.61"/>
+    <circle cx="1330" cy="83" r="1" fill="#F5C451" fill-opacity="0.35"/>
+    <circle cx="133" cy="131" r="1" fill="#F5C451" fill-opacity="0.26"/>
+    <circle cx="1243" cy="433" r="1" fill="#FFF6D6" fill-opacity="0.62"/>
+    <circle cx="1050" cy="86" r="1" fill="#F5C451" fill-opacity="0.63"/>
+    <circle cx="1185" cy="63" r="1.5" fill="#FFF6D6" fill-opacity="0.23"/>
+    <circle cx="120" cy="473" r="1" fill="#F5C451" fill-opacity="0.64"/>
+    <circle cx="151" cy="145" r="1" fill="#F5C451" fill-opacity="0.29"/>
+    <circle cx="1299" cy="411" r="1.2" fill="#FFF6D6" fill-opacity="0.35"/>
+    <circle cx="160" cy="46" r="1" fill="#F5C451" fill-opacity="0.36"/>
+    <circle cx="440" cy="28" r="1" fill="#F5C451" fill-opacity="0.55"/>
+    <circle cx="210" cy="25" r="2" fill="#F5C451" fill-opacity="0.36"/>
+  </g>
+  <!-- the mark: a star's core, and the loop that runs around it -->
+  <g transform="translate(196 66) scale(.72)">
+    <circle cx="256" cy="256" r="190" fill="url(#glow)"/>
+    <circle cx="256" cy="256" r="210" fill="none" stroke="#B8891F" stroke-opacity=".7" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 14"/>
+    <circle cx="256" cy="256" r="172" fill="none" stroke="#D9A62E" stroke-width="6" stroke-linecap="round" stroke-dasharray="660 421" transform="rotate(100 256 256)"/>
+    <circle cx="256" cy="256" r="128" fill="none" stroke="#F5C451" stroke-width="10" stroke-linecap="round" stroke-dasharray="670 134" transform="rotate(-125 256 256)"/>
+    <circle cx="256" cy="256" r="78" fill="url(#core)"/>
+    <circle cx="428" cy="256" r="9" fill="#F5C451" transform="rotate(-40 256 256)"/>
+    <circle cx="466" cy="256" r="6" fill="#F5C451" fill-opacity=".9" transform="rotate(150 256 256)"/>
+  </g>
+  <g font-family="Inter, 'Inter Variable', -apple-system, 'Helvetica Neue', Arial, sans-serif">
+    <text x="612" y="262" font-size="150" font-weight="700" letter-spacing="-7" fill="url(#word)">stellar</text>
+    <text x="620" y="332" font-size="29" font-weight="500" fill="#C9C2B2">A minified agent core: the infrastructure to run an agent,</text>
+    <text x="620" y="374" font-size="29" font-weight="500" fill="#C9C2B2">under 2000 readable lines of stdlib Python.</text>
+  </g>
+</svg>

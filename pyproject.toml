@@ -3,10 +3,16 @@ name = "stellar"
 version = "0.1.0"
 description = "A minified agent core: the infrastructure to run an agent, under 2000 readable lines of stdlib Python."
 readme = "README.md"
+license = "MIT"
+authors = [{ name = "Anandesh Sharma", email = "anandeshsharma@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
 ]
+
+[project.urls]
+Repository = "https://github.com/definableai/stellar"
+Issues = "https://github.com/definableai/stellar/issues"
 
 [tool.ruff.lint.per-file-ignores]
 "core/__init__.py" = ["F401"]   # the public-API re-export barrel

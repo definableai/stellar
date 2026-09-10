@@ -1,4 +1,11 @@
-# stellar core
+<p align="center">
+  <img src="assets/banner.png" alt="stellar: a minified agent core" width="100%">
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D9A62E" alt="MIT license"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.11%2B-D9A62E" alt="Python 3.11+"></a>
+</p>
 
 A minified agent core: the infrastructure to run an agent, kept under 2000
 readable lines (`wc -l core/*.py`) and built on the standard library alone.
@@ -777,3 +784,7 @@ Two more belong to whoever reviews the change, because no test can see them:
 
 - Twelve nouns. A thirteenth noun in `core/` is a conversation, not a merge.
 - `Agent` has one method, `run()`. There is never a second one.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
