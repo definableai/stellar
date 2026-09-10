@@ -9,9 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from dataclasses import MISSING, fields, is_dataclass
+from enum import Enum
 from functools import partial
+from types import UnionType
 from typing import (
-    TYPE_CHECKING, Annotated, Any, Callable, get_args, get_origin, overload,
+    TYPE_CHECKING, Annotated, Any, Callable, Literal, Union, get_args,
+    get_origin, get_type_hints, is_typeddict, overload,
 )
 
 from core.contracts import Tool, wrong
@@ -30,6 +34,8 @@ TYPES = {                               # a hint the schema knows, or nothing
     float: "number",
     bool: "boolean",
     list: "array",
+    tuple: "array",
+    set: "array",
     dict: "object",
 }
 
@@ -126,12 +132,43 @@ def schema(
     for name, p in inspect.signature(fn, eval_str=True).parameters.items():
         if name == skip:
             continue
-        ann = p.annotation
-        hint, *notes = get_args(ann) if get_origin(ann) is Annotated else (ann,)
-        kind = TYPES.get(get_origin(hint) or hint)
-        properties[name] = {"type": kind} if kind else {}
-        if notes and isinstance(notes[0], str):   # the note the model reads
-            properties[name]["description"] = notes[0]
+        properties[name] = kind(p.annotation)     # no annotation reads as anything
         if p.default is p.empty:
             required.append(name)
     return {"type": "object", "properties": properties, "required": required}
+
+
+def kind(
+    hint: Annotated[Any, "one evaluated hint, at any depth — never a string"],
+) -> dict[str, Any]:
+    """One hint as a schema, all the way down. What it cannot read is anything: {}."""
+    origin, args = get_origin(hint), get_args(hint)
+    if origin is Annotated:                   # a note this deep reaches the model too
+        note = next((n for n in args[1:] if isinstance(n, str)), None)
+        return kind(args[0]) | ({"description": note} if note else {})
+    if origin in (Union, UnionType):
+        rest = [a for a in args if a is not type(None)]
+        one = kind(rest[0]) if len(rest) == 1 else {"anyOf": [kind(a) for a in rest]}
+        if len(rest) == len(args):            # no None in it: the union stands as is
+            return one
+        t = one.get("type")
+        return ({**one, "type": [t, "null"]} if isinstance(t, str)
+                else {"anyOf": [*one.get("anyOf", [one]), {"type": "null"}]})
+    if origin is Literal:
+        shared = {TYPES.get(type(a)) for a in args}
+        share = len(shared) == 1 and None not in shared
+        return {"enum": list(args)} | ({"type": shared.pop()} if share else {})
+    if origin in (list, set) or (origin is tuple and args[-1:] == (...,)):
+        return {"type": "array", "items": kind(args[0])}
+    if isinstance(hint, type) and issubclass(hint, Enum):
+        return {"enum": [m.value for m in hint]}
+    if is_dataclass(hint) or is_typeddict(hint):
+        hints = get_type_hints(hint, include_extras=True)
+        need = (hint.__required_keys__ if is_typeddict(hint) else
+                {f.name for f in fields(hint)
+                 if f.default is f.default_factory is MISSING})
+        return {"type": "object",
+                "properties": {n: kind(h) for n, h in hints.items()},
+                "required": [n for n in hints if n in need]}
+    # ponytail: dict[str, X] is a bare object — the value hint goes unsaid
+    return {"type": t} if (t := TYPES.get(origin or hint)) else {}

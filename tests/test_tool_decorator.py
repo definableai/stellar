@@ -83,7 +83,7 @@ def test_every_hint_has_a_type() -> None:
         "d": {"type": "boolean"},
         "e": {"type": "array"},
         "f": {"type": "object"},
-        "g": {"type": "array"},
+        "g": {"type": "array", "items": {"type": "string"}},
         "h": {},                                     # no hint, no promise
     }
     assert kinds.parameters["required"] == list("abcdefgh")
@@ -92,8 +92,8 @@ def test_every_hint_has_a_type() -> None:
 def test_string_hints_are_read_as_hints() -> None:
     assert quoted.parameters["properties"] == {      # a module that says
         "a": {"type": "integer"},                    # from __future__ import
-        "b": {"type": "array"},                      # annotations has only these
-    }
+        "b": {"type": "array", "items": {"type": "string"}},
+    }                                                # annotations has only these
 
 
 def test_an_annotated_note_becomes_the_description() -> None:
