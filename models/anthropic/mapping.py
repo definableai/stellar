@@ -88,11 +88,17 @@ def notebook(messages: list[Message]) -> tuple[str, list[dict]]:
 
 # ---- reply header -> meta -----------------------------------------------
 
+CACHED = ("cache_read_input_tokens", "cache_creation_input_tokens")
+
 
 def meta(raw: dict, asked: str, invalid: dict) -> Part:
     """The one meta Part: what the turn cost, who answered, why it stopped."""
     used = raw.get("usage") or {}
-    said = {"usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")},
+    # ponytail: a cache count rides along only when there is one, and
+    # hooks/budget.py still adds input+output alone — a cached read is a tenth
+    # of the price, so a purse charging it in full would call time too early
+    said = {"usage": {k: used.get(k) for k in ("input_tokens", "output_tokens")}
+                     | {k: used[k] for k in CACHED if used.get(k)},
             "model": raw.get("model") or asked,
             "stop_reason": raw.get("stop_reason")}
     if invalid:

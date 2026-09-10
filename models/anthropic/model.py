@@ -15,6 +15,7 @@ from core.llm import args_of
 from .mapping import IN, meta, notebook, tool, whole
 
 VERSION = "2023-06-01"
+EPHEMERAL = {"cache_control": {"type": "ephemeral"}}   # a breakpoint, marked
 
 # Every current Claude does all eight — pictures, PDFs, tools, thinking, the lot
 DOES = frozenset({"image", "document", "tools", "stream", "tool_stream",
@@ -25,6 +26,7 @@ class Anthropic(Provider):
     """Claude over HTTP. The key comes from you or from ANTHROPIC_API_KEY."""
 
     url, env = "https://api.anthropic.com", "ANTHROPIC_API_KEY"
+    cache: bool = True      # two breakpoints: tools+system, and the last turn
     # context and max output off the models overview; the words off the feature
     # pages — vision, PDF support, tool use, thinking, structured outputs
     PROFILES = {
@@ -39,7 +41,11 @@ class Anthropic(Provider):
         return {"x-api-key": self.key, "anthropic-version": VERSION}
 
     def encode(self, run: Run) -> dict:
-        """This run's notebook and the agent's toolbox, as one request body."""
+        """This run's notebook and the agent's toolbox, as one request body.
+
+        With cache on, two breakpoints: the system block, which tools sit in
+        front of in the prefix, and the last block of the turn just written.
+        """
         system, turns = notebook(run.messages)
         body: dict = {"model": self.model, "max_tokens": self.profile.max_output,
                       "messages": turns}
@@ -47,9 +53,12 @@ class Anthropic(Provider):
             body["stream"] = True
         body.update(self.params)        # yours last: max_tokens, stream, whatever
         if system:
-            body["system"] = system
+            body["system"] = ([{"type": "text", "text": system} | EPHEMERAL]
+                              if self.cache else system)
         if run.agent.tools:
             body["tools"] = [tool(t) for t in self.tool_schemas(run)]
+        if self.cache and turns and turns[-1]["content"]:
+            turns[-1]["content"][-1].update(EPHEMERAL)
         return body
 
     async def send(self, run: Run, body: dict):
