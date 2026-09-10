@@ -1,0 +1,149 @@
+---
+title: Tools from functions
+description: One decorator reads a plain function — its name, its docstring, its signature — and hands back a tool.
+icon: code
+---
+
+A tool is one thing the agent can do. The short way to write one is a plain
+function with `@tool` on it.
+
+```python
+from core import Agent, FakeModel, tool
+
+
+@tool
+def shout(word: str, times: int = 1) -> str:
+    """Shout a word."""
+    return (word.upper() + " ") * times
+
+
+agent = Agent(FakeModel(["done"]), [shout])
+```
+
+`shout` is now a tool — a `Tool` instance, the noun the
+[reference](/reference/tool) describes — and the line above handed it to an
+[agent](/reference/agent). Three things came off the function and nothing else
+did: the **name** is the function's name, the **description** is its docstring,
+and the **schema** is its signature.
+
+## The schema is the signature
+
+That is the whole of what the model is offered:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "word": {
+      "type": "string"
+    },
+    "times": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "word"
+  ]
+}
+```
+
+A parameter with no default is required; a parameter with one is not. Six hints
+have a JSON type, and anything else has none:
+
+| hint | JSON type |
+| --- | --- |
+| `str` | `string` |
+| `int` | `integer` |
+| `float` | `number` |
+| `bool` | `boolean` |
+| `list`, `list[str]` | `array` |
+| `dict`, `dict[str, int]` | `object` |
+| anything else, or no hint at all | no `type` — the model may send what it likes |
+
+Hints written as strings are read as hints, so a module that says
+`from __future__ import annotations` — where every annotation is a string —
+gets the same schema as one that does not.
+
+An `Annotated` note becomes the parameter's description, which is the one
+place to tell the model what an argument means:
+
+```python
+from typing import Annotated
+
+from core import tool
+
+
+@tool
+def shout(word: Annotated[str, "the word to shout"], times: int = 1) -> str:
+    """Shout a word."""
+    return (word.upper() + " ") * times
+```
+
+## Sync, async, or streaming
+
+`@tool` reads what kind of function you wrote and wires it accordingly.
+
+- A **sync** function runs in a thread (`asyncio.to_thread`), so a blocking
+  call does not stall the loop.
+- An **async** function is awaited.
+- An **async generator** streams: every `Part` it yields rings
+  [`tool.delta`](/hooks/stages) and folds into the tool message, the same
+  protocol a streaming model uses.
+
+```python
+from core import Part, tool
+
+
+@tool
+async def told(word: str):
+    """Shout one letter at a time."""
+    for letter in word:
+        yield Part("text", letter.upper())
+```
+
+Called with `hi`, that streams two parts and folds into one tool message
+reading `HI` — see [what a tool returns](/tools/results).
+
+## Asking for the run
+
+Spell the first parameter exactly `run` and the loop fills it in. The schema
+never sees that one, so neither does the model:
+
+```python
+from core import tool
+
+
+@tool
+def notebook(run) -> int:
+    """How many lines the notebook holds."""
+    return len(run.messages)
+```
+
+Only the *first* parameter answers to that name. A `run` in second place is an
+ordinary argument, hint, default and all.
+
+## One keyword, and no more
+
+<Note>
+  `@tool` takes `parallel=` and nothing else, on purpose. For a different name,
+  description or schema, write a [`Tool` subclass](/tools/classes) — that is
+  what the class is for.
+</Note>
+
+`@tool(parallel=True)` lets a tool run beside other parallel ones;
+the default is serial, which is a barrier. [Parallel tools](/tools/parallel)
+has the batching rules.
+
+A signature the schema cannot read is refused at decoration time, not mid-run.
+This one raises `ContractError` the moment the module is imported, and the
+message is `@tool cannot read *args/**kwargs on anything`:
+
+```python
+from core import tool
+
+
+@tool
+def anything(*args, **kwargs) -> str:
+    """An unreadable signature is no schema."""
+    return ""
+```

@@ -1,0 +1,137 @@
+---
+title: Parallel tools
+description: One keyword opts a tool into running beside its siblings; serial is the default, and a serial tool is a barrier.
+icon: git-fork
+---
+
+A model's turn can ask for many tools at once. Whether they actually run at
+once is one keyword on each tool, and nothing else:
+
+```python
+from core import Tool, tool
+
+
+@tool(parallel=True)                    # may run beside other parallel tools
+def read(path: str) -> str:
+    """Read a path."""
+    return path.upper()
+
+
+@tool                                   # serial, the default: a barrier
+def write(path: str, content: str) -> str:
+    """Write a path."""
+    return path
+
+
+class Search(Tool):
+    name = "search"
+    description = "Search the index."
+    parameters = {"type": "object", "properties": {}}
+    parallel = True                     # the class form
+
+    async def execute(self, run) -> str:
+        return "found"
+```
+
+Serial is the default, so nothing runs together until you opt a tool in.
+
+## How a turn is cut into batches
+
+The model asks for N calls, in order. The loop walks that list and cuts it:
+consecutive calls on `parallel=True` tools ride together, and **any other call
+rides alone**. That is the whole rule.
+
+```text
+the model's turn:  [read, read, write, read]
+
+  batch 1   read, read     parallel and consecutive — both at once
+  batch 2   write          serial: a barrier, so it rides by itself
+  batch 3   read           the barrier ended the run of reads; a new batch
+```
+
+A serial tool is a barrier in both directions: everything before it finishes
+first, it runs alone, then the next batch starts.
+
+The batches are cut from the names the model asked for, **before any
+`tool.pre` rings**. So a hook that reroutes a call to a differently-parallel
+tool does not re-batch it — the new tool runs in the slot the old name earned.
+
+## Inside one batch
+
+Three phases, in this order:
+
+<Steps>
+  <Step title="Every tool.pre rings, in call order">
+    A [`Permission`](/hooks/cards) card still asks one question at a time, and
+    a denial skips that one call — its siblings run as usual.
+  </Step>
+  <Step title="The calls run, at once">
+    One `asyncio.gather` over the batch. `tool.delta` from streaming siblings
+    interleaves, and each event names its own tool in `source`.
+  </Step>
+  <Step title="Every tool.post rings and lands, in call order">
+    The results are written into the notebook (`run.messages`) in the order the
+    model asked for them, whichever tool finished first. The transcript is the
+    same every time.
+  </Step>
+</Steps>
+
+## When something in a batch stops the run
+
+A `Stop` or a `ContractError` from any tool in a batch is raised once the
+**whole batch is done**, first in call order. Nothing is cancelled mid-write,
+so a half-written file is never left behind.
+
+The replies from calls before it in the order are already in the notebook; the
+ones behind it are dropped, though their tools ran to the end. Every other
+exception is not a signal at all — it becomes that call's result and the model
+reads it, so it never disturbs a sibling. [Stopping and
+denying](/hooks/stopping) has the two signals in full.
+
+<Warning>
+  Two ceilings. A slow sibling delays the `Stop` by its own runtime — the
+  signal waits for the batch. And there is no concurrency limit: a turn asking
+  for fifty parallel calls runs fifty at once. Add a semaphore in `act()` when
+  that hurts.
+</Warning>
+
+## Seeing it happen
+
+Two parallel tools that wait for each other only finish if they really did run
+together — a serial pair would deadlock:
+
+```python
+import asyncio
+
+from core import Agent, FakeModel, Message, ToolCall, tool
+
+met = {"left": asyncio.Event(), "right": asyncio.Event()}
+
+
+@tool(parallel=True)
+async def left() -> str:
+    """Wait for right."""
+    met["left"].set()
+    await asyncio.wait_for(met["right"].wait(), 1)
+    return "L"
+
+
+@tool(parallel=True)
+async def right() -> str:
+    """Wait for left."""
+    met["right"].set()
+    await asyncio.wait_for(met["left"].wait(), 1)
+    return "R"
+
+
+asked = Message("assistant", "", [ToolCall("c1", "left"), ToolCall("c2", "right")])
+agent = Agent(FakeModel([asked, "done"]), [left, right])
+run = asyncio.run(agent.run("go"))
+assert [m.text for m in run.messages if m.role == "tool"] == ["L", "R"]
+```
+
+<Tip>
+  Opt a tool in when two of it may safely overlap — reads, lookups, searches.
+  Leave it serial when order or exclusivity matters, and the barrier does the
+  rest for free.
+</Tip>

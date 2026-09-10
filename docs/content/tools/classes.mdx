@@ -1,0 +1,146 @@
+---
+title: Tools as classes
+description: Subclass Tool when the tool needs its own name, its own schema, or something to hold on to.
+icon: box
+---
+
+`@tool` reads a function and gives you no say in what it read. Subclass `Tool`
+and every part is yours: the name, the description, the schema the model sees,
+and whether the tool may run beside others.
+
+```python
+from core import Tool
+
+
+class Shout(Tool):
+    name = "shout"
+    description = "Shout a word."
+    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
+
+    async def execute(self, run, word) -> str:
+        return word.upper()
+```
+
+Hand the instance over — `Agent(model, [Shout()])` — not the class.
+
+## The four attributes and the one method
+
+| attribute | what it is |
+| --- | --- |
+| `name` | what the model asks for, and the key the [agent](/reference/agent) files it under. An empty one fails `check()` before the first turn |
+| `description` | the sentence the model reads when it decides whether to call you |
+| `parameters` | JSON Schema, sent as it is. Defaults to an object with no properties |
+| `parallel` | `True` lets this tool ride in a batch with other parallel tools; the default is a barrier — see [parallel tools](/tools/parallel) |
+
+Write `parameters` on your own subclass rather than mutating the base class
+default: that dict is shared by every tool that does not replace it.
+
+`execute` is the one method, and it is always async. Its real shape is
+`execute(self, run, **args)` — the run first, then the parameters your schema
+promised, by name, off the call. The base class types it loosely so an override
+may spell those parameters out, the way `Shout` spells `word`.
+
+Sync work is one line inside it, never a sync `execute`:
+
+```python
+import asyncio
+
+from core import Tool
+
+
+class Shout(Tool):
+    name = "shout"
+    description = "Shout a word."
+    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
+
+    async def execute(self, run, word) -> str:
+        return await asyncio.to_thread(str.upper, word)
+```
+
+A sync `execute` is refused when the agent is built, with that same `to_thread`
+line in the message — the loop cannot await it, so it never gets the chance to
+try.
+
+## A class holds something
+
+That is the reason to reach for one. The instance lives as long as the agent,
+so anything it keeps is there on the next call:
+
+```python
+from core import Tool
+
+
+class Counter(Tool):
+    name = "count"
+    description = "Count up, and say where the count got to."
+    parameters = {"type": "object", "properties": {}}
+
+    def __init__(self) -> None:
+        self.n = 0
+
+    async def execute(self, run) -> str:
+        self.n += 1
+        return str(self.n)
+```
+
+<Warning>
+  One instance is shared by every run of that agent. Per-conversation state
+  belongs in `run.extra`, not on the tool.
+</Warning>
+
+## Streaming
+
+Write `execute` as an async generator and the tool streams. Each yielded
+`Part` rings [`tool.delta`](/hooks/stages) and folds into the tool message,
+exactly as a streaming model's parts fold into its reply:
+
+```python
+from core import Part, Tool
+
+
+class Teller(Tool):
+    name = "tell"
+    description = "Tell a story, a piece at a time."
+    parameters = {"type": "object", "properties": {}}
+
+    async def execute(self, run):
+        yield Part("text", "once upon ")
+        yield Part("text", "a time")
+        yield Part("meta", {"lines": 2})
+```
+
+The folded message reads `once upon a time` and carries `{"lines": 2}` in its
+meta. A tool that raises halfway is answered for instead: the error is the
+whole result, and the parts it had already yielded are dropped — though they
+did reach anyone watching the bus. [What a tool
+returns](/tools/results) has the rules.
+
+## The toolbox is a mapping
+
+`agent.tools` is a mapping of name to tool. Hand the constructor an iterable
+and it keys one for you; hand it the mapping and it is used as it is.
+
+```python
+from core import Agent, FakeModel, Tool
+
+
+class Shout(Tool):
+    name = "shout"
+    description = "Shout a word."
+    parameters = {"type": "object", "properties": {"word": {"type": "string"}}}
+
+    async def execute(self, run, word) -> str:
+        return word.upper()
+
+
+shout = Shout()
+assert Agent(FakeModel([]), [shout]).tools == {"shout": shout}
+assert Agent(FakeModel([]), {"shout": shout}).tools == {"shout": shout}
+```
+
+One name, one tool: two tools answering to `shout` is a `ContractError` saying
+`two tools answer to 'shout'`, and a key that is not the tool's own name is
+`tool 'shout' is filed under 'yell'`. Both come from `check()`, which runs at
+construction *and* at the top of every step — so a tool filed into
+`agent.tools` mid-run under the wrong key is caught at the next step, like
+every other bad swap.
