@@ -1,95 +1,83 @@
 ---
 title: Introduction
-description: A minified agent core — the infrastructure to run an agent, in under 2000 readable lines of standard-library Python.
+description: Stellar is a small Python library that runs an AI agent. Under 2000 lines, easy to read, easy to change.
 ---
 
-stellar is an agent core with the agent left out. What it ships is the
-infrastructure: a loop that asks a model, runs whatever the model asked for,
-and asks again. All of `core/` is under 2000 lines together — `wc -l core/*.py`
-is the measurement, and a test fails the build when it stops being true — and
-it imports the standard library and itself, nothing else. The single exception
-is `httpx`, in `core/llm.py` alone, because a socket has to come from
-somewhere.
+An AI agent is a program that talks to a model (like Claude or GPT), lets
+the model use tools, and keeps going until the job is done. Stellar is the
+small engine that runs this loop for you.
 
-Small enough to read top to bottom in one sitting, strong enough for hard tasks
-when it is used well. Everything past the loop — providers, rule cards,
-transports — is a small file outside `core/` that you can read, copy and
-change.
-
-## The robot with one backpack
-
-An agent is a robot with one backpack. Inside: a brain (the model), a toolbox
-(the tools), a stack of rule cards (the hooks), a radio (the events) and one
-spare pocket (`extra`).
-
-One errand is one `Run`: its own notebook (`run.messages`), its own step count,
-its own id, its own spare pocket, and its own rule cards if it wants any. The
-robot reads the cards before and after it thinks, and before and after every
-tool it picks up. Everything that happens goes out over the radio. When the
-model stops asking for tools, the errand is done.
-
-```text
-run.pre
-  ┌ model.pre → the model answers, a model.delta per streamed Part → model.post
-  │   the answer goes in the notebook; for each tool it asked for:
-  │     tool.pre → the tool runs, a tool.delta per yielded Part → tool.post
-  │     → the result goes in the notebook
-  └ again, as long as the last answer asked for tools
-run.post
+```mermaid
+flowchart LR
+  You([You]) -->|"a question"| Agent
+  Agent -->|"the conversation so far"| Model
+  Model -->|"an answer, or 'use this tool'"| Agent
+  Agent -->|"runs it"| Tool
+  Tool -->|"the result"| Agent
+  Agent -->|"the final answer"| You
 ```
-
-Those eight names are the whole schedule. [The loop](/concepts/loop) walks them
-one moment at a time.
 
 ## What is in the box
 
+Think of the agent as a robot with a backpack. Inside the backpack:
+
+- **A brain.** The model. Claude, GPT, or one you write yourself.
+- **Hands.** Tools. Any Python function can be a tool.
+- **Rules.** Hooks. The robot checks them before and after each step.
+  "Never delete files." "Stop after 8 steps."
+- **A diary.** Events. Everything that happens is written down, as it
+  happens. You can watch it live.
+
+You build the robot once. Then you give it jobs. Each job is a `Run`. It has
+its own conversation, its own step count, and its own id.
+
+## Why people like it
+
+- **Small.** The whole core is under 2000 lines of plain Python. You can
+  read it in an afternoon.
+- **No magic.** It uses the Python standard library and one HTTP client.
+  That is all.
+- **Easy to change.** Swap the model, add a tool, attach a rule. You can do
+  it while the agent is running.
+- **Works with any model.** Claude and OpenAI come in the box. Others take a
+  few lines.
+
+## Try it in ten seconds
+
+This runs with no API key. `FakeModel` plays the part of the model and says
+what you tell it to say.
+
+```python run
+import asyncio
+
+from core import Agent, FakeModel
+
+agent = Agent(FakeModel(["Hello! I am your agent."]))
+run = asyncio.run(agent.run("Say hello"))
+print(run.messages[-1].text)
+```
+
+```text output
+Hello! I am your agent.
+```
+
+- `Agent(...)` builds the robot. It has a brain and nothing else.
+- `agent.run("Say hello")` gives it a job. The answer comes back in `run`.
+- `run.messages` is the whole conversation. The last message is the answer.
+
+## Where to go next
+
 <CardGroup cols={2}>
-  <Card title="Models" icon="brain" href="/models/overview">
-    A brain is any object with an async `invoke(run)`. Two providers ship;
-    wrapping the SDK you already have is one method.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first agent with a real model, in five steps.
+  </Card>
+  <Card title="Examples" icon="play" href="/examples/hello">
+    Twelve small programs you can copy, run, and change.
   </Card>
   <Card title="Tools" icon="wrench" href="/tools/functions">
-    A decorated function is a tool: its name is the name, its docstring is the
-    description, its signature is the schema.
+    Turn a Python function into something the model can call.
   </Card>
   <Card title="Hooks" icon="shield" href="/hooks/overview">
-    The control plane. An async function tagged with a stage fires inline, and
-    what it returns replaces the payload.
-  </Card>
-  <Card title="Events" icon="radio" href="/events/overview">
-    The data plane. Everything that happens is numbered, stamped with its run,
-    and streamable — a listener can only watch.
-  </Card>
-  <Card title="Patterns" icon="workflow" href="/patterns/sub-agents">
-    A sub-agent is not a feature: it is a tool that runs a child agent and
-    hands back what it said.
-  </Card>
-  <Card title="Reference" icon="book-open" href="/reference/agent">
-    Every field, every signature, every default — the pages you keep open while
-    you write.
+    Add rules. Stop early, block a tool, trim the conversation.
   </Card>
 </CardGroup>
-
-## Small on purpose
-
-The shape is the feature. Everything here is one of a short list of things:
-
-- **[Twelve nouns](/concepts/nouns)** — `Part`, `ToolCall`, `Message`, `Model`,
-  `Tool`, `Hooks`, `Event`, `Events`, `Agent`, `Run`, `ContractError`, `Stop`.
-  Nothing else in `core/` gets to be one.
-- **[One method](/reference/agent)** — `Agent.run()`. There is never a second.
-- **[Three contracts](/concepts/contracts)** — a Model, a Tool, a hook. Two are
-  classes, one is a function; all three are async, and all three take the run.
-- **[Two control signals](/concepts/control)** — `raise Stop`, and a `tool.pre`
-  hook that returns a result. No third one, no boolean to return.
-- **[Eight stages](/concepts/loop)** — the loop's moments. A hook name and an
-  event name are one word, so the thing you listen for is the thing you can
-  change.
-
-Nothing is composed by configuration. Any part is swapped by assignment, even
-mid-run: the wiring is read again at the top of every step, so a bad swap is
-caught before it runs.
-
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  One agent, one tool, one run — from clone to an answer, in a page.
-</Card>

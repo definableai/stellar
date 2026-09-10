@@ -1,18 +1,23 @@
 """The docs' own test: the table and the pages agree, links land, python parses.
 
-    python3 docs/check.py
+    python3 docs/check.py          # the table, the links, the icons, every fence parses
+    python3 docs/check.py --run    # ...and every ```python run fence runs, printing its output fence
 
 Every page docs.json lists has a file under content/; every file is listed,
 unless its frontmatter says `hidden: true`; every page has a title and a
 description; every absolute link points at a page; every icon name is one
 misc.tsx can draw; every ```python fence compiles (top-level await allowed;
-add `nocheck` to a fence to skip it).
+add `nocheck` to a fence to skip it). With --run, every ```python run fence
+is run as a script from the repo root with no key in the environment, and
+what it prints must equal the ```text output fence that follows it.
 One line per problem and exit 1, else one line and exit 0.
 """
 
 import ast
 import json
+import os
 import re
+import subprocess
 import sys
 import textwrap
 from pathlib import Path
@@ -105,15 +110,54 @@ def problems():
     yield from ()
 
 
+def runs(files):
+    """Run every ```python run fence; check its stdout against the ```text output fence after it."""
+    keys = {k: v for k, v in os.environ.items() if not k.endswith("_API_KEY")}   # no key: FakeModel only
+    for path in files.values():
+        rel, text = path.relative_to(HERE), path.read_text()
+        fences = list(FENCE.finditer(text))
+        for i, m in enumerate(fences):
+            lang, meta, code = m.groups()
+            if lang != "python" or "run" not in meta.split():
+                continue
+            line = text.count("\n", 0, m.start()) + 1
+            try:
+                done = subprocess.run(["uv", "run", "python", "-"], input=textwrap.dedent(code), text=True,
+                                      capture_output=True, timeout=120, cwd=HERE.parent,
+                                      env={**keys, "PYTHONPATH": str(HERE.parent)})
+            except subprocess.TimeoutExpired:
+                yield f"{rel}:{line}: python fence ran for over two minutes", False
+                continue
+            if done.returncode:
+                yield f"{rel}:{line}: python fence failed:\n{done.stderr.strip()[-800:]}", False
+                continue
+            after = fences[i + 1] if i + 1 < len(fences) else None
+            if after and after.group(1) == "text" and "output" in after.group(2).split():
+                want = textwrap.dedent(after.group(3)).strip()
+                if done.stdout.strip() != want:
+                    yield (f"{rel}:{line}: python fence printed this, not its output fence:\n"
+                           f"{done.stdout.strip()[-800:]}"), False
+                    continue
+            yield None, True
+
+
 def main() -> int:
     found = list(problems())
+    ran = 0
+    if "--run" in sys.argv[1:]:
+        files = {p.relative_to(CONTENT).with_suffix("").as_posix(): p for p in sorted(CONTENT.rglob("*.mdx"))}
+        for problem, ok in runs(files):
+            ran += ok
+            if problem:
+                found.append(problem)
     for line in found:
         print(line)
     if found:
         print(f"{len(found)} problem(s)")
         return 1
     count = sum(1 for _ in CONTENT.rglob("*.mdx")) if CONTENT.is_dir() else 0
-    print(f"ok: {count} pages, every link lands, every python fence parses")
+    tail = f", {ran} examples ran and printed what they say" if "--run" in sys.argv[1:] else ""
+    print(f"ok: {count} pages, every link lands, every python fence parses{tail}")
     return 0
 
 

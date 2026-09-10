@@ -3,13 +3,14 @@
  * Grammar (Mintlify's spellings), words in any order:
  * `title="main.py"` the header title, quoted so it may hold spaces; `{1,3-5}`
  * highlighted rows, read by rehype-pretty-code, not here; `lines` `wrap`
- * `expandable` `nocopy` the flags; whatever is left over is the title too,
+ * `expandable` `nocopy` `run` `output` the flags; whatever is left over is the title too,
  * which is how ```python main.py names a block.
  */
 
-export type Meta = { title: string; lines: boolean; wrap: boolean; expandable: boolean; nocopy: boolean };
+export type Meta = { title: string; lines: boolean; wrap: boolean; expandable: boolean; nocopy: boolean; run: boolean };
 
-const FLAGS = ["lines", "wrap", "expandable", "nocopy"];
+// `run`: check.py --run executes the fence; `output`: the text fence check.py compares it with.
+const FLAGS = ["lines", "wrap", "expandable", "nocopy", "run", "output"];
 
 export function parseMeta(meta = ""): Meta {
   const words: string[] = meta.match(/title="[^"]*"|\S+/g) ?? [];
@@ -21,6 +22,7 @@ export function parseMeta(meta = ""): Meta {
     wrap: words.includes("wrap"),
     expandable: words.includes("expandable"),
     nocopy: words.includes("nocopy"),
+    run: words.includes("run"),
   };
 }
 

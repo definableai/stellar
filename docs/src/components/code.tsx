@@ -17,10 +17,13 @@ export function CodeBlock(props: PreProps) {
   const copy = meta.nocopy ? null : <CopyButton frame={frame} />;
   return (
     <div ref={frame} className={FRAME}>
-      {meta.title ? (
+      {meta.title || meta.run ? (
         <div className={HEADER}>
           <span className={`truncate ${TITLE} text-gray-500 dark:text-gray-400`}>{meta.title}</span>
-          <span className="ml-auto">{copy}</span>
+          <span className="ml-auto flex items-center gap-3">
+            {meta.run && <Tested />}
+            {copy}
+          </span>
         </div>
       ) : (
         // No header: the button floats over the code, on hover.
@@ -105,6 +108,14 @@ function Body({ meta, className, ...rest }: PreProps & { meta: Meta }) {
     </div>
   );
 }
+
+/** check.py --run executed this fence and it printed what the page says. */
+const Tested = () => (
+  <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400" title="check.py --run ran this example">
+    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+    Tested
+  </span>
+);
 
 /** The line numbers are drawn by CSS, so textContent is the code and nothing else. */
 function CopyButton({ frame }: { frame: RefObject<HTMLDivElement | null> }) {

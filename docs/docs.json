@@ -41,10 +41,14 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["introduction", "quickstart", "layout"]
+            "pages": [
+              "introduction",
+              "quickstart",
+              "layout"
+            ]
           },
           {
-            "group": "Concepts",
+            "group": "How it works",
             "pages": [
               "concepts/loop",
               "concepts/nouns",
@@ -68,19 +72,69 @@
           },
           {
             "group": "Tools",
-            "pages": ["tools/functions", "tools/classes", "tools/parallel", "tools/results"]
+            "pages": [
+              "tools/functions",
+              "tools/classes",
+              "tools/parallel",
+              "tools/results"
+            ]
           },
           {
             "group": "Hooks",
-            "pages": ["hooks/overview", "hooks/stages", "hooks/stopping", "hooks/cards"]
+            "pages": [
+              "hooks/overview",
+              "hooks/stages",
+              "hooks/stopping",
+              "hooks/cards"
+            ]
           },
           {
             "group": "Events",
-            "pages": ["events/overview", "events/streaming", "events/transport"]
+            "pages": [
+              "events/overview",
+              "events/streaming",
+              "events/transport"
+            ]
           },
           {
-            "group": "Patterns",
-            "pages": ["patterns/sub-agents", "patterns/checkpoint", "patterns/concurrency"]
+            "group": "Recipes",
+            "pages": [
+              "patterns/sub-agents",
+              "patterns/checkpoint",
+              "patterns/concurrency"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "Start here",
+            "pages": [
+              "examples/hello",
+              "examples/tool",
+              "examples/watch",
+              "examples/stop"
+            ]
+          },
+          {
+            "group": "Take control",
+            "pages": [
+              "examples/permission",
+              "examples/stream",
+              "examples/parallel",
+              "examples/fallback"
+            ]
+          },
+          {
+            "group": "Bigger ideas",
+            "pages": [
+              "examples/save",
+              "examples/helper",
+              "examples/web",
+              "examples/real-model"
+            ]
           }
         ]
       },
@@ -101,8 +155,11 @@
             ]
           },
           {
-            "group": "Beyond core",
-            "pages": ["reference/cards", "reference/drivers"]
+            "group": "Extras",
+            "pages": [
+              "reference/cards",
+              "reference/drivers"
+            ]
           }
         ]
       }
