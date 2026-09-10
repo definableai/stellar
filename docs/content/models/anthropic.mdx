@@ -1,115 +1,53 @@
 ---
 title: Anthropic
-description: The Messages API — system lines outside the turns, tool results with blocks inside.
+description: Claude over HTTP. Four models in the box, and what is different about this API.
 ---
 
-`models/anthropic/` is the Messages API in two files. Name the model, and the
-key comes from you or from the environment:
+`models/anthropic/` talks to Claude. Name a model, and the key comes from you
+or from `ANTHROPIC_API_KEY`.
+
+This example needs a real key, so the docs test does not run it.
 
 ```python
+import asyncio
+
 from core import Agent
 from models.anthropic import Anthropic
 
-agent = Agent(Anthropic("claude-sonnet-5"))     # ANTHROPIC_API_KEY in the env
-run = await agent.run("shout hello")
+# ANTHROPIC_API_KEY in the environment, or api_key="sk-ant-..." here
+agent = Agent(Anthropic("claude-sonnet-5", temperature=0))
+run = asyncio.run(agent.run("shout hello"))
+print(run.messages[-1].text)
 ```
 
-`api_key=` beats `ANTHROPIC_API_KEY`; without either, the constructor raises
-`ValueError` naming the variable. Any extra keyword is kept and spent on the
-request body, yours winning over the adapter's own keys:
+Any extra keyword, like `temperature` or `max_tokens`, goes on the request. It
+beats the default this provider would have used.
 
-```python
-from models.anthropic import Anthropic
+## The models in the box
 
-Anthropic("claude-sonnet-5", api_key="sk-ant-x",
-          max_tokens=1024, stop_sequences=["END"], temperature=0)
-```
-
-Two headers go out with every request — the key, and the wire version this
-adapter was written against:
-
-```python
-VERSION = "2023-06-01"
-
-
-def headers(self) -> dict:
-    """The key, and the wire version this file was written against."""
-    return {"x-api-key": self.key, "anthropic-version": VERSION}
-```
-
-## The shipped rows
-
-Context and max output come off the models overview; the words come off the
-feature pages — vision, PDF support, tool use, thinking, structured outputs.
-
-| id | context | max output | words |
+| id | input size | output size | words |
 | --- | --- | --- | --- |
 | `claude-fable-5-1` | 1,000,000 | 128,000 | all eight |
 | `claude-opus-5` | 1,000,000 | 128,000 | all eight |
 | `claude-sonnet-5` | 1,000,000 | 128,000 | all eight |
 | `claude-haiku-4-5` | 200,000 | 64,000 | all eight |
 
-All four share one frozen set, because every current Claude does the lot:
-`image`, `document`, `tools`, `stream`, `tool_stream`, `thinking`, `json`,
-`system`. An id outside the table takes the longest row it starts with, so a
-dated id lands on its family — see [profiles](/models/profiles).
+Every current Claude does everything, so all four share one list. An id
+outside the table takes the longest row it starts with. See
+[what a model can do](/models/profiles).
 
-## What crosses the wire
+## What is different about this API
 
-**System lines ride outside the turns.** Every system
-[`Message`](/reference/types) in the notebook is pulled out, joined with a
-blank line between, and sent as the body's `system` field. The turns that
-remain are user and assistant only.
+- **System messages travel on their own.** Every system
+  [`Message`](/reference/types) is lifted out of the conversation and sent in
+  its own field. What is left is the user and assistant turns.
+- **A tool result can carry pictures.** Tool messages in a row merge into one
+  user turn, each keeping its own id. A picture a tool returned rides inside
+  the result it belongs to. See [what a tool may return](/tools/results).
+- **Thinking blocks pass through both ways.** A block stellar does not know is
+  kept whole, and goes back next turn exactly as it arrived.
+- **The reply arrives live.** Text comes out a piece at a time. Every other
+  block is held until it is finished, so a thinking block lands whole. Tool
+  arguments ride the [event log](/events/streaming) as they arrive.
 
-**A tool result is a block in a user turn.** Consecutive tool messages merge
-into one user turn, each as its own `tool_result` block keyed by
-`tool_use_id`. Nothing is lost when two tools were asked for at once.
-
-**A tool result that is more than text keeps its blocks.** When every part of
-the tool message is text, the `tool_result` carries that text as a string;
-otherwise it carries every block the message holds — a picture a tool returned
-travels inside the result it belongs to.
-
-```python
-from core import Message, Part
-
-Message("tool", [Part("text", "here"),
-                 Part("image", {"media_type": "image/png", "data": "aGk="})],
-        tool_call_id="t1")
-```
-
-That message becomes one `tool_result` whose `content` is a two-block list: the
-text, then the image. See [tool results](/tools/results) for what a tool may
-return.
-
-**Images** go as a `source`: `{"type": "url", …}` when the Part carries a
-`url`, `{"type": "base64", "media_type": …, "data": …}` when it carries bytes.
-
-**Thinking blocks pass through both ways.** A block this adapter has no in-row
-for is kept whole as `Part(block["type"], block)`, and the out-row that sends
-it back is `passthrough` — `{"type": p.type, **p.data}` — so a thinking block
-with its signature replays next turn exactly as it arrived. Nothing is
-reinterpreted on the way out.
-
-<Note>
-That round trip is why new provider features need no new methods here. A block
-core never opened is a Part core never opened, and it goes back as it came.
-</Note>
-
-## Off the stream
-
-With `stream` in the profile — every shipped row has it — `encode` asks for the
-event stream and `send` assembles the same message a POST would have returned.
-
-Text yields as it arrives, one Part per `text_delta`. Every other block is held
-open at its index until `content_block_stop`, so a thinking block lands whole
-rather than in pieces. A tool call's `partial_json` grows on its own block and
-is parsed once, at the stop, which is why a `tool_call` Part is always a whole
-[`ToolCall`](/reference/types); arguments that will not parse land in
-`meta["invalid_args"]` instead of raising.
-
-While that JSON is arriving, the fragments ride the bus as `tool.args`
-[events](/events/streaming) with source `model:claude-sonnet-5`. One `meta`
-Part goes last, on either path, carrying `usage`, `model` and `stop_reason` —
-usage merged from both ends of the stream. An `error` event mid-stream raises
-`ProviderError` with no status, so half a reply never folds into a whole one.
+One last piece carries the cost, the name of who answered, and why it stopped.

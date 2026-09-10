@@ -1,108 +1,82 @@
 ---
-title: Profiles and the gate
-description: One row off the provider's docs, and the refusal it buys before any byte.
+title: What a model can do
+description: A short list per model, checked before anything leaves your computer.
 ---
 
-A `Profile` is one row off the provider's own documentation: what a single
-model id can do. Every [`Provider`](/models/folder) instance carries exactly
-one, chosen by the id you named.
+A `Profile` is one short list per model. It says how big the input may be, and
+how much the model may write back. It also says which kinds of thing the model
+can read.
 
-```python
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class Profile:
-    id: str
-    context: int                        # input window, tokens
-    max_output: int                     # default max output tokens
-    features: frozenset[str] = frozenset()
-
-    def __contains__(self, feature: str) -> bool:
-        """True when this model has that word."""
-        return feature in self.features
+```mermaid
+flowchart LR
+  Yours["your message"] --> Check["the profile check"]
+  Check -->|"yes"| Sent[sent]
+  Check -->|"no"| Refused["refused, no network call"]
 ```
 
-`"image" in model.profile` is the whole API. It is a router's question, and it
-is the one question the gate asks of everything you put in the notebook.
+Every [provider](/models/folder) you build carries exactly one profile, picked
+by the model id you named. You ask a profile one question, and it looks like
+`"image" in model.profile`.
 
 ## The eight words
 
 | word | what it means |
 | --- | --- |
-| `image` | a `Part("image", …)` may ride in what you send |
-| `document` | a `Part("document", …)` may ride |
-| `thinking` | a `Part("thinking", …)` may ride |
-| `tools` | the toolbox may go on the wire |
-| `stream` | ask for the event stream; without it, one POST |
-| `tool_stream` | put argument fragments on the bus as `tool.args` events |
-| `json` | structured outputs |
-| `system` | system messages |
+| `image` | you may send a picture |
+| `document` | you may send a PDF |
+| `thinking` | you may send a thinking part back |
+| `tools` | your toolbox may go along with the request |
+| `stream` | ask for the live stream instead of one plain reply |
+| `tool_stream` | put tool arguments on the [event log](/events/streaming) as they arrive |
+| `json` | the model can be asked for structured output |
+| `system` | the model reads system messages |
 
-The first three are Part types. `tools`, `stream` and `tool_stream` are read by
-the shipped adapters. `json` and `system` are read by nobody in this
-repository — they are there for a router of yours to ask about, and for an
-adapter that grows a use for them.
+The first three name a kind of part. The next three are read by the two
+providers in the box. Nothing here reads `json` or `system` yet. They are
+there for a model picker of your own to ask about.
 
-## One rule
+## The one rule
 
-**A feature named after a Part type admits that Part in what you send** — user,
-system and tool messages. That is the entire grading rule.
+A word that names a kind of part means you may send that part. Only what you
+wrote is checked, because the model's own past replies go back to it as they
+came.
 
-The model's own output is never graded: an assistant turn is its past, not your
-request, and replays as its wire allows. Three types are never graded either,
-because core folds them itself: `text`, `tool_call` and `meta`.
+## Try it
 
-`accept()` runs inside `invoke`, before `encode` and before any byte leaves the
-process. It raises `Unsupported` — a `ValueError` — naming the part and listing
-what this row does read. A toolbox on a model without `tools` gets the same
-treatment.
+This profile has no `image` word, so the picture never leaves your computer.
 
-```python
+```python run
+import asyncio
+
 from core import Agent, Message, Part, Profile, Unsupported
 from models.openai import OpenAI
 
-WORDS = Profile("gpt-5.6-luna", 1_050_000, 128_000, frozenset({"system", "tools"}))
-agent = Agent(OpenAI("gpt-5.6-luna", api_key="sk-x", profile=WORDS))
+TEXT_ONLY = Profile("gpt-5.6-luna", 1_050_000, 128_000, frozenset({"system", "tools"}))
+agent = Agent(OpenAI("gpt-5.6-luna", api_key="not-used", profile=TEXT_ONLY))
 
+picture = Message("user", [Part("image", {"url": "https://example.com/cat.png"})])
 try:
-    await agent.run(Message("user", [Part("image", {"url": "https://x/cat.png"})]))
-except Unsupported as ex:
-    print(ex)    # gpt-5.6-luna reads no 'image' part; it reads system, tools
+    asyncio.run(agent.run(picture))
+except Unsupported as no:
+    print(no)
 ```
 
-A picture nobody can read never costs a round trip — and under a
-[`Fallback`](/models/fallback) that free refusal is what moves the run to the
-next model.
+```text output
+gpt-5.6-luna reads no 'image' part; it reads system, tools
+```
 
-## What the adapters do with the words
+- The check runs first, so nothing was sent and nothing was paid for.
+- `Unsupported` is a `ValueError`. It names the part and lists what does work.
+- Under a [fallback](/models/fallback), that free no moves you to the next
+  model.
 
-`stream` picks the path. With it, `encode` asks for the event stream and `send`
-yields a text Part per chunk; without it, one POST and the same parse. That is
-why a proxy that cannot hold a stream open only needs a row without the word.
+## Good to know
 
-`tool_stream` puts the argument fragments on the radio as `tool.args`
-[events](/events/streaming) — `{"id", "name", "delta"}`, source `model:<id>`.
-An event and not a Part, deliberately: a Part would land in the message.
-
-`max_output` is the max-tokens the body carries, unless a param of yours says
-otherwise. `Anthropic` writes it as `max_tokens`, `OpenAI` as
-`max_completion_tokens`; in both, a keyword you passed to the constructor wins.
-
-## An id with no row
-
-`lookup` takes the longest row the id starts with, so a dated id finds its
-family: `gpt-5.6-luna-2026-08-01` resolves to the `gpt-5.6-luna` row. When
-nothing matches, the id gets the `ANY` profile — 128,000 context, 4,096 max
-output, all eight words — under its own name, and a warning on the
-`core.llm` logger. Never an error: an unknown id runs, loudly.
-
-Pass `profile=` to overrule all of that for one instance, or set your own
-`PROFILES` on a subclass to overrule it for a whole vendor.
-
-<Warning>
-The numbers in the shipped rows come from the providers' own docs. A row nobody
-could verify is absent, not invented — that is why the gate falls back to `ANY`
-and a warning instead of guessing, and why adding a model you use is a
-one-line pull request against `PROFILES`.
-</Warning>
+- Three kinds are never checked, because stellar handles them itself. They are
+  `text`, `tool_call` and `meta`.
+- A toolbox on a model with no `tools` word is refused the same way.
+- An id you did not list takes the longest one it starts with, so
+  `gpt-5.6-luna-2026-08-01` finds the `gpt-5.6-luna` row.
+- An id that matches nothing gets a generous default and a warning in the log.
+  It still runs.
+- `profile=` overrules all of it for one model.

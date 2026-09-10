@@ -1,83 +1,56 @@
 ---
-title: A provider is a folder
-description: mapping.py is the table of what crosses the wire; model.py is the rest.
+title: Inside a provider
+description: Two files. mapping.py says what crosses the network, model.py does the rest.
 ---
 
-`core/llm.py` holds the half every HTTP provider shares — the key, the profile,
-one client, the retries, an SSE parser — as the class `Provider`. A real
-adapter writes the other half in two files, and an `__init__.py` that
-re-exports them.
+Stellar ships the half that every HTTP provider shares, as the class
+`Provider`. A real provider adds two small files of its own.
 
-`mapping.py` is the table: what crosses the wire, one row per thing that
-crosses. `model.py` is the rest — `PROFILES`, `headers`, `encode` (the body's
-own keys) and `send` (the stream's grammar).
+`mapping.py` is the table. It has one row for each kind of thing that goes out
+or comes back. Text, pictures, tool calls, one whole message, a tool
+description, and the reply's header.
 
-## What the base hands you
+`model.py` is the rest. It holds the list of models, the headers, `encode` and
+`send`.
+
+## What the base class gives you
 
 ```python
 from models.openai import OpenAI
 
-model = OpenAI("gpt-5.6-luna", api_key="sk-…", temperature=0)
+model = OpenAI("gpt-5.6-luna", api_key="sk-...", temperature=0)
 ```
 
-The model id is positional and required — one id per instance, no silent
-default. `api_key=` beats the environment variable named by `env`; a missing
-key raises `ValueError` saying which variable to set, and `env = None` is a
-model that wants no key at all. `base_url=` points the same class at a clone.
-Every other keyword is kept in `self.params` for `encode` to spend.
+The model id comes first and is required. `api_key=` beats the environment
+variable, and a missing key raises `ValueError` naming the variable to set.
+`base_url=` points the same class at a look-alike. Every other keyword is kept
+for `encode` to use.
 
-| what | it is |
+| what | it gives you |
 | --- | --- |
-| `self.key` | the key, from `api_key=` or the environment |
-| `self.profile` | the [row](/models/profiles) for this model id |
-| `self.params` | the extra keywords this instance was built with |
-| `self.tool_schemas(run)` | the toolbox as plain dicts: `name`, `description`, `parameters` |
+| `self.key` | the key, from `api_key=` or from the environment |
+| `self.profile` | the [short list](/models/profiles) for this model id |
+| `self.params` | the extra keywords this model was built with |
+| `self.tool_schemas(run)` | every tool as a plain dict of name, description and parameters |
 | `await self.post(path, body)` | one reply, parsed, as a dict |
-| `self.sse(path, body)` | the event stream, one dict per `data:` line |
-| `self.http` | the `httpx` client — one per instance, rebuilt per event loop |
-| `await self.aclose()` | close that client; nothing else holds a socket |
-| `self.headers()` | yours to write: what every request carries |
+| `self.sse(path, body)` | the live stream, one dict per data line |
+| `self.http` | the HTTP client, one per model, opened when first used |
+| `await self.aclose()` | close that client, which is the only thing holding a socket |
+| `self.headers()` | yours to write, and what every request carries |
 
-## Three tries, and where they stop
+## It retries
 
-`post` and `sse` retry the same way: three attempts, on a dead socket or on a
-status in `{408, 409, 429, 500, 502, 503, 504, 529}`. Anything else — a 400, a
-401 — is yours to fix, not to repeat, and raises `ProviderError` with its
-`.status` on the first try. A socket that never opened after three tries and a
-`data:` line that is not JSON raise the same exception with `status None`; so
-does an `error` event mid-stream, which is the adapter's own line to write.
+`post` and `sse` both try three times. They try again on a dead socket, and on
+these statuses: 408, 409, 429, 500, 502, 503, 504, 529. Anything else raises
+`ProviderError` on the first try. A 400 or a 401 will not go away if you ask
+again.
 
-How long it waits is one function, and the header wins:
+A stream stops retrying once the first piece is out. There is no way to ask
+again without repeating words the reader already saw.
 
-```python
-def wait(answer: httpx.Response, attempt: int) -> float:
-    """How long to hold off: what retry-after says, else the attempt number."""
-    try:
-        return float(answer.headers.get("retry-after", ""))
-    except ValueError:                  # absent, or a date — our own guess wins
-        return float(attempt)
-```
+## One row from the table
 
-<Warning>
-`sse` stops retrying once a chunk is out. There is no asking again without
-replaying what the caller already heard, so a stream that dies mid-flight
-raises rather than starting over.
-</Warning>
-
-## mapping.py is the table
-
-Four kinds of thing cross the wire, and each gets a row.
-
-| core noun | the wire's word | the row |
-| --- | --- | --- |
-| `Part` | a block, a content part | many per message, keyed by type: `OUT`, and `IN` where the reply has blocks |
-| `Message` | a turn | one per message: `turn()` — and on Claude a `notebook()` over the lot, because system lines ride outside the turns |
-| `Tool` | a tool schema | one per tool: `tool()` |
-| `Message.meta` | the reply's header | one per reply: `meta()` — what it cost, who answered, why it stopped |
-
-Rows are named for what they make. An out-row makes a wire thing — `text`,
-`image`, `tool_use`, `function`; an in-row makes a core one, `tool_call` or
-`meta`. Here is a real pair, from `models/anthropic/mapping.py`:
+Here is the picture row, from `models/anthropic/mapping.py`.
 
 ```python
 def image(p: Part) -> dict:
@@ -90,36 +63,9 @@ def image(p: Part) -> dict:
 OUT = {"text": text, "image": image}        # Part.type -> block; else passthrough
 ```
 
-There is no dispatcher to write. A call site reads `OUT.get(p.type,
-passthrough)(p)`, and the else-rule is that `.get` default, under a name of its
-own. The two shipped wires disagree about what it should be, on purpose:
+It turns one `Part` into the block Claude expects. `OUT` is looked up by the
+part's type. A type that is missing falls to `passthrough`, which sends the
+part back exactly as it came.
 
-- Claude's is `passthrough` — `{"type": p.type, **p.data}` — so a block core
-  never opened goes back exactly as it came.
-- Chat Completions' is `unsaid`, which raises `ContractError`, because a
-  profile word promised that part and this wire has no shape for it.
-
-## model.py is the rest
-
-```python
-# models/openai/model.py — mapping.py sits beside it, __init__.py re-exports
-from core import Profile, Provider
-
-from .mapping import meta, tool, tool_call, turn
-
-CHAT = frozenset({"image", "tools", "stream", "tool_stream", "json", "system"})
-
-
-class OpenAI(Provider):
-    url, env = "https://api.openai.com/v1", "OPENAI_API_KEY"
-    PROFILES = {"gpt-5.6-luna": Profile("gpt-5.6-luna", 1_050_000, 128_000, CHAT)}
-
-    def headers(self) -> dict: ...        # the key rides in here
-    def encode(self, run) -> dict: ...    # pure, and it reads self.profile
-    async def send(self, run, body): ...  # Parts, off self.sse() or self.post()
-```
-
-That is the whole shape. The two shipped folders,
-[`models/anthropic/`](/models/anthropic) and
-[`models/openai/`](/models/openai), are a little over two hundred lines each,
-and are the reference for the next one.
+The two providers in the box, [Anthropic](/models/anthropic) and
+[OpenAI](/models/openai), are about two hundred lines each. Copy one.

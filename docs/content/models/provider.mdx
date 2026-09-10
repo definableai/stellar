@@ -1,107 +1,93 @@
 ---
-title: The provider model
-description: encode builds the body, send yields Parts, and core folds them into one Message.
+title: Write your own provider
+description: encode builds the request, send hands the reply back in pieces, and stellar joins them.
 ---
 
-`ProviderModel` splits an adapter along the only seam that matters: the half
-that is pure translation, and the half that touches the network.
+`ProviderModel` cuts a model in half. One half builds the request and touches
+nothing. The other half makes the network call.
 
-```python
-from core import Part, ProviderModel
+```mermaid
+flowchart LR
+  Run[Run] --> Encode[encode]
+  Encode -->|"the request"| Send[send]
+  Send -->|"in pieces"| Parts[Parts]
+  Parts -->|"joined"| Answer["one Message"]
+```
+
+## What each half does
+
+`encode(run)` reads `run.messages` and `run.agent.tools` and returns the
+request body. It sends nothing. That is why a test can check it with no
+network at all.
+
+`send(run, body)` is handed exactly what `encode` built, and never builds it
+again. Everything that can go wrong on a network belongs in here.
+
+You do not write `invoke`. Stellar calls both methods, runs the
+[hooks](/hooks/stages) on every piece, and joins the pieces into one assistant
+[`Message`](/reference/types).
+
+## What a piece may be
+
+`send` yields `Part` objects. Five rules cover every one of them.
+
+- **`Part("text", "...")` is a piece of the answer.** Text pieces in a row are
+  glued together.
+- **`Part("tool_call", ToolCall(...))` arrives whole.** Buffer the arguments
+  yourself. Stellar never sees half of one.
+- **`Part("meta", {...})` merges into `message.meta`.** Send one at the end,
+  not several halves.
+- **Arguments that are not valid JSON do not raise.** They become an empty
+  call plus `meta["invalid_args"]`. The tool result tells the model what it
+  typed, so it can fix it.
+- **Any other type is kept as it is.** Thinking blocks and vendor extras ride
+  through untouched.
+
+Three things are always written the same way, so providers agree with each
+other. A picture is always `Part("image", ...)`. `meta["usage"]` holds
+`input_tokens` and `output_tokens`, which the [budget hook](/hooks/cards)
+reads.
+
+`meta["model"]` names who answered. That is how you tell who won a
+[fallback](/models/fallback).
+
+## Try it
+
+This provider hands back three pieces. The listener counts them as they
+arrive.
+
+```python run
+import asyncio
+
+from core import Agent, Part, ProviderModel
 
 
-class MyProvider(ProviderModel):
-    def encode(self, run) -> dict:
-        """The request body, built from the run. Pure."""
-        return {"lines": [m.text for m in run.messages]}
+class Slowly(ProviderModel):
+    def encode(self, run):
+        return None
 
     async def send(self, run, body):
-        """Yield the reply as Parts. An async generator; the network is here."""
-        yield Part("text", "hello")
+        for piece in ("A ", "small ", "answer."):
+            yield Part("text", piece)
+
+
+agent = Agent(Slowly())
+pieces = []
+agent.events.listen(lambda event: pieces.append(event.data), "model.delta")
+
+run = asyncio.run(agent.run("say something"))
+print(run.messages[-1].text)
+print(len(pieces), "pieces")
 ```
 
-`encode(run)` reads `run.messages` and `run.agent.tools` and returns whatever
-your wire wants — usually a dict. It never sends anything, which is why it can
-be asserted against directly in a test with no socket in sight.
-
-`send(run, body)` is handed exactly what `encode` built and never rebuilds it.
-Everything that can go wrong on a network lives in here.
-
-`invoke` is core's, and you do not write it. For each Part `send` yields it
-rings the `model.delta` hooks, folds the Part into the growing assistant
-[`Message`](/reference/types), and says it on the bus:
-
-```python
-async def invoke(self, run) -> Message:                # core/contracts.py, trimmed
-    answer = Message("assistant")
-    async for part in self.send(run, self.encode(run)):
-        [part] = await run.hooks.fire("model.delta", run, part)   # then fold
-        fold(answer, part)
-        run.emit("model.delta", part, source="loop")
-    return answer
+```text output
+A small answer.
+3 pieces
 ```
 
-A [hook](/hooks/stages) that returns a new Part therefore changes what folds
-*and* what the bus carries. A `send` that yields anything but a `Part` raises
-`ContractError` naming the type it got.
+- The answer is one message, even though it came in three pieces.
+- Each piece went out as a `model.delta` event too, in order.
+- A new vendor feature is a new piece type, never a new method.
 
-## The Part protocol
-
-Every streaming adapter obeys the same five rules, so a UI written for one
-works for all of them.
-
-- **`Part("text", str)` is a delta.** Consecutive text parts concatenate into
-  one part; the whole reply is `message.text`.
-- **`Part("tool_call", ToolCall(…))` arrives whole.** Buffer partial JSON
-  wherever it comes from — core never sees half an argument string. Anything
-  but a real `ToolCall` in `data` raises `ContractError`.
-- **`Part("meta", dict)` merges into `message.meta`,** later keys winning. The
-  merge is shallow, so yield one meta at the end rather than several halves.
-- **Arguments that are not valid JSON are not an exception.** They become
-  `ToolCall(id, name, {})` plus `meta["invalid_args"][id] = <the raw string>`,
-  and the loop turns that into the tool's result — `error: tool arguments were
-  not valid JSON: …` — so the model reads its own mistake instead of a
-  traceback. `core/llm.py` has the one function that decides it:
-
-  ```python
-  def args_of(raw: str) -> tuple[dict, str | None]:
-      """The arguments as one dict — or an empty one and the string back, unread."""
-      try:
-          args = json.loads(raw or "{}")
-          if not isinstance(args, dict):
-              raise ValueError("tool arguments must be a JSON object")
-      except ValueError:                  # a broken parse is a ValueError too
-          return {}, raw
-      return args, None
-  ```
-
-  A JSON string or number parses and still fails: the arguments have to be an
-  object.
-- **Every other type lands in `content` untouched** — thinking blocks, provider
-  extras, whatever a vendor ships next quarter.
-
-## The spellings adapters share
-
-Three, and only three, so that adapters agree where they must.
-
-A picture is `Part("image", …)`, on the way in and out of every wire, and its
-data is one of two dicts: `{"url": …}`, or `{"media_type": …, "data": …}` with
-the bytes base64-encoded in a str.
-
-`meta["usage"]` is `{"input_tokens": …, "output_tokens": …}`. That is the
-convention the `Budget` [card](/hooks/cards) reads; an adapter that leaves it
-out just counts as free.
-
-`meta["model"]` names who answered — the wire's own word for itself, else the
-id you asked for, never `None`. It is how you tell who ended up replying under
-a [`Fallback`](/models/fallback).
-
-<Note>
-A new provider feature is a new Part type, never a new method. The two methods
-are the whole surface: if a vendor invents a block you have never seen, yield
-it as `Part("their_word", …)` and it rides through core untouched, back onto
-the wire next turn.
-</Note>
-
-Next: [what `Provider` hands an HTTP adapter](/models/folder), and the
-[profile](/models/profiles) that decides what it will accept.
+Read [inside a provider](/models/folder) next. Then
+[what a model can do](/models/profiles).

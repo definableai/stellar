@@ -1,111 +1,125 @@
 ---
 title: Models
-description: The brain in the backpack, and the three ways to give an agent one.
+description: The model is your agent's brain. Three ways to give it one.
 ---
 
-A model is the brain an [`Agent`](/reference/agent) thinks with. The whole
-contract is one method: `async invoke(run)`, handed the run, giving back one
-assistant [`Message`](/reference/types). Everything below is a shorter way to
-write that method well.
+The model is the brain of your [agent](/reference/agent). It reads the
+conversation and writes back one reply. There are three ways to plug one in.
 
-The run is all the context there is. `run.messages` is the notebook (the
-conversation so far), `run.agent.tools` is the toolbox, `run.emit(…)` is the
-radio. Nothing else is passed in, and nothing else has to be.
-
-## Subclass `Model`
-
-Wrap what you already have. Core is async all the way down and ships no sync
-twins, so a blocking SDK is one `to_thread` line away:
-
-```python
-import asyncio
-
-from core import Message, Model
-
-
-class MyModel(Model):
-    async def invoke(self, run) -> Message:
-        said = await asyncio.to_thread(my_sdk.complete, run.messages)   # yours
-        return Message("assistant", said)
+```mermaid
+flowchart LR
+  Agent[Agent] --> One["Write invoke"]
+  Agent --> Two["Any object with invoke"]
+  Agent --> Three["encode plus send"]
 ```
 
-`Message("assistant", said)` takes a str and makes it one text
-[`Part`](/reference/types) at construction; `.text` joins them back.
+All three end up doing the same job. Pick the smallest one that fits.
 
-## No base class
+## Write `invoke`
 
-Nothing checks your ancestry. Any object whose own class defines an async
-`invoke(run)` passes [`check()`](/concepts/contracts) and runs. This one needs
-no key, no network and no import from `models/`:
+Subclass `Model` and write one method. It is handed the `Run`, and it gives
+back one assistant [`Message`](/reference/types). The conversation so far is
+`run.messages`.
 
-```python
+```python run
+import asyncio
+
+from core import Agent, Message, Model
+
+
+class Shouty(Model):
+    async def invoke(self, run) -> Message:
+        return Message("assistant", run.messages[-1].text.upper())
+
+
+run = asyncio.run(Agent(Shouty()).run("hello"))
+print(run.messages[-1].text)
+```
+
+```text output
+HELLO
+```
+
+- `run.messages[-1]` is the newest message, and `.text` is its words.
+- The reply is one `Message` with the role `assistant`.
+- `invoke` has to be `async`. Wrap a blocking library in `asyncio.to_thread`.
+
+## Any object with `invoke`
+
+There is no base class you must inherit. Any object whose own class writes an
+async `invoke` passes the [check](/concepts/contracts) and runs.
+
+```python run
+import asyncio
+
 from core import Agent, Message
 
 
 class Parrot:
     async def invoke(self, run) -> Message:
-        return Message("assistant", run.messages[-1].text.upper())
+        return Message("assistant", "you said: " + run.messages[-1].text)
 
 
-run = await Agent(Parrot()).run("hello")
-print(run.messages[-1].text)                     # HELLO
+run = asyncio.run(Agent(Parrot()).run("hello"))
+print(run.messages[-1].text)
 ```
 
-<Warning>
-A sync `invoke` is refused before it ever runs — at construction, and again at
-the top of every step, because the backpack can be swapped mid-run. The loop
-could never await it, so the `ContractError` says so and carries the code to
-type instead.
-</Warning>
-
-## `ProviderModel`
-
-An HTTP provider in two steps. `encode(run)` builds the request body — pure
-translation, which is what makes it testable without a socket. `async
-send(run, body)` owns the network, retries included, and yields the reply as
-Parts.
-
-```python
-from core import Part, ProviderModel
-
-
-class MyProvider(ProviderModel):
-    def encode(self, run) -> dict:            # pure: send() takes it from here
-        ...
-
-    async def send(self, run, body):          # the network lives here
-        yield Part("text", "hello")
+```text output
+you said: hello
 ```
 
-Core writes the fold: `invoke` rings `model.delta` for every Part and grows one
-assistant Message out of them. A provider that streams yields a Part per chunk;
-one that does not yields the Parts of its single response, and core cannot tell
-the difference — which is why a streaming UI is written once.
+## `encode` plus `send`
 
-For an HTTP provider a third of it is already written. `Provider`, in
-`core/llm.py`, holds the key, the profile, one client, the retries and an SSE
-parser; a real adapter is two small files on top of it.
+Real models answer over HTTP. Subclass `ProviderModel` and write two small
+methods instead of one big one. `encode` builds the request. `send` makes the
+call and hands the reply back in pieces.
+
+```python run
+import asyncio
+
+from core import Agent, Part, ProviderModel
+
+
+class TwoPieces(ProviderModel):
+    def encode(self, run):
+        return {"say": run.messages[-1].text}
+
+    async def send(self, run, body):
+        yield Part("text", "Hello ")
+        yield Part("text", body["say"] + "!")
+
+
+run = asyncio.run(Agent(TwoPieces()).run("world"))
+print(run.messages[-1].text)
+```
+
+```text output
+Hello world!
+```
+
+Stellar joins the pieces into one message for you. So you write a live view
+once, and it works with every model.
 
 <CardGroup cols={2}>
-  <Card title="The provider model" icon="plug" href="/models/provider">
-    `encode`, `send`, and the Part protocol core folds them with.
+  <Card title="Write your own provider" icon="plug" href="/models/provider">
+    What `encode` and `send` each do, and what a piece may be.
   </Card>
-  <Card title="A provider is a folder" icon="folder" href="/models/folder">
-    What `Provider` hands you, and the mapping table beside it.
+  <Card title="Inside a provider" icon="folder" href="/models/folder">
+    The two files a real provider is made of.
   </Card>
-  <Card title="Profiles and the gate" icon="sliders-horizontal" href="/models/profiles">
-    One row off the docs, and the refusal it buys before any byte.
+  <Card title="What a model can do" icon="sliders-horizontal" href="/models/profiles">
+    A short list per model, checked before anything is sent.
   </Card>
   <Card title="Anthropic" icon="sparkles" href="/models/anthropic">
-    The Messages API: system lines, tool results, thinking blocks.
+    Claude, and the four models that come in the box.
   </Card>
-  <Card title="OpenAI and its clones" icon="bot" href="/models/openai">
-    Chat Completions, and the vendors who copied the wire.
+  <Card title="OpenAI and look-alikes" icon="bot" href="/models/openai">
+    GPT, plus the vendors that copied its API.
   </Card>
-  <Card title="Fallback and routing" icon="shuffle" href="/models/fallback">
-    Models in a row; the first that answers wins.
+  <Card title="Try one model, then another" icon="shuffle" href="/models/fallback">
+    A list of models. The first one that answers wins.
   </Card>
-  <Card title="Testing a model" icon="flask-conical" href="/models/testing">
-    Canned traffic, `check_model`, and `FakeModel`.
+  <Card title="Test a model" icon="flask-conical" href="/models/testing">
+    Canned replies, `check_model`, and `FakeModel`.
   </Card>
 </CardGroup>
