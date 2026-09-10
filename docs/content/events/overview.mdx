@@ -7,7 +7,7 @@ Every time your agent does something, it writes an event. The events are the
 agent's diary. You can read them as they happen, or read them later.
 
 ```mermaid
-flowchart LR
+flowchart TD
   Agent -->|"asks first"| Hooks
   Hooks -->|"can change or stop"| Agent
   Agent -->|"tells after"| Events

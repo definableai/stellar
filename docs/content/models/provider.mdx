@@ -7,7 +7,7 @@ description: encode builds the request, send hands the reply back in pieces, and
 nothing. The other half makes the network call.
 
 ```mermaid
-flowchart LR
+flowchart TD
   Run[Run] --> Encode[encode]
   Encode -->|"the request"| Send[send]
   Send -->|"in pieces"| Parts[Parts]

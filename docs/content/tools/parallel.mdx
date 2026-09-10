@@ -7,7 +7,7 @@ A model can ask for several tools in one turn. Whether they actually run at
 the same time is one keyword on each tool, and nothing else.
 
 ```mermaid
-flowchart LR
+flowchart TD
   Turn["read, read, write, read"] -->|"together"| One["read, read"]
   One -->|"then"| Two["write"]
   Two -->|"then"| Three["read"]

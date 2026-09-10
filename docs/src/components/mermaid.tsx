@@ -40,12 +40,12 @@ const LIGHT = {
 
 const BOX =
   "my-6 overflow-x-auto rounded-2xl border border-gray-950/10 bg-gray-50 p-6 dark:border-white/10 dark:bg-white/[0.03]";
-const DRAWN = "flex justify-center [&_svg]:h-auto [&_svg]:max-w-full";
+const DRAWN = "[&_svg]:h-auto [&_svg]:max-w-full";
 
 export function Mermaid({ chart }: { chart: string }) {
   const id = "mermaid" + useId().replace(/\W/g, "");   // mermaid puts the id in a CSS selector
   const [svg, setSvg] = useState("");
-  const [floor, setFloor] = useState(0);   // the least width the picture may shrink to
+  const [size, setSize] = useState({ natural: 0, floor: 0 });   // its own width, and the least it may shrink to
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function Mermaid({ chart }: { chart: string }) {
         // Mermaid scales the picture down to fit; below 72% of its natural width the labels
         // stop being readable, so from there the box scrolls instead.
         const natural = Number(/viewBox="[\d.]+ [\d.]+ ([\d.]+)/.exec(drawn.svg)?.[1] ?? 0);
-        setFloor(Math.round(natural * 0.72));
+        setSize({ natural: Math.ceil(natural), floor: Math.round(natural * 0.72) });
         setSvg(drawn.svg);
         setError("");
       } catch (e) {
@@ -96,7 +96,8 @@ export function Mermaid({ chart }: { chart: string }) {
   }
   return (
     <div className={`${BOX} ${DRAWN} ${svg ? "" : "min-h-32"}`}>
-      <div className="max-w-full" style={{ minWidth: floor }} dangerouslySetInnerHTML={{ __html: svg }} />
+      {/* As wide as the drawing, centred; never narrower than the floor, so a wide one scrolls right and its left edge stays reachable. */}
+      <div className="mx-auto max-w-full" style={{ width: size.natural || undefined, minWidth: size.floor }} dangerouslySetInnerHTML={{ __html: svg }} />
     </div>
   );
 }

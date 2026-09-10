@@ -7,17 +7,6 @@ A stage is one moment in a run. There are eight of them and nothing else is
 a moment. They are also the names your agent writes in its
 [event log](/events/overview), so one word covers both.
 
-```mermaid
-flowchart LR
-  A["run.pre"] --> B["model.pre"]
-  B --> C["model.delta"]
-  C --> D["model.post"]
-  D --> E["tool.pre"]
-  E --> F["tool.delta"]
-  F --> G["tool.post"]
-  G --> H["run.post"]
-```
-
 | stage | what it hands you | what a return changes |
 | --- | --- | --- |
 | `run.pre` | the last message, once, before the first turn | that message |

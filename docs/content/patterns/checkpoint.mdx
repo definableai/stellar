@@ -8,7 +8,7 @@ saves down to a few plain values, and `agent.run` picks it back up. Think of
 it as a save point in a game.
 
 ```mermaid
-flowchart LR
+flowchart TD
   Run -->|"pickle"| File["a file"]
   File -->|"load"| Saved["the same messages"]
   Saved -->|"run again"| New["a new Run"]
