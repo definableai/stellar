@@ -15,12 +15,19 @@ function label(page: string) {
   return front.sidebarTitle || front.title || stem[0].toUpperCase() + stem.slice(1);
 }
 
-export default function Sidebar() {
+/** The tab's groups. In the column at `lg`, inside the drawer below it. */
+export default function Sidebar({ drawer = false }: { drawer?: boolean }) {
   const { pathname } = useLocation();
   const here = idOf(pathname);
   const tab = tabs.find((t) => t.tab === find(pathname)?.tab) ?? tabs[0];
   return (
-    <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] overflow-y-auto px-5 pt-5 pb-10 [scrollbar-width:thin] lg:block">
+    <aside
+      className={
+        drawer
+          ? "px-5 pt-5 pb-10"
+          : "sticky top-12 hidden h-[calc(100vh-3rem)] overflow-y-auto px-5 pt-5 pb-10 [scrollbar-width:thin] lg:block"
+      }
+    >
       {tab.groups.map((group) => (
         <div key={group.group} className="mt-8 first:mt-0">
           <div className="mb-2 pl-4 text-sm font-semibold text-gray-900 dark:text-gray-200">{group.group}</div>
