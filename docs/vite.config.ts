@@ -1,3 +1,4 @@
+import meta from "./meta.ts";
 import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -36,5 +37,5 @@ const mdxPlugin: PluginOption = {
 
 export default defineConfig({
   base: "/",
-  plugins: [mdxPlugin, react(), tailwindcss()],
+  plugins: [meta(), mdxPlugin, react(), tailwindcss()],
 });
